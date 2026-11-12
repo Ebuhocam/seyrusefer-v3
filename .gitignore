@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# orijinal yuksek cozunurluklu gorseller (scripts/gorsel-optimize.mjs ile public'e donusturulur)
+/_kaynak-gorseller/
