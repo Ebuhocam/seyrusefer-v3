@@ -24,19 +24,25 @@ Son güncelleme: 12 Kasım 2026
 - `src/lib/oyun/kurallar.js` — saf oyun kuralları (üretim, depo, bina durumu, level durumu)
 - `src/components/koy/` — `KoyHaritasi`, `UstBar`, `Panel`, `GelistiriciPaneli` (🛠: zaman ileri sarma, level, görev şartı, koordinat modu)
 
-### Faz 2 + Faz 3 Çekirdeği — Veritabanı, giriş, kaynak üretimi ve inşaat
+### Faz 2 + Faz 3 — Veritabanı, giriş, kaynak üretimi ve inşaat
 - `@opennextjs/cloudflare` + `wrangler.jsonc` + `open-next.config.ts` kuruldu (`next.config.mjs` içinde `initOpenNextCloudflareForDev()`).
-- Yeni D1 veritabanı oluşturuldu: `seyrusefer-v3-db` (`e23293e1-7e9a-4ce1-b319-6fe0eec32a45`), `migrations/0001_ilk_sema.sql` hem yerel hem uzak D1'e uygulandı (`kullanicilar`, `oturumlar`, `oyuncu_durumu`, `binalar`, `kaynaklar`, `gorev_ilerlemesi`).
-- `src/lib/oyun/eylemler.js` — saf sunucu eylemleri (`topla`, `yukselt`, `levelAtla`, `gelistiriciEylemleri`).
-- `src/lib/sunucu/` — `db.js`, `sifre.js` (PBKDF2-SHA256), `oturum.js` (HTTP-only çerez `seyrusefer_oturum`), `oyunDeposu.js` (atomik D1 `batch` okuma/yazma), `api.js`.
-- API uçları: `/api/auth/kayit`, `/api/auth/giris`, `/api/auth/cikis`, `/api/oyun` (GET/POST, sunucu saatine göre kaynak/depo/inşaat hesabı).
-- `/giris` sayfası (`src/app/giris/`) ve `src/lib/oyun/useOyun.js` sunucu hook'u (`useSahteOyun.js` kaldırıldı).
+- Yeni D1 veritabanı: `seyrusefer-v3-db` (`e23293e1-7e9a-4ce1-b319-6fe0eec32a45`), `migrations/0001_ilk_sema.sql` hem yerel hem uzak D1'e uygulandı.
+- `src/lib/sunucu/` — `db.js`, `sifre.js` (PBKDF2-SHA256), `oturum.js` (HTTP-only çerez), `oyunDeposu.js`, `api.js`.
+- API uçları: `/api/auth/kayit`, `/api/auth/giris`, `/api/auth/cikis`, `/api/oyun`.
+- `/giris` sayfası ve `src/lib/oyun/useOyun.js` sunucu hook'u.
 
-## Sıradaki: Faz 4 — Görevler ve level sistemi
-1. Görev şeması ve içerik tabloları (hadisler, videolar, aile okumaları, namaz çetelesi, meydan paylaşımları) — mevcut hadis/soru verilerinin eski D1'den aktarımı
-2. Görev Panosu: aktif levelın görev listesi, ilerleme durumu, tamamlama akışı
-3. Bina içi ekranlar: Cami (namaz çetelesi), Medrese (hadis/video/sınav), Otağ (aile okuması), Sosyal Meydan (gündem paylaşımı)
-4. `binaDurumu` ve `levelAtla` içindeki `gorevlerTamam` kontrolünün gerçek görev ilerlemesine bağlanması
+### Faz 4 — Görevler ve level sistemi
+- `migrations/0002_gorevler.sql` — `gorev_ilerlemesi.son_gun`, `namaz_cetelesi`, `meydan_paylasimlari`, `meydan_yorumlar` tabloları (yerel + uzak D1).
+- `src/lib/oyun/gorevler.js` — 10 levelın görev tanımları (`LEVEL_GOREVLERI`), sahih hadisleri, video özetleri, aile okuması mektupları, sınav soruları (`LEVEL_ICERIKLERI`), Seyyah iyilik görevleri (`SEYYAH_GOREVLERI`) ve bina/level görev kontrol fonksiyonları.
+- `src/components/koy/GorevlerEkrani.js` ve güncellenen `Panel.js`:
+  - Görev Panosu: aktif levelın görev listesi, bina anahtarı eşleşmesi, tek tıkla göreve gitme.
+  - Bina içi ekranlar (`🚪 İçeri Gir`): Cami (5 vakit namaz çetelesi), Medrese (Hadis, ileri sarma engelli Video, İlim Sınavı), Otağ (Aile Okuması ve Level 10 Mezuniyet Beratı), Sosyal Meydan (Gündem paylaşımı ve kardeş yorumları, `/api/meydan`), Seyyah (günlük iyilik görevi).
+  - Bina yükseltme ve level atlama gerçek görev ilerlemesine bağlandı (geliştirici panelindeki `Görev şartları tamam` kutucuğu test override olarak korundu).
+
+## Sıradaki: Faz 5 — Admin Level Tasarım Merkezi
+1. `/admin` sayfası (sadece `rol === 'admin'` veya yerel geliştirici için açık)
+2. 10 levelın gündem başlığı, hadisleri, video bağlantısı/süresi, aile okuma metni, meydan sorusu, görev hedefleri ve bina kaynak bedellerini D1 üzerinden kod yazmadan düzenleme
+3. Kullanıcı listesi ve rol/ilerleme yönetimi
 
 ## Notlar
 - `AGENTS.md`: Bu Next.js sürümü farklı; kod yazmadan önce `node_modules/next/dist/docs/` okunmalı.
