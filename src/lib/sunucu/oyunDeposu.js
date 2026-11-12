@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { baslangicDurumu } from "@/lib/oyun/eylemler";
-import { LEVEL_GOREVLERI, oyunGunu } from "@/lib/oyun/gorevler";
+import { levelGorevTanimlari, oyunGunu } from "@/lib/oyun/gorevler";
 
 const BOS_NAMAZ = { sabah: 0, ogle: 0, ikindi: 0, aksam: 0, yatsi: 0 };
 
@@ -49,12 +49,12 @@ export async function durumOku(kullaniciId) {
 }
 
 /** Durumu tek bir toplu işlemle (atomik) yazar */
-export async function durumYaz(kullaniciId, durum, islemSaati = null) {
+export async function durumYaz(kullaniciId, durum, islemSaati = null, ayarlar = null) {
   const d = await db();
   const gercekSimdi = Date.now();
   const simdi = islemSaati ?? oyunSaati(durum);
   const bugun = oyunGunu(simdi);
-  const tanimlar = Object.fromEntries((LEVEL_GOREVLERI[durum.level] ?? []).map((t) => [t.kod, t]));
+  const tanimlar = Object.fromEntries(levelGorevTanimlari(durum.level, ayarlar).map((t) => [t.kod, t]));
   const n = durum.bugunNamaz ?? BOS_NAMAZ;
 
   const ifadeler = [

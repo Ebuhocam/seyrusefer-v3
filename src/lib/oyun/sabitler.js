@@ -122,3 +122,13 @@ export const LEVELLAR = [
   { no: 9, gundem: "Adalet ve Emanet", evre: "meydan", hedefGun: 10, hedefler: { medrese: 4, sosyalmeydan: 4 } },
   { no: 10, gundem: "İhsan", evre: "meydan", hedefGun: 10, hedefler: { otag: 4 } },
 ];
+
+// ---------- ALAN MÜCADELESİ BÖLGELERİ (Level 6+) ----------
+export const BOLGELER = [
+  { id: "ihlas_vadisi", ad: "İhlas Vadisi", ikon: "🏞️", bedel: { erzak: 200, kereste: 150, tas: 100 }, temelGuc: 100 },
+  { id: "hikmet_tepesi", ad: "Hikmet Tepesi", ikon: "⛰️", bedel: { erzak: 250, kereste: 200, tas: 150 }, temelGuc: 140 },
+  { id: "kardeslik_ovasi", ad: "Kardeşlik Ovası", ikon: "🌾", bedel: { erzak: 300, kereste: 250, tas: 200 }, temelGuc: 180 },
+  { id: "emanet_kalesi", ad: "Emanet Kalesi", ikon: "🏰", bedel: { erzak: 400, kereste: 350, tas: 250 }, temelGuc: 240 },
+  { id: "sabir_limani", ad: "Sabır Limanı", ikon: "⚓", bedel: { erzak: 450, kereste: 400, tas: 300 }, temelGuc: 300 },
+  { id: "ihsan_sancagi", ad: "İhsan Sancağı", ikon: "🚩", bedel: { erzak: 600, kereste: 500, tas: 400 }, temelGuc: 400 },
+];

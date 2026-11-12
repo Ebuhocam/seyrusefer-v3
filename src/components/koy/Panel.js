@@ -11,8 +11,10 @@ import {
   SinavKutusu,
   SosyalMeydanKutusu,
   SeyyahKutusu,
+  OzelGorevKutusu,
   BinaIciGorunumu,
 } from "./GorevlerEkrani";
+import { BirlikPaneli } from "./BirlikVeFetihEkrani";
 
 export default function Panel({ secim, oyun, kapat }) {
   return (
@@ -33,6 +35,12 @@ export default function Panel({ secim, oyun, kapat }) {
             <SeyyahKutusu oyun={oyun} />
           </>
         )}
+        {secim.tur === "birlik" && (
+          <>
+            <h2 className="mb-3 text-xl font-black">🤝 Birlik ve Alan Mücadelesi</h2>
+            <BirlikPaneli oyun={oyun} varsayilanSekme={secim.sekme ?? "birlik"} />
+          </>
+        )}
       </div>
     </div>
   );
@@ -50,6 +58,9 @@ function Sart({ tamam, children, eylem }) {
 }
 
 function GorevEkrani({ gorevKodu, oyun, geri }) {
+  const gorev = oyun.gorevler.find((g) => g.kod === gorevKodu);
+  const tur = gorev?.tur ?? gorevKodu;
+
   return (
     <div className="space-y-3">
       <button
@@ -59,13 +70,14 @@ function GorevEkrani({ gorevKodu, oyun, geri }) {
       >
         ← Geri Dön
       </button>
-      {gorevKodu === "hadis" && <HadisKutusu oyun={oyun} />}
-      {gorevKodu === "video" && <VideoKutusu oyun={oyun} />}
-      {gorevKodu === "aile" && <AileOkumasiKutusu oyun={oyun} />}
-      {gorevKodu === "namaz" && <NamazCetelesiKutusu oyun={oyun} />}
-      {gorevKodu === "sinav" && <SinavKutusu oyun={oyun} />}
-      {(gorevKodu === "meydan_paylasim" || gorevKodu === "meydan_yorum") && <SosyalMeydanKutusu oyun={oyun} />}
-      {gorevKodu === "seyyah" && <SeyyahKutusu oyun={oyun} />}
+      {tur === "hadis" && <HadisKutusu oyun={oyun} gorevKodu={gorevKodu} />}
+      {tur === "video" && <VideoKutusu oyun={oyun} gorevKodu={gorevKodu} />}
+      {tur === "aile" && <AileOkumasiKutusu oyun={oyun} gorevKodu={gorevKodu} />}
+      {tur === "namaz" && <NamazCetelesiKutusu oyun={oyun} />}
+      {tur === "sinav" && <SinavKutusu oyun={oyun} />}
+      {(tur === "meydan_paylasim" || tur === "meydan_yorum") && <SosyalMeydanKutusu oyun={oyun} />}
+      {tur === "seyyah" && <SeyyahKutusu oyun={oyun} gorevKodu={gorevKodu} />}
+      {tur === "onay" && <OzelGorevKutusu gorev={gorev} oyun={oyun} />}
     </div>
   );
 }
@@ -162,7 +174,7 @@ function BinaIcerik({ id, oyun }) {
                     )
                   }
                 >
-                  🔑 {GOREV_TURLERI[g.tur]?.ikon} {g.ad}{" "}
+                  🔑 {GOREV_TURLERI[g.tur]?.ikon ?? "✨"} {g.ad}{" "}
                   <span className="text-xs text-amber-200/70">
                     ({g.yapilan}/{g.hedef})
                   </span>
@@ -172,11 +184,15 @@ function BinaIcerik({ id, oyun }) {
               <Sart tamam={false}>🔑 Görev şartları (Level {b.gerekenLevel}&apos;de açılır)</Sart>
             )}
 
-            {Object.entries(b.bedel).map(([k, m]) => (
-              <Sart key={k} tamam={env[k] >= m}>
-                🔑 {KAYNAKLAR[k].ikon} {KAYNAKLAR[k].ad}: <b className="tabular-nums">{env[k]}</b> / {m}
-              </Sart>
-            ))}
+            {Object.entries(b.bedel).map(([k, m]) => {
+              const tutar = Number(m) || 0;
+              if (tutar <= 0) return null;
+              return (
+                <Sart key={k} tamam={env[k] >= tutar}>
+                  🔑 {KAYNAKLAR[k].ikon} {KAYNAKLAR[k].ad}: <b className="tabular-nums">{env[k]}</b> / {tutar}
+                </Sart>
+              );
+            })}
           </ul>
           <button
             disabled={!b.yapilabilir || oyun.bekliyor}
@@ -217,34 +233,40 @@ function PanoIcerik({ oyun, kapat }) {
       <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-amber-300/80">
         1. Gündem Görevleri (Bina Anahtarları)
       </h3>
-      <ul className="space-y-1.5">
-        {gorevler.map((g) => (
-          <Sart
-            key={g.kod}
-            tamam={g.tamam}
-            eylem={
-              <button
-                type="button"
-                onClick={() => setAcikGorev(g.kod)}
-                className={`rounded-md px-2.5 py-1 text-xs font-black ${
-                  g.tamam ? "bg-stone-700 text-amber-100" : "bg-amber-400 text-stone-900"
-                }`}
-              >
-                {g.tamam ? "Aç" : "Yap →"}
-              </button>
-            }
-          >
-            <span>
-              {GOREV_TURLERI[g.tur]?.ikon} {g.ad}
-            </span>
-            <span className="block text-xs text-amber-200/70">
-              İlerleme: <b className="tabular-nums">{g.yapilan}/{g.hedef}</b>
-              {g.bina && ` · 🔑 ${BINALAR[g.bina]?.ad}`}
-              {g.bugunYapildi && !g.tamam && " · Bugün yapıldı"}
-            </span>
-          </Sart>
-        ))}
-      </ul>
+      {gorevler.length === 0 ? (
+        <p className="rounded-xl bg-stone-950/50 p-3 text-xs text-stone-400">
+          Bu level için henüz görev tanımlanmamış.
+        </p>
+      ) : (
+        <ul className="space-y-1.5">
+          {gorevler.map((g) => (
+            <Sart
+              key={g.kod}
+              tamam={g.tamam}
+              eylem={
+                <button
+                  type="button"
+                  onClick={() => setAcikGorev(g.kod)}
+                  className={`rounded-md px-2.5 py-1 text-xs font-black ${
+                    g.tamam ? "bg-stone-700 text-amber-100" : "bg-amber-400 text-stone-900"
+                  }`}
+                >
+                  {g.tamam ? "Aç" : "Yap →"}
+                </button>
+              }
+            >
+              <span>
+                {GOREV_TURLERI[g.tur]?.ikon ?? "✨"} {g.ad}
+              </span>
+              <span className="block text-xs text-amber-200/70">
+                İlerleme: <b className="tabular-nums">{g.yapilan}/{g.hedef}</b>
+                {g.bina && BINALAR[g.bina] && ` · 🔑 ${BINALAR[g.bina].ad}`}
+                {g.bugunYapildi && !g.tamam && " · Bugün yapıldı"}
+              </span>
+            </Sart>
+          ))}
+        </ul>
+      )}
 
       <h3 className="mt-4 mb-2 text-sm font-bold uppercase tracking-wider text-amber-300/80">
         2. Level Bina Hedefleri
@@ -252,7 +274,7 @@ function PanoIcerik({ oyun, kapat }) {
       <ul className="space-y-1.5">
         {level.hedefler.map((h) => (
           <Sart key={h.binaId} tamam={h.tamam}>
-            {BINALAR[h.binaId].ad} → Seviye {h.seviye}
+            {BINALAR[h.binaId]?.ad ?? h.binaId} → Seviye {h.seviye}
           </Sart>
         ))}
       </ul>

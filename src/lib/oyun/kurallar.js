@@ -1,6 +1,7 @@
 // =============================================================
 // SEYRÜSEFER v3 — OYUN KURALLARI (saf fonksiyonlar)
-// Arayüzden ve ileride sunucudan (API) aynı şekilde kullanılır.
+// Arayüzden ve sunucudan (API) aynı şekilde kullanılır.
+// Admin panelinden özelleştirilen bina bedelleri ve level hedeflerini de destekler.
 // =============================================================
 import { KAYNAKLAR, DEPO_SAAT, BINALAR, LEVELLAR } from "./sabitler";
 
@@ -26,8 +27,10 @@ export function biriken(kaynak, sonToplama, simdi, otagSeviye) {
 /** Kaynak bedeli karşılanıyor mu? Eksik olanları da döner. */
 export function bedelKontrol(bedel, envanter) {
   const eksik = {};
-  for (const [k, miktar] of Object.entries(bedel)) {
-    const fark = miktar - (envanter[k] ?? 0);
+  for (const [k, miktar] of Object.entries(bedel ?? {})) {
+    const m = Number(miktar) || 0;
+    if (m <= 0) continue;
+    const fark = m - (envanter[k] ?? 0);
     if (fark > 0) eksik[k] = fark;
   }
   return { yeterli: Object.keys(eksik).length === 0, eksik };
@@ -36,13 +39,18 @@ export function bedelKontrol(bedel, envanter) {
 /**
  * Bir binanın yükseltme durumunu hesaplar.
  * İki anahtar kuralı: görev şartı + kaynak bedeli (+ oyuncu level şartı)
- *
- * @param {string} binaId
- * @param {{ level:number, binalar:Record<string,number>, envanter:Record<string,number>,
- *           gorevlerTamam:(binaId:string, hedefSeviye:number)=>boolean }} durum
  */
-export function binaDurumu(binaId, durum) {
-  const tanim = BINALAR[binaId];
+export function binaDurumu(binaId, durum, ozelBinalar = null) {
+  const varsayilan = BINALAR[binaId];
+  const ozel = ozelBinalar?.[binaId];
+  const tanim = ozel
+    ? {
+        ...varsayilan,
+        acilis: { ...varsayilan.acilis, ...ozel.acilis },
+        bedel: { ...varsayilan.bedel, ...ozel.bedel },
+      }
+    : varsayilan;
+
   const seviye = durum.binalar[binaId] ?? 0;
   const hedef = seviye + 1;
 
@@ -52,7 +60,7 @@ export function binaDurumu(binaId, durum) {
 
   const gerekenLevel = tanim.acilis[hedef];
   const levelYeterli = durum.level >= gerekenLevel;
-  const bedel = tanim.bedel[hedef];
+  const bedel = tanim.bedel[hedef] ?? {};
   const kaynak = bedelKontrol(bedel, durum.envanter);
   const gorevTamam = levelYeterli && durum.gorevlerTamam(binaId, hedef);
 
@@ -72,13 +80,16 @@ export function binaDurumu(binaId, durum) {
 }
 
 /** Oyuncu levelının bina hedefleri ve ilerlemesi */
-export function levelDurumu(level, binalar) {
-  const tanim = LEVELLAR.find((l) => l.no === level);
-  if (!tanim) return null;
-  const hedefler = Object.entries(tanim.hedefler).map(([binaId, seviye]) => ({
+export function levelDurumu(level, binalar, ozelLevellar = null) {
+  const varsayilan = LEVELLAR.find((l) => l.no === level);
+  if (!varsayilan) return null;
+  const ozel = ozelLevellar?.[level];
+  const tanim = ozel ? { ...varsayilan, ...ozel, hedefler: ozel.hedefler ?? varsayilan.hedefler } : varsayilan;
+
+  const hedefler = Object.entries(tanim.hedefler ?? {}).map(([binaId, seviye]) => ({
     binaId,
-    seviye,
-    tamam: (binalar[binaId] ?? 0) >= seviye,
+    seviye: Number(seviye),
+    tamam: (binalar[binaId] ?? 0) >= Number(seviye),
   }));
   return { ...tanim, hedefler, binalarTamam: hedefler.every((h) => h.tamam) };
 }

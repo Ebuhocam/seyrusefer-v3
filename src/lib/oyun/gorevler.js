@@ -21,6 +21,7 @@ export const GOREV_TURLERI = {
   meydan_paylasim: { ad: "Meydan Paylaşımı", ikon: "💬", yer: "Sosyal Meydan" },
   meydan_yorum: { ad: "Kardeş Yorumu", ikon: "🤝", yer: "Sosyal Meydan" },
   seyyah: { ad: "Seyyah İyilik Görevi", ikon: "🏇", yer: "Seyyah" },
+  onay: { ad: "Özel Görev / Etkinlik", ikon: "✨", yer: "Görev Panosu" },
 };
 
 // Her level için görev listesi ve hangi bina hedefinin anahtarı olduğu
@@ -355,23 +356,49 @@ export const SEYYAH_GOREVLERI = [
 /** Oyun saatine (ms) göre YYYY-MM-DD gün dizgesi */
 export const oyunGunu = (simdiMs) => new Date(simdiMs).toISOString().slice(0, 10);
 
+/** Bir levelın aktif görev tanımlarını döner (yönetici panelinden özelleştirilmişse onu kullanır) */
+export function levelGorevTanimlari(level, ayarlar = null) {
+  const ozel = ayarlar?.levellar?.[level]?.gorevler;
+  return Array.isArray(ozel) ? ozel : LEVEL_GOREVLERI[level] ?? [];
+}
+
+/** Bir levelın aktif eğitsel içeriğini döner (yönetici panelinden özelleştirilmişse onu kullanır) */
+export function levelIcerigi(level, ayarlar = null) {
+  const varsayilan = LEVEL_ICERIKLERI[level] ?? LEVEL_ICERIKLERI[1];
+  const ozel = ayarlar?.levellar?.[level]?.icerik;
+  if (!ozel) return varsayilan;
+  return {
+    hadisler: Array.isArray(ozel.hadisler) ? ozel.hadisler : varsayilan.hadisler,
+    video: ozel.video ? { ...varsayilan.video, ...ozel.video } : varsayilan.video,
+    aile: ozel.aile ? { ...varsayilan.aile, ...ozel.aile } : varsayilan.aile,
+    gundemSorusu: ozel.gundemSorusu ?? varsayilan.gundemSorusu,
+    sinav: Array.isArray(ozel.sinav) ? ozel.sinav : varsayilan.sinav,
+  };
+}
+
 /** Oyun gününe göre deterministik Seyyah görevi seçer */
-export function gununSeyyahGorevi(simdiMs) {
+export function gununSeyyahGorevi(simdiMs, ayarlar = null) {
+  const havuz =
+    Array.isArray(ayarlar?.seyyahGorevleri) && ayarlar.seyyahGorevleri.length > 0
+      ? ayarlar.seyyahGorevleri
+      : SEYYAH_GOREVLERI;
   const gun = oyunGunu(simdiMs);
   let toplam = 0;
   for (let i = 0; i < gun.length; i++) toplam = (toplam * 31 + gun.charCodeAt(i)) >>> 0;
-  return SEYYAH_GOREVLERI[toplam % SEYYAH_GOREVLERI.length];
+  return havuz[toplam % havuz.length];
 }
 
 /**
  * Bir levelın görev listesini oyuncunun ilerlemesiyle birleştirir.
- * @param {number} level
- * @param {Record<string, { ilerleme:number, sonGun?:string|null }>} ilerlemeHaritasi
- * @param {boolean} gorevlerTamamBayragi  Geliştirici override bayrağı
- * @param {number} simdiMs                Oyun saati
  */
-export function levelGorevListesi(level, ilerlemeHaritasi = {}, gorevlerTamamBayragi = false, simdiMs = Date.now()) {
-  const tanimlar = LEVEL_GOREVLERI[level] ?? [];
+export function levelGorevListesi(
+  level,
+  ilerlemeHaritasi = {},
+  gorevlerTamamBayragi = false,
+  simdiMs = Date.now(),
+  ayarlar = null
+) {
+  const tanimlar = levelGorevTanimlari(level, ayarlar);
   const bugun = oyunGunu(simdiMs);
   return tanimlar.map((t) => {
     const kayit = ilerlemeHaritasi[t.kod];
@@ -385,17 +412,22 @@ export function levelGorevListesi(level, ilerlemeHaritasi = {}, gorevlerTamamBay
 /**
  * Bir binanın o leveldaki yükseltmesi için gereken görevlerin tamamlanıp tamamlanmadığını döner.
  */
-export function binaGorevleriTamamMi(level, binaId, ilerlemeHaritasi = {}, gorevlerTamamBayragi = false) {
+export function binaGorevleriTamamMi(
+  level,
+  binaId,
+  ilerlemeHaritasi = {},
+  gorevlerTamamBayragi = false,
+  ayarlar = null
+) {
   if (gorevlerTamamBayragi) return true;
-  const liste = levelGorevListesi(level, ilerlemeHaritasi, false);
+  const liste = levelGorevListesi(level, ilerlemeHaritasi, false, Date.now(), ayarlar);
   const binaGorevleri = liste.filter((g) => g.bina === binaId);
-  // Eğer binaya özel görev tanımlanmışsa onların bitmesi, tanımlanmamışsa tüm level görevlerinin bitmesi gerekir
   const kontrol = binaGorevleri.length > 0 ? binaGorevleri : liste;
   return kontrol.every((g) => g.tamam);
 }
 
 /** Leveldaki tüm görevler tamamlandı mı? */
-export function tumLevelGorevleriTamamMi(level, ilerlemeHaritasi = {}, gorevlerTamamBayragi = false) {
+export function tumLevelGorevleriTamamMi(level, ilerlemeHaritasi = {}, gorevlerTamamBayragi = false, ayarlar = null) {
   if (gorevlerTamamBayragi) return true;
-  return levelGorevListesi(level, ilerlemeHaritasi, false).every((g) => g.tamam);
+  return levelGorevListesi(level, ilerlemeHaritasi, false, Date.now(), ayarlar).every((g) => g.tamam);
 }

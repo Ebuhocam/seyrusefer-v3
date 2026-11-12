@@ -1,21 +1,18 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import {
-  LEVEL_ICERIKLERI,
-  NAMAZ_VAKITLERI,
-  gununSeyyahGorevi,
-  oyunGunu,
-} from "@/lib/oyun/gorevler";
+import { NAMAZ_VAKITLERI, oyunGunu } from "@/lib/oyun/gorevler";
+import { BirlikPaneli } from "./BirlikVeFetihEkrani";
 
 // ---------------------------------------------------------------
 // 1. GÜNLÜK HADİS KUTUSU
 // ---------------------------------------------------------------
-export function HadisKutusu({ oyun }) {
-  const { durum } = oyun;
-  const icerik = LEVEL_ICERIKLERI[durum.level] ?? LEVEL_ICERIKLERI[1];
-  const gorev = oyun.gorevler.find((g) => g.kod === "hadis");
-  const hadisler = icerik.hadisler ?? [];
-  const aktifIndeks = gorev ? Math.min(gorev.yapilan, hadisler.length - 1) : 0;
+export function HadisKutusu({ oyun, gorevKodu = "hadis" }) {
+  const { durum, aktifIcerik } = oyun;
+  const gorev =
+    oyun.gorevler.find((g) => g.kod === gorevKodu) ??
+    oyun.gorevler.find((g) => g.tur === "hadis");
+  const hadisler = aktifIcerik?.hadisler ?? [];
+  const aktifIndeks = gorev ? Math.min(gorev.yapilan, Math.max(0, hadisler.length - 1)) : 0;
   const [ozelIndeks, setOzelIndeks] = useState(null);
   const secili = ozelIndeks ?? aktifIndeks;
 
@@ -29,7 +26,7 @@ export function HadisKutusu({ oyun }) {
         </span>
         {gorev && (
           <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-bold text-amber-200">
-            {gorev.yapilan} / {gorev.hedef} gün
+            {gorev.yapilan} / {gorev.hedef}
           </span>
         )}
       </div>
@@ -58,11 +55,13 @@ export function HadisKutusu({ oyun }) {
         </div>
       )}
 
-      {h && (
+      {h ? (
         <div className="rounded-2xl bg-stone-950/70 p-4 ring-1 ring-amber-500/30">
           <p className="text-base leading-relaxed font-semibold text-amber-50">“{h.metin}”</p>
-          <p className="mt-2 text-right text-xs font-bold text-amber-300/80">— {h.kaynak}</p>
+          {h.kaynak && <p className="mt-2 text-right text-xs font-bold text-amber-300/80">— {h.kaynak}</p>}
         </div>
+      ) : (
+        <p className="rounded-xl bg-stone-950/60 p-3 text-xs text-stone-400">Bu level için henüz hadis eklenmemiş.</p>
       )}
 
       {gorev && (
@@ -71,12 +70,12 @@ export function HadisKutusu({ oyun }) {
           disabled={oyun.bekliyor || gorev.tamam || gorev.bugunYapildi}
           onClick={() => {
             setOzelIndeks(null);
-            oyun.gorevTamamla("hadis");
+            oyun.gorevTamamla(gorev.kod);
           }}
           className="w-full rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 text-sm font-black text-stone-900 shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
         >
           {gorev.tamam
-            ? "✅ Bu Levelın Hadis Görevi Tamamlandı"
+            ? "✅ Hadis Görevi Tamamlandı"
             : gorev.bugunYapildi
             ? "✅ Bugünün Hadisini Okudun (Yarın Devam Et)"
             : "📖 Günün Hadisini Okudum ve Tefekkür Ettim"}
@@ -89,11 +88,13 @@ export function HadisKutusu({ oyun }) {
 // ---------------------------------------------------------------
 // 2. VİDEO KUTUSU (İleri sarma engelli)
 // ---------------------------------------------------------------
-export function VideoKutusu({ oyun }) {
-  const { durum } = oyun;
-  const video = (LEVEL_ICERIKLERI[durum.level] ?? LEVEL_ICERIKLERI[1]).video;
-  const gorev = oyun.gorevler.find((g) => g.kod === "video");
-  const toplamSn = video?.sureSn ?? 15;
+export function VideoKutusu({ oyun, gorevKodu = "video" }) {
+  const { aktifIcerik } = oyun;
+  const video = aktifIcerik?.video;
+  const gorev =
+    oyun.gorevler.find((g) => g.kod === gorevKodu) ??
+    oyun.gorevler.find((g) => g.tur === "video");
+  const toplamSn = Math.max(5, Number(video?.sureSn) || 15);
 
   const [oynuyor, setOynuyor] = useState(false);
   const [gecenSn, setGecenSn] = useState(0);
@@ -101,7 +102,6 @@ export function VideoKutusu({ oyun }) {
   const videoRef = useRef(null);
   const enYuksekSnRef = useRef(0);
 
-  // Yerleşik ders oynatıcısı sayacı (harici video dosyası olmadığında da ileri sarma engelli çalışır)
   useEffect(() => {
     if (!oynuyor || video?.url) return;
     const t = setInterval(() => {
@@ -119,7 +119,6 @@ export function VideoKutusu({ oyun }) {
   const bitti = (gorev && gorev.tamam) || gecenSn >= toplamSn;
   const oran = Math.min(100, Math.round((gecenSn / toplamSn) * 100));
 
-  // HTML5 <video> için ileri sarma engeli
   const zamanGuncellendi = () => {
     const el = videoRef.current;
     if (!el) return;
@@ -194,7 +193,7 @@ export function VideoKutusu({ oyun }) {
         <button
           type="button"
           disabled={oyun.bekliyor || gorev.tamam || !bitti}
-          onClick={() => oyun.gorevTamamla("video")}
+          onClick={() => oyun.gorevTamamla(gorev.kod)}
           className="w-full rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 py-3 text-sm font-black text-white shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
         >
           {gorev.tamam
@@ -211,10 +210,12 @@ export function VideoKutusu({ oyun }) {
 // ---------------------------------------------------------------
 // 3. AİLE OKUMASI KUTUSU (Otağ)
 // ---------------------------------------------------------------
-export function AileOkumasiKutusu({ oyun }) {
-  const { durum } = oyun;
-  const aile = (LEVEL_ICERIKLERI[durum.level] ?? LEVEL_ICERIKLERI[1]).aile;
-  const gorev = oyun.gorevler.find((g) => g.kod === "aile");
+export function AileOkumasiKutusu({ oyun, gorevKodu = "aile" }) {
+  const { durum, aktifIcerik } = oyun;
+  const aile = aktifIcerik?.aile;
+  const gorev =
+    oyun.gorevler.find((g) => g.kod === gorevKodu) ??
+    oyun.gorevler.find((g) => g.tur === "aile");
   const [onay, setOnay] = useState(false);
 
   return (
@@ -249,7 +250,7 @@ export function AileOkumasiKutusu({ oyun }) {
         <button
           type="button"
           disabled={oyun.bekliyor || gorev.tamam || !onay}
-          onClick={() => oyun.gorevTamamla("aile")}
+          onClick={() => oyun.gorevTamamla(gorev.kod)}
           className="w-full rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 text-sm font-black text-stone-900 shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
         >
           {gorev.tamam ? "✅ Aile Okuması Tamamlandı" : "🏠 Aile Okumasını Tamamla"}
@@ -267,7 +268,7 @@ export function NamazCetelesiKutusu({ oyun }) {
   const bugun = oyunGunu(simdi);
   const cetele = durum.bugunNamaz ?? {};
   const kilinan = NAMAZ_VAKITLERI.filter((v) => cetele[v.kod]).length;
-  const gorev = oyun.gorevler.find((g) => g.kod === "namaz");
+  const gorev = oyun.gorevler.find((g) => g.tur === "namaz" || g.kod === "namaz");
 
   return (
     <div className="space-y-3">
@@ -276,7 +277,9 @@ export function NamazCetelesiKutusu({ oyun }) {
           <span className="text-xs font-bold uppercase tracking-wider text-amber-300/80">
             🕌 Günlük Namaz Çetelesi
           </span>
-          <p className="text-xs text-amber-200/70">Tarih: {bugun} · Bugün {kilinan}/5 vakit</p>
+          <p className="text-xs text-amber-200/70">
+            Tarih: {bugun} · Bugün {kilinan}/5 vakit
+          </p>
         </div>
         {gorev && (
           <span className="rounded-full bg-emerald-500/20 px-2.5 py-1 text-xs font-bold text-emerald-200">
@@ -321,9 +324,9 @@ export function NamazCetelesiKutusu({ oyun }) {
 // 5. İLİM VE HADİS SINAVI KUTUSU (Medrese)
 // ---------------------------------------------------------------
 export function SinavKutusu({ oyun }) {
-  const { durum } = oyun;
-  const sorular = LEVEL_ICERIKLERI[durum.level]?.sinav ?? [];
-  const gorev = oyun.gorevler.find((g) => g.kod === "sinav");
+  const { durum, aktifIcerik } = oyun;
+  const sorular = aktifIcerik?.sinav ?? [];
+  const gorev = oyun.gorevler.find((g) => g.tur === "sinav" || g.kod === "sinav");
   const [cevaplar, setCevaplar] = useState({});
 
   if (!sorular.length) {
@@ -359,7 +362,7 @@ export function SinavKutusu({ oyun }) {
             {i + 1}. {s.soru}
           </p>
           <div className="space-y-1.5">
-            {s.secenekler.map((secenek, secIdx) => {
+            {(s.secenekler ?? []).map((secenek, secIdx) => {
               const secili = cevaplar[i] === secIdx;
               return (
                 <label
@@ -399,8 +402,8 @@ export function SinavKutusu({ oyun }) {
 // 6. SOSYAL MEYDAN KUTUSU (Gündem Paylaşımı & Yorumlar)
 // ---------------------------------------------------------------
 export function SosyalMeydanKutusu({ oyun }) {
-  const { durum } = oyun;
-  const gundemSorusu = (LEVEL_ICERIKLERI[durum.level] ?? LEVEL_ICERIKLERI[1]).gundemSorusu;
+  const { durum, aktifIcerik } = oyun;
+  const gundemSorusu = aktifIcerik?.gundemSorusu;
   const [paylasimlar, setPaylasimlar] = useState([]);
   const [yukleniyor, setYukleniyor] = useState(true);
   const [metin, setMetin] = useState("");
@@ -555,11 +558,12 @@ export function SosyalMeydanKutusu({ oyun }) {
 // ---------------------------------------------------------------
 // 7. SEYYAH SÜRPRİZ İYİLİK GÖREVİ KUTUSU
 // ---------------------------------------------------------------
-export function SeyyahKutusu({ oyun }) {
-  const { durum, simdi } = oyun;
-  const acik = durum.level >= 4;
-  const gununGorevi = gununSeyyahGorevi(simdi);
-  const gorev = oyun.gorevler.find((g) => g.kod === "seyyah");
+export function SeyyahKutusu({ oyun, gorevKodu = "seyyah" }) {
+  const { durum, aktifSeyyahGorevi } = oyun;
+  const gorev =
+    oyun.gorevler.find((g) => g.kod === gorevKodu) ??
+    oyun.gorevler.find((g) => g.tur === "seyyah");
+  const acik = durum.level >= 4 || !!gorev;
 
   return (
     <div className="space-y-3 text-center">
@@ -585,17 +589,17 @@ export function SeyyahKutusu({ oyun }) {
                 </span>
               )}
             </div>
-            <p className="mt-2 text-sm leading-relaxed text-amber-50">{gununGorevi}</p>
+            <p className="mt-2 text-sm leading-relaxed text-amber-50">{aktifSeyyahGorevi}</p>
           </div>
           {gorev && (
             <button
               type="button"
               disabled={oyun.bekliyor || gorev.tamam || gorev.bugunYapildi}
-              onClick={() => oyun.gorevTamamla("seyyah")}
+              onClick={() => oyun.gorevTamamla(gorev.kod)}
               className="w-full rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 text-sm font-black text-stone-900 shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
             >
               {gorev.tamam
-                ? "✅ Bu Leveldaki Seyyah Görevleri Tamamlandı"
+                ? "✅ Seyyah Görevleri Tamamlandı"
                 : gorev.bugunYapildi
                 ? "✅ Bugünkü İyilik Görevini Yaptın (Yarın Yeni Görev)"
                 : "🏇 Bugünkü İyilik Görevini Yaptım"}
@@ -608,7 +612,41 @@ export function SeyyahKutusu({ oyun }) {
 }
 
 // ---------------------------------------------------------------
-// 8. BİNA İÇİ TAM GÖRÜNÜMÜ
+// 8. YÖNETİCİ ÖZEL GÖREV / ETKİNLİK KUTUSU (tur: "onay")
+// ---------------------------------------------------------------
+export function OzelGorevKutusu({ gorev, oyun }) {
+  if (!gorev) return null;
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl bg-stone-950/75 p-4 ring-1 ring-amber-500/30">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-300">✨ Görev Detayı</span>
+          <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-bold text-amber-200">
+            {gorev.yapilan} / {gorev.hedef}
+          </span>
+        </div>
+        <h3 className="mt-1 text-base font-black text-amber-100">{gorev.ad}</h3>
+        {gorev.aciklama && <p className="mt-2 text-sm leading-relaxed text-amber-50/90">{gorev.aciklama}</p>}
+      </div>
+
+      <button
+        type="button"
+        disabled={oyun.bekliyor || gorev.tamam || gorev.bugunYapildi}
+        onClick={() => oyun.gorevTamamla(gorev.kod)}
+        className="w-full rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 text-sm font-black text-stone-900 shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
+      >
+        {gorev.tamam
+          ? "✅ Görev Tamamlandı"
+          : gorev.bugunYapildi
+          ? "✅ Bugünkü Adım Tamamlandı (Yarın Devam Et)"
+          : "✅ Görevi Yaptım (Kaydet)"}
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------
+// 9. BİNA İÇİ TAM GÖRÜNÜMÜ
 // ---------------------------------------------------------------
 export function BinaIciGorunumu({ binaId, oyun, baslangicSekme = null }) {
   const [sekme, setSekme] = useState(baslangicSekme);
@@ -678,19 +716,11 @@ export function BinaIciGorunumu({ binaId, oyun, baslangicSekme = null }) {
   }
 
   if (binaId === "takasmerkezi") {
-    return (
-      <p className="rounded-2xl bg-stone-950/70 p-4 text-center text-xs text-amber-200/80">
-        🏪 Takas Merkezi ve Birlik Kasası paylaşımı Faz 6 (Birlik Sistemi) ile aktif olacak.
-      </p>
-    );
+    return <BirlikPaneli oyun={oyun} varsayilanSekme="birlik" />;
   }
 
   if (binaId === "oyuncadiri") {
-    return (
-      <p className="rounded-2xl bg-stone-950/70 p-4 text-center text-xs text-amber-200/80">
-        🎪 Oyun Çadırı ve Alan Mücadelesi yarışmaları Faz 6 ile aktif olacak.
-      </p>
-    );
+    return <BirlikPaneli oyun={oyun} varsayilanSekme="fetih" />;
   }
 
   return null;

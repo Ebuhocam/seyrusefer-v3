@@ -1,18 +1,14 @@
 "use client";
 // =============================================================
 // OYUN DURUMU — sunucu API'sine bağlı
-// Durumun asıl sahibi sunucudur (D1). İstemci sadece gösterir ve eylem gönderir.
-// Üretim sayaçları ve günlük görevler sunucu saatine göre ilerletilir.
+// Durumun ve ayarların asıl sahibi sunucudur (D1).
 // =============================================================
 import { useCallback, useEffect, useState } from "react";
 import { BINALAR } from "./sabitler";
 import { biriken, binaDurumu, levelDurumu } from "./kurallar";
 import { gorevKontrol, levelAtlanabilirMi } from "./eylemler";
-import { levelGorevListesi, tumLevelGorevleriTamamMi } from "./gorevler";
+import { levelGorevListesi, levelIcerigi, gununSeyyahGorevi, tumLevelGorevleriTamamMi } from "./gorevler";
 
-/**
- * @param {{ kullanici, durum, sunucuSaati:number, gelistirici:boolean }} baslangic
- */
 export function useOyun(baslangic) {
   const [veri, setVeri] = useState(baslangic);
   const [saat, setSaat] = useState({ alindi: null, simdi: null });
@@ -33,7 +29,7 @@ export function useOyun(baslangic) {
     return () => clearTimeout(t);
   }, [mesaj]);
 
-  const { durum, sunucuSaati } = veri;
+  const { durum, sunucuSaati, ayarlar } = veri;
   const simdi = saat.alindi == null ? sunucuSaati : sunucuSaati + (saat.simdi - saat.alindi);
 
   const veriUygula = useCallback((j) => {
@@ -41,6 +37,7 @@ export function useOyun(baslangic) {
     setVeri((eski) => ({
       kullanici: j.kullanici ?? eski.kullanici,
       durum: j.durum ?? eski.durum,
+      ayarlar: j.ayarlar ?? eski.ayarlar,
       sunucuSaati: j.sunucuSaati ?? eski.sunucuSaati,
       gelistirici: j.gelistirici ?? eski.gelistirici,
     }));
@@ -79,7 +76,7 @@ export function useOyun(baslangic) {
   );
 
   const otag = durum.binalar.otag ?? 1;
-  const kontrolDurumu = gorevKontrol(durum);
+  const kontrolDurumu = gorevKontrol(durum, ayarlar);
 
   const bekleyen = (k) => (durum.sonToplama[k] != null ? biriken(k, durum.sonToplama[k], simdi, otag) : 0);
 
@@ -111,20 +108,25 @@ export function useOyun(baslangic) {
     window.location.href = "/giris";
   };
 
-  const gorevler = levelGorevListesi(durum.level, durum.gorevIlerlemesi, durum.gorevlerTamam, simdi);
-  const tumGorevlerTamam = tumLevelGorevleriTamamMi(durum.level, durum.gorevIlerlemesi, durum.gorevlerTamam);
+  const gorevler = levelGorevListesi(durum.level, durum.gorevIlerlemesi, durum.gorevlerTamam, simdi, ayarlar);
+  const tumGorevlerTamam = tumLevelGorevleriTamamMi(durum.level, durum.gorevIlerlemesi, durum.gorevlerTamam, ayarlar);
+  const aktifIcerik = levelIcerigi(durum.level, ayarlar);
+  const aktifSeyyahGorevi = gununSeyyahGorevi(simdi, ayarlar);
 
   return {
     hazir: true,
     kullanici: veri.kullanici,
     durum,
+    ayarlar,
+    aktifIcerik,
+    aktifSeyyahGorevi,
     simdi,
     bekliyor,
     mesaj,
     setMesaj,
     veriUygula,
-    level: levelDurumu(durum.level, durum.binalar),
-    levelAtlanabilir: levelAtlanabilirMi(durum),
+    level: levelDurumu(durum.level, durum.binalar, ayarlar?.levellar),
+    levelAtlanabilir: levelAtlanabilirMi(durum, ayarlar),
     levelAtla,
     gorevler,
     tumGorevlerTamam,
@@ -133,7 +135,7 @@ export function useOyun(baslangic) {
     sinavCevapla,
     bekleyen,
     topla,
-    binaBilgisi: (binaId) => binaDurumu(binaId, kontrolDurumu),
+    binaBilgisi: (binaId) => binaDurumu(binaId, kontrolDurumu, ayarlar?.binalar),
     yukselt,
     binaIdleri: Object.keys(BINALAR),
     gelistirici,

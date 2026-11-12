@@ -19,12 +19,16 @@ export async function POST(request) {
   const var_ = await d.prepare("SELECT 1 FROM kullanicilar WHERE kullanici_adi = ?").bind(kAdi).first();
   if (var_) return hata("Bu kullanıcı adı alınmış.", 409);
 
+  // İlk kayıt olan kullanıcı otomatik olarak 'admin' rolü alır
+  const sayac = await d.prepare("SELECT COUNT(*) AS adet FROM kullanicilar").first();
+  const rol = (sayac?.adet ?? 0) === 0 ? "admin" : "ogrenci";
+
   const kayit = await d
-    .prepare("INSERT INTO kullanicilar (kullanici_adi, sifre_hash, ad, olusturma) VALUES (?, ?, ?, ?) RETURNING id")
-    .bind(kAdi, await sifreOzetle(sifre), gorunenAd, Date.now())
+    .prepare("INSERT INTO kullanicilar (kullanici_adi, sifre_hash, ad, rol, olusturma) VALUES (?, ?, ?, ?, ?) RETURNING id")
+    .bind(kAdi, await sifreOzetle(sifre), gorunenAd, rol, Date.now())
     .first();
 
-  await durumGetir(kayit.id); // başlangıç köyünü oluştur
+  await durumGetir(kayit.id);
   await oturumAc(kayit.id);
-  return Response.json({ tamam: true });
+  return Response.json({ tamam: true, rol });
 }

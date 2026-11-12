@@ -6,10 +6,10 @@
 import { KAYNAKLAR, BINALAR, LEVELLAR } from "./sabitler";
 import { biriken, binaDurumu, kaynakAcikMi, levelDurumu } from "./kurallar";
 import {
-  LEVEL_GOREVLERI,
-  LEVEL_ICERIKLERI,
   NAMAZ_VAKITLERI,
   oyunGunu,
+  levelGorevTanimlari,
+  levelIcerigi,
   binaGorevleriTamamMi,
   tumLevelGorevleriTamamMi,
 } from "./gorevler";
@@ -26,8 +26,8 @@ export function baslangicDurumu(simdi) {
     binalar,
     envanter: Object.fromEntries(Object.keys(KAYNAKLAR).map((k) => [k, 0])),
     sonToplama: Object.fromEntries(Object.keys(KAYNAKLAR).map((k) => [k, null])),
-    gorevlerTamam: false, // Geliştirici override bayrağı
-    gorevIlerlemesi: {}, // { [gorevKodu]: { ilerleme:number, sonGun:string|null } }
+    gorevlerTamam: false,
+    gorevIlerlemesi: {},
     bugunNamaz: { ...BOS_NAMAZ },
     zamanKaydirma: 0,
   };
@@ -43,9 +43,9 @@ export function uretimiBaslat(d, simdi) {
   return { ...d, sonToplama };
 }
 
-export const gorevKontrol = (d) => ({
+export const gorevKontrol = (d, ayarlar = null) => ({
   ...d,
-  gorevlerTamam: (binaId) => binaGorevleriTamamMi(d.level, binaId, d.gorevIlerlemesi, d.gorevlerTamam),
+  gorevlerTamam: (binaId) => binaGorevleriTamamMi(d.level, binaId, d.gorevIlerlemesi, d.gorevlerTamam, ayarlar),
 });
 
 export function topla(d, kaynak, simdi) {
@@ -63,26 +63,26 @@ export function topla(d, kaynak, simdi) {
   };
 }
 
-export function yukselt(d, binaId) {
+export function yukselt(d, binaId, ayarlar = null) {
   if (!BINALAR[binaId]) return { hata: "Bilinmeyen bina" };
-  const b = binaDurumu(binaId, gorevKontrol(d));
+  const b = binaDurumu(binaId, gorevKontrol(d, ayarlar), ayarlar?.binalar);
   if (b.maks) return { hata: "Bina zaten en üst seviyede" };
   if (!b.levelYeterli) return { hata: `Level ${b.gerekenLevel} gerekli` };
   if (!b.gorevTamam) return { hata: "Bu binanın görev şartları henüz tamamlanmadı" };
   if (!b.kaynakYeterli) return { hata: "Kaynak yetersiz" };
   const envanter = { ...d.envanter };
-  for (const [k, m] of Object.entries(b.bedel)) envanter[k] -= m;
+  for (const [k, m] of Object.entries(b.bedel)) envanter[k] -= Number(m) || 0;
   return { durum: { ...d, envanter, binalar: { ...d.binalar, [binaId]: b.hedef } } };
 }
 
-export function levelAtlanabilirMi(d) {
-  const l = levelDurumu(d.level, d.binalar);
-  const gorevTamam = tumLevelGorevleriTamamMi(d.level, d.gorevIlerlemesi, d.gorevlerTamam);
+export function levelAtlanabilirMi(d, ayarlar = null) {
+  const l = levelDurumu(d.level, d.binalar, ayarlar?.levellar);
+  const gorevTamam = tumLevelGorevleriTamamMi(d.level, d.gorevIlerlemesi, d.gorevlerTamam, ayarlar);
   return !!l && l.binalarTamam && gorevTamam && d.level < LEVELLAR.length;
 }
 
-export function levelAtla(d, simdi) {
-  if (!levelAtlanabilirMi(d)) return { hata: "Level hedefleri tamamlanmadı" };
+export function levelAtla(d, simdi, ayarlar = null) {
+  if (!levelAtlanabilirMi(d, ayarlar)) return { hata: "Level hedefleri tamamlanmadı" };
   return {
     durum: uretimiBaslat(
       { ...d, level: d.level + 1, gorevlerTamam: false, gorevIlerlemesi: {} },
@@ -92,13 +92,20 @@ export function levelAtla(d, simdi) {
 }
 
 /**
- * Bir görevi 1 adım ilerletir (hadis, video, aile, seyyah, meydan_paylasim, meydan_yorum).
+ * Bir görevi 1 adım ilerletir (kod veya tür ile eşleşir).
  */
-export function gorevIlerlet(d, gorevKodu, simdi) {
-  const tanim = (LEVEL_GOREVLERI[d.level] ?? []).find((g) => g.kod === gorevKodu);
+export function gorevIlerlet(d, gorevKodu, simdi, ayarlar = null) {
+  const tanimlar = levelGorevTanimlari(d.level, ayarlar);
+  let tanim = tanimlar.find((g) => g.kod === gorevKodu);
+  if (!tanim) {
+    // Tür üzerinden henüz tamamlanmamış ilk görevi bul (örn. meydan_paylasim, hadis)
+    tanim =
+      tanimlar.find((g) => g.tur === gorevKodu && (d.gorevIlerlemesi?.[g.kod]?.ilerleme ?? 0) < g.hedef) ??
+      tanimlar.find((g) => g.tur === gorevKodu);
+  }
   if (!tanim) return { hata: "Bu levelda böyle bir görev yok" };
 
-  const mevcut = d.gorevIlerlemesi?.[gorevKodu] ?? { ilerleme: 0, sonGun: null };
+  const mevcut = d.gorevIlerlemesi?.[tanim.kod] ?? { ilerleme: 0, sonGun: null };
   if (mevcut.ilerleme >= tanim.hedef) return { hata: "Bu görev zaten tamamlandı" };
 
   const bugun = oyunGunu(simdi);
@@ -110,7 +117,7 @@ export function gorevIlerlet(d, gorevKodu, simdi) {
   return {
     durum: {
       ...d,
-      gorevIlerlemesi: { ...d.gorevIlerlemesi, [gorevKodu]: yeni },
+      gorevIlerlemesi: { ...d.gorevIlerlemesi, [tanim.kod]: yeni },
     },
     gorev: tanim,
   };
@@ -118,25 +125,26 @@ export function gorevIlerlet(d, gorevKodu, simdi) {
 
 /**
  * Günlük namaz çetelesini günceller.
- * 5 vakitten en az 5'i (tam gün) işaretlendiğinde o günün 'namaz' görev ilerlemesi otomatik kaydedilir.
+ * 5 vakit tamamlandığında o leveldaki namaz görevlerini otomatik 1 gün ilerletir.
  */
-export function namazGuncelle(d, vakit, deger, simdi) {
+export function namazGuncelle(d, vakit, deger, simdi, ayarlar = null) {
   if (!NAMAZ_VAKITLERI.some((v) => v.kod === vakit)) return { hata: "Geçersiz namaz vakti" };
   const bugunNamaz = { ...(d.bugunNamaz ?? BOS_NAMAZ), [vakit]: deger ? 1 : 0 };
   const kilinanSayisi = Object.values(bugunNamaz).reduce((a, b) => a + (b ? 1 : 0), 0);
 
   let yeniDurum = { ...d, bugunNamaz };
-  const namazGorevi = (LEVEL_GOREVLERI[d.level] ?? []).find((g) => g.kod === "namaz");
+  const tanimlar = levelGorevTanimlari(d.level, ayarlar);
+  const namazGorevi = tanimlar.find((g) => g.tur === "namaz" || g.kod === "namaz");
   const bugun = oyunGunu(simdi);
 
   if (namazGorevi && kilinanSayisi === 5) {
-    const mevcut = d.gorevIlerlemesi?.namaz ?? { ilerleme: 0, sonGun: null };
+    const mevcut = d.gorevIlerlemesi?.[namazGorevi.kod] ?? { ilerleme: 0, sonGun: null };
     if (mevcut.ilerleme < namazGorevi.hedef && mevcut.sonGun !== bugun) {
       yeniDurum = {
         ...yeniDurum,
         gorevIlerlemesi: {
           ...d.gorevIlerlemesi,
-          namaz: { ilerleme: mevcut.ilerleme + 1, sonGun: bugun },
+          [namazGorevi.kod]: { ilerleme: mevcut.ilerleme + 1, sonGun: bugun },
         },
       };
     }
@@ -148,17 +156,17 @@ export function namazGuncelle(d, vakit, deger, simdi) {
 /**
  * Medrese sınavını değerlendirir; tüm sorular doğruysa 'sinav' görevini tamamlar.
  */
-export function sinavDegerlendir(d, cevaplar, simdi) {
-  const sorular = LEVEL_ICERIKLERI[d.level]?.sinav ?? [];
+export function sinavDegerlendir(d, cevaplar, simdi, ayarlar = null) {
+  const sorular = levelIcerigi(d.level, ayarlar)?.sinav ?? [];
   if (!sorular.length) return { hata: "Bu levelda sınav bulunmuyor" };
   if (!Array.isArray(cevaplar) || cevaplar.length !== sorular.length) {
     return { hata: "Lütfen tüm soruları cevapla" };
   }
-  const yanlisIndeks = sorular.findIndex((s, i) => Number(cevaplar[i]) !== s.dogru);
+  const yanlisIndeks = sorular.findIndex((s, i) => Number(cevaplar[i]) !== Number(s.dogru));
   if (yanlisIndeks !== -1) {
     return { hata: `${yanlisIndeks + 1}. sorunun cevabı hatalı. Tekrar dene!` };
   }
-  return gorevIlerlet(d, "sinav", simdi);
+  return gorevIlerlet(d, "sinav", simdi, ayarlar);
 }
 
 // ---------- Geliştirici araçları (sadece geliştirme ortamı / admin) ----------

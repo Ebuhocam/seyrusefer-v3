@@ -1,7 +1,9 @@
 import { db } from "@/lib/sunucu/db";
 import { durumGetir, durumYaz, oyunSaati } from "@/lib/sunucu/oyunDeposu";
+import { oyunAyarlariniGetir, tesvikOdulunuKontrolEt } from "@/lib/sunucu/ayarlarDeposu";
 import { govde, hata, oturumZorunlu, oyunYaniti } from "@/lib/sunucu/api";
 import { gorevIlerlet } from "@/lib/oyun/eylemler";
+import { oyunGunu } from "@/lib/oyun/gorevler";
 
 async function paylasimlariGetir(level) {
   const d = await db();
@@ -43,7 +45,6 @@ async function paylasimlariGetir(level) {
   }));
 }
 
-/** Aktif levelın (veya ?level=N) meydan paylaşımlarını döner */
 export async function GET(request) {
   const { kullanici, yanit } = await oturumZorunlu();
   if (yanit) return yanit;
@@ -52,11 +53,6 @@ export async function GET(request) {
   return Response.json({ paylasimlar: await paylasimlariGetir(istenenLevel) });
 }
 
-/**
- * Gövde:
- *   { tur: 'paylasim', icerik }
- *   { tur: 'yorum', paylasimId, icerik }
- */
 export async function POST(request) {
   const { kullanici, yanit } = await oturumZorunlu();
   if (yanit) return yanit;
@@ -68,7 +64,7 @@ export async function POST(request) {
   }
 
   const d = await db();
-  let durum = await durumGetir(kullanici.id);
+  let [durum, ayarlar] = await Promise.all([durumGetir(kullanici.id), oyunAyarlariniGetir()]);
   const simdi = oyunSaati(durum);
 
   if (tur === "paylasim") {
@@ -77,10 +73,11 @@ export async function POST(request) {
       .bind(kullanici.id, durum.level, metin, Date.now())
       .run();
 
-    const ilerlet = gorevIlerlet(durum, "meydan_paylasim", simdi);
+    const ilerlet = gorevIlerlet(durum, "meydan_paylasim", simdi, ayarlar);
     if (ilerlet.durum) {
       durum = ilerlet.durum;
       await durumYaz(kullanici.id, durum);
+      await tesvikOdulunuKontrolEt(kullanici.id, oyunGunu(simdi));
     }
   } else if (tur === "yorum") {
     const p = await d.prepare("SELECT id FROM meydan_paylasimlari WHERE id = ?").bind(Number(paylasimId)).first();
@@ -91,16 +88,20 @@ export async function POST(request) {
       .bind(p.id, kullanici.id, metin, Date.now())
       .run();
 
-    const ilerlet = gorevIlerlet(durum, "meydan_yorum", simdi);
+    const ilerlet = gorevIlerlet(durum, "meydan_yorum", simdi, ayarlar);
     if (ilerlet.durum) {
       durum = ilerlet.durum;
       await durumYaz(kullanici.id, durum);
+      await tesvikOdulunuKontrolEt(kullanici.id, oyunGunu(simdi));
     }
   } else {
     return hata("Geçersiz işlem türü");
   }
 
-  return oyunYaniti(kullanici, durum, {
-    paylasimlar: await paylasimlariGetir(durum.level),
-  });
+  return oyunYaniti(
+    kullanici,
+    durum,
+    { paylasimlar: await paylasimlariGetir(durum.level) },
+    ayarlar
+  );
 }

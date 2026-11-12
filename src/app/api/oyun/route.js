@@ -1,7 +1,9 @@
 import { db } from "@/lib/sunucu/db";
 import { gelistiriciIzni } from "@/lib/sunucu/oturum";
 import { durumGetir, durumOku, durumYaz, oyunSaati } from "@/lib/sunucu/oyunDeposu";
+import { oyunAyarlariniGetir, tesvikOdulunuKontrolEt } from "@/lib/sunucu/ayarlarDeposu";
 import { govde, hata, oturumZorunlu, oyunYaniti } from "@/lib/sunucu/api";
+import { oyunGunu } from "@/lib/oyun/gorevler";
 import {
   topla,
   yukselt,
@@ -19,22 +21,12 @@ export async function GET() {
   return oyunYaniti(kullanici, await durumGetir(kullanici.id));
 }
 
-/**
- * Oyun eylemi. Gövde: { eylem, ... }
- *   topla          { kaynak }
- *   yukselt        { binaId }
- *   levelAtla      {}
- *   gorevTamamla   { gorevKodu }            (hadis, video, aile, seyyah)
- *   namazIsaretle  { vakit, deger }
- *   sinavCevapla   { cevaplar:number[] }
- *   gelistirici    { islem, ...parametreler }
- */
 export async function POST(request) {
   const { kullanici, yanit } = await oturumZorunlu();
   if (yanit) return yanit;
 
   const g = await govde(request);
-  const durum = await durumGetir(kullanici.id);
+  const [durum, ayarlar] = await Promise.all([durumGetir(kullanici.id), oyunAyarlariniGetir()]);
   const simdi = oyunSaati(durum);
   let sonuc;
 
@@ -43,22 +35,19 @@ export async function POST(request) {
       sonuc = topla(durum, g.kaynak, simdi);
       break;
     case "yukselt":
-      sonuc = yukselt(durum, g.binaId);
+      sonuc = yukselt(durum, g.binaId, ayarlar);
       break;
     case "levelAtla":
-      sonuc = levelAtla(durum, simdi);
+      sonuc = levelAtla(durum, simdi, ayarlar);
       break;
     case "gorevTamamla":
-      if (!["hadis", "video", "aile", "seyyah"].includes(g.gorevKodu)) {
-        return hata("Bu görev buradan tamamlanamaz");
-      }
-      sonuc = gorevIlerlet(durum, g.gorevKodu, simdi);
+      sonuc = gorevIlerlet(durum, String(g.gorevKodu ?? ""), simdi, ayarlar);
       break;
     case "namazIsaretle":
-      sonuc = namazGuncelle(durum, g.vakit, g.deger, simdi);
+      sonuc = namazGuncelle(durum, g.vakit, g.deger, simdi, ayarlar);
       break;
     case "sinavCevapla":
-      sonuc = sinavDegerlendir(durum, g.cevaplar, simdi);
+      sonuc = sinavDegerlendir(durum, g.cevaplar, simdi, ayarlar);
       break;
     case "gelistirici": {
       if (!gelistiriciIzni(kullanici)) return hata("Yetkisiz", 403);
@@ -80,8 +69,12 @@ export async function POST(request) {
 
   if (sonuc.hata) return Response.json({ hata: sonuc.hata }, { status: 409 });
   await durumYaz(kullanici.id, sonuc.durum);
-  // Zaman veya level değiştiyse yeni günün namaz/görev kayıtlarını veritabanından taze oku
+
+  if (["gorevTamamla", "namazIsaretle", "sinavCevapla"].includes(g.eylem)) {
+    await tesvikOdulunuKontrolEt(kullanici.id, oyunGunu(simdi));
+  }
+
   const guncel =
     g.eylem === "levelAtla" || g.eylem === "gelistirici" ? await durumOku(kullanici.id) : sonuc.durum;
-  return oyunYaniti(kullanici, guncel, sonuc.miktar ? { miktar: sonuc.miktar } : {});
+  return oyunYaniti(kullanici, guncel, sonuc.miktar ? { miktar: sonuc.miktar } : {}, ayarlar);
 }

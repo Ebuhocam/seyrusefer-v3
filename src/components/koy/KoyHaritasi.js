@@ -99,7 +99,11 @@ export default function KoyHaritasi({ baslangic }) {
         </div>
       </div>
 
-      <UstBar oyun={oyun} onLevelTikla={() => setSecim({ tur: "nokta", id: "pano" })} />
+      <UstBar
+        oyun={oyun}
+        onLevelTikla={() => setSecim({ tur: "nokta", id: "pano" })}
+        onBirlikTikla={() => setSecim({ tur: "birlik", sekme: "birlik" })}
+      />
 
       {oyun.mesaj && (
         <div

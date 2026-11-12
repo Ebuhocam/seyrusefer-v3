@@ -1,6 +1,7 @@
 import "server-only";
 import { aktifKullanici, gelistiriciIzni } from "./oturum";
 import { oyunSaati } from "./oyunDeposu";
+import { oyunAyarlariniGetir } from "./ayarlarDeposu";
 
 export const hata = (mesaj, status = 400) => Response.json({ hata: mesaj }, { status });
 
@@ -20,11 +21,14 @@ export async function oturumZorunlu() {
 }
 
 /** İstemciye giden standart oyun yanıtı */
-export const oyunYaniti = (kullanici, durum, ek = {}) =>
-  Response.json({
-    kullanici: { ad: kullanici.ad, kullaniciAdi: kullanici.kullanici_adi, rol: kullanici.rol },
+export async function oyunYaniti(kullanici, durum, ek = {}, hazirAyarlar = null) {
+  const ayarlar = hazirAyarlar ?? (await oyunAyarlariniGetir());
+  return Response.json({
+    kullanici: { id: kullanici.id, ad: kullanici.ad, kullaniciAdi: kullanici.kullanici_adi, rol: kullanici.rol },
     durum,
+    ayarlar,
     sunucuSaati: oyunSaati(durum),
     gelistirici: gelistiriciIzni(kullanici),
     ...ek,
   });
+}

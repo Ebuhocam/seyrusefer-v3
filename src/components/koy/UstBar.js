@@ -1,25 +1,53 @@
 "use client";
-import { KAYNAKLAR } from "@/lib/oyun/sabitler";
+import Link from "next/link";
+import { KAYNAKLAR, BIRLIK_ACILIS_LEVEL } from "@/lib/oyun/sabitler";
 import { kaynakAcikMi } from "@/lib/oyun/kurallar";
 
-export default function UstBar({ oyun, onLevelTikla }) {
+export default function UstBar({ oyun, onLevelTikla, onBirlikTikla }) {
   const { durum, level, kullanici } = oyun;
+  const birlikAcik = durum.level >= BIRLIK_ACILIS_LEVEL;
+  const yoneticiMi = !!oyun.gelistirici || kullanici?.rol === "admin";
+
   return (
     <header className="pointer-events-none fixed inset-x-0 top-0 z-[250] flex items-start justify-between gap-1.5 p-2 sm:p-3">
-      <button
-        onClick={onLevelTikla}
-        className="pointer-events-auto flex min-w-0 shrink items-center gap-1.5 rounded-2xl bg-stone-900/85 py-1 pl-1 pr-2.5 text-left shadow-xl ring-1 ring-amber-500/50 backdrop-blur sm:gap-2 sm:py-1.5 sm:pl-1.5 sm:pr-3"
-      >
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 font-black text-stone-900 sm:h-10 sm:w-10 sm:text-lg">
-          {durum.level}
-        </span>
-        <span className="min-w-0 leading-tight">
-          <span className="block truncate text-[9px] uppercase tracking-wider text-amber-300/80 sm:text-[10px]">
-            {kullanici ? `${kullanici.ad} · Lv.${durum.level}` : `Level ${durum.level} Gündemi`}
+      <div className="pointer-events-auto flex min-w-0 items-center gap-1.5">
+        <button
+          onClick={onLevelTikla}
+          className="flex min-w-0 shrink items-center gap-1.5 rounded-2xl bg-stone-900/85 py-1 pl-1 pr-2.5 text-left shadow-xl ring-1 ring-amber-500/50 backdrop-blur sm:gap-2 sm:py-1.5 sm:pl-1.5 sm:pr-3"
+        >
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 font-black text-stone-900 sm:h-10 sm:w-10 sm:text-lg">
+            {durum.level}
           </span>
-          <span className="block truncate text-xs font-bold text-amber-50 sm:text-sm">{level.gundem}</span>
-        </span>
-      </button>
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate text-[9px] uppercase tracking-wider text-amber-300/80 sm:text-[10px]">
+              {kullanici ? `${kullanici.ad} · Lv.${durum.level}` : `Level ${durum.level} Gündemi`}
+            </span>
+            <span className="block truncate text-xs font-bold text-amber-50 sm:text-sm">{level.gundem}</span>
+          </span>
+        </button>
+
+        <button
+          onClick={onBirlikTikla}
+          title={birlikAcik ? "Birlik ve Alan Mücadelesi" : `Level ${BIRLIK_ACILIS_LEVEL}'te açılır`}
+          className={`flex items-center gap-1 rounded-2xl bg-stone-900/85 px-2.5 py-2 text-xs font-black shadow-xl ring-1 ring-amber-500/50 backdrop-blur ${
+            birlikAcik ? "text-amber-100 hover:bg-stone-800" : "text-stone-400 opacity-75"
+          }`}
+        >
+          <span>🤝</span>
+          <span className="hidden sm:inline">Birlik</span>
+        </button>
+
+        {yoneticiMi && (
+          <Link
+            href="/admin"
+            title="Admin Level Tasarım Merkezi"
+            className="flex items-center gap-1 rounded-2xl bg-stone-900/85 px-2.5 py-2 text-xs font-black text-lime-300 shadow-xl ring-1 ring-lime-500/50 backdrop-blur hover:bg-stone-800"
+          >
+            <span>⚙️</span>
+            <span className="hidden sm:inline">Yönetim</span>
+          </Link>
+        )}
+      </div>
 
       <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-2xl bg-stone-900/85 p-1 shadow-xl ring-1 ring-amber-500/50 backdrop-blur sm:gap-1.5 sm:p-1.5">
         {Object.entries(KAYNAKLAR).map(([k, t]) => {
