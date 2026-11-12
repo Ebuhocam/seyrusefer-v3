@@ -7,17 +7,24 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "gorseller": "node scripts/gorsel-optimize.mjs"
+    "gorseller": "node scripts/gorsel-optimize.mjs",
+    "db:yerel": "wrangler d1 migrations apply seyrusefer-v3-db --local",
+    "db:uzak": "wrangler d1 migrations apply seyrusefer-v3-db --remote",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.19.11",
     "next": "16.2.12",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "wrangler": "^4.160.1"
   }
 }

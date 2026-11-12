@@ -3,7 +3,7 @@ import { KAYNAKLAR } from "@/lib/oyun/sabitler";
 import { kaynakAcikMi } from "@/lib/oyun/kurallar";
 
 export default function UstBar({ oyun, onLevelTikla }) {
-  const { durum, level } = oyun;
+  const { durum, level, kullanici } = oyun;
   return (
     <header className="pointer-events-none fixed inset-x-0 top-0 z-[250] flex items-start justify-between gap-1.5 p-2 sm:p-3">
       <button
@@ -14,12 +14,14 @@ export default function UstBar({ oyun, onLevelTikla }) {
           {durum.level}
         </span>
         <span className="min-w-0 leading-tight">
-          <span className="block text-[9px] uppercase tracking-wider text-amber-300/80 sm:text-[10px]">Level {durum.level} Gündemi</span>
+          <span className="block truncate text-[9px] uppercase tracking-wider text-amber-300/80 sm:text-[10px]">
+            {kullanici ? `${kullanici.ad} · Lv.${durum.level}` : `Level ${durum.level} Gündemi`}
+          </span>
           <span className="block truncate text-xs font-bold text-amber-50 sm:text-sm">{level.gundem}</span>
         </span>
       </button>
 
-      <div className="pointer-events-auto flex shrink-0 gap-1 rounded-2xl bg-stone-900/85 p-1 shadow-xl ring-1 ring-amber-500/50 backdrop-blur sm:gap-1.5 sm:p-1.5">
+      <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-2xl bg-stone-900/85 p-1 shadow-xl ring-1 ring-amber-500/50 backdrop-blur sm:gap-1.5 sm:p-1.5">
         {Object.entries(KAYNAKLAR).map(([k, t]) => {
           const acik = kaynakAcikMi(k, durum.level);
           return (
@@ -29,6 +31,15 @@ export default function UstBar({ oyun, onLevelTikla }) {
             </div>
           );
         })}
+        {oyun.cikis && (
+          <button
+            onClick={oyun.cikis}
+            title="Çıkış yap"
+            className="rounded-xl bg-stone-800 px-2 py-1 text-xs font-bold text-stone-300 hover:bg-stone-700 hover:text-white"
+          >
+            ⏻
+          </button>
+        )}
       </div>
     </header>
   );

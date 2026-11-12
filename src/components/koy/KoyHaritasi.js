@@ -2,15 +2,15 @@
 import { useEffect, useRef, useState } from "react";
 import { ARSALAR, NOKTALAR, BINALAR, KAYNAKLAR } from "@/lib/oyun/sabitler";
 import { depoKapasitesi, kaynakAcikMi } from "@/lib/oyun/kurallar";
-import { useSahteOyun } from "@/lib/oyun/useSahteOyun";
+import { useOyun } from "@/lib/oyun/useOyun";
 import UstBar from "./UstBar";
 import Panel from "./Panel";
 import GelistiriciPaneli from "./GelistiriciPaneli";
 
 const HARITA_ORAN = 1710 / 920;
 
-export default function KoyHaritasi() {
-  const oyun = useSahteOyun();
+export default function KoyHaritasi({ baslangic }) {
+  const oyun = useOyun(baslangic);
   const kaydirRef = useRef(null);
   const [secim, setSecim] = useState(null); // { tur: 'bina'|'nokta', id }
   const [duzenle, setDuzenle] = useState(false);
@@ -101,9 +101,19 @@ export default function KoyHaritasi() {
 
       <UstBar oyun={oyun} onLevelTikla={() => setSecim({ tur: "nokta", id: "pano" })} />
 
+      {oyun.mesaj && (
+        <div
+          className={`fixed top-16 left-1/2 -translate-x-1/2 z-[450] rounded-full px-4 py-1.5 text-xs font-bold shadow-xl ${
+            oyun.mesaj.tur === "hata" ? "bg-red-700 text-white" : "bg-emerald-600 text-white"
+          }`}
+        >
+          {oyun.mesaj.metin}
+        </div>
+      )}
+
       {secim && <Panel secim={secim} oyun={oyun} kapat={() => setSecim(null)} />}
 
-      <GelistiriciPaneli oyun={oyun} duzenle={duzenle} setDuzenle={setDuzenle} />
+      {oyun.gelistirici && <GelistiriciPaneli oyun={oyun} duzenle={duzenle} setDuzenle={setDuzenle} />}
 
       {duzenle && koordinat && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[300] rounded-lg bg-black/85 px-4 py-2 font-mono text-sm text-lime-300">
