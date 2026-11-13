@@ -2,9 +2,11 @@ import { db } from "@/lib/sunucu/db";
 import { durumGetir, durumYaz, oyunSaati } from "@/lib/sunucu/oyunDeposu";
 import { oyunAyarlariniGetir } from "@/lib/sunucu/ayarlarDeposu";
 import { govde, hata, oturumZorunlu, oyunYaniti } from "@/lib/sunucu/api";
-import { BIRLIK_ACILIS_LEVEL, ALAN_MUCADELESI_LEVEL, BOLGELER, KAYNAKLAR } from "@/lib/oyun/sabitler";
+import { BIRLIK_ACILIS_LEVEL, ALAN_MUCADELESI_LEVEL, BIRLIK_BINALARI, BOLGELER } from "@/lib/oyun/sabitler";
 import { bedelKontrol } from "@/lib/oyun/kurallar";
 import { oyunGunu } from "@/lib/oyun/gorevler";
+
+const BAGIS_KAYNAKLARI = new Set(["erzak", "kereste", "tas"]);
 
 async function birlikDurumuGetir(kullaniciId, bugun) {
   const d = await db();
@@ -60,22 +62,24 @@ async function birlikDurumuGetir(kullaniciId, bugun) {
     return { birlik: null, acikBirlikler: acikBirlikler.results ?? [], bolgeler };
   }
 
-  const [uyeler, gonderilenTesvikler, gelenTesvikler] = await d.batch([
+  const [uyeler, gonderilenTesvikler, gelenTesvikler, binalarSor, mesajlarSor] = await d.batch([
     d
       .prepare(
         `SELECT k.id, k.ad, k.kullanici_adi, COALESCE(od.level, 1) AS level,
                 u.bagis_toplam, u.katki_puani,
+                COALESCE(nc.sabah + nc.ogle + nc.ikindi + nc.aksam + nc.yatsi, 0) AS bugun_namaz,
                 EXISTS(
                   SELECT 1 FROM gorev_ilerlemesi gi
                    WHERE gi.kullanici_id = k.id AND gi.son_gun = ?2
                   UNION
-                  SELECT 1 FROM namaz_cetelesi nc
-                   WHERE nc.kullanici_id = k.id AND nc.tarih = ?2
-                     AND (nc.sabah + nc.ogle + nc.ikindi + nc.aksam + nc.yatsi) > 0
+                  SELECT 1 FROM namaz_cetelesi nc2
+                   WHERE nc2.kullanici_id = k.id AND nc2.tarih = ?2
+                     AND (nc2.sabah + nc2.ogle + nc2.ikindi + nc2.aksam + nc2.yatsi) > 0
                 ) AS bugun_aktif
            FROM birlik_uyeleri u
            JOIN kullanicilar k ON k.id = u.kullanici_id
            LEFT JOIN oyuncu_durumu od ON od.kullanici_id = k.id
+           LEFT JOIN namaz_cetelesi nc ON nc.kullanici_id = k.id AND nc.tarih = ?2
           WHERE u.birlik_id = ?1
           ORDER BY u.katki_puani DESC, u.bagis_toplam DESC`
       )
@@ -91,6 +95,17 @@ async function birlikDurumuGetir(kullaniciId, bugun) {
           WHERE t.alici_id = ? AND t.gun = ?`
       )
       .bind(kullaniciId, bugun),
+    d.prepare("SELECT bina_id, seviye FROM birlik_binalari WHERE birlik_id = ?").bind(uyelik.id),
+    d
+      .prepare(
+        `SELECT m.id, m.kullanici_id, m.mesaj, m.olusturma, k.ad AS yazar_ad
+           FROM birlik_mesajlari m
+           JOIN kullanicilar k ON k.id = m.kullanici_id
+          WHERE m.birlik_id = ?
+          ORDER BY m.olusturma DESC
+          LIMIT 40`
+      )
+      .bind(uyelik.id),
   ]);
 
   const tesvikEdilenler = new Set((gonderilenTesvikler.results ?? []).map((t) => t.alici_id));
@@ -101,12 +116,19 @@ async function birlikDurumuGetir(kullaniciId, bugun) {
     level: u.level,
     bagisToplam: u.bagis_toplam,
     katkiPuani: u.katki_puani,
+    bugunNamaz: u.bugun_namaz ?? 0,
     bugunAktif: !!u.bugun_aktif,
     bugunTesvikEdildi: tesvikEdilenler.has(u.id),
   }));
 
+  const binalar = Object.fromEntries(Object.keys(BIRLIK_BINALARI).map((k) => [k, 1]));
+  for (const b of binalarSor.results ?? []) {
+    binalar[b.bina_id] = b.seviye;
+  }
+
   const aktifSayisi = uyeListesi.filter((u) => u.bugunAktif).length;
   const disiplinOrani = uyeListesi.length ? Math.round((aktifSayisi / uyeListesi.length) * 100) : 0;
+  const namazToplam = uyeListesi.reduce((t, u) => t + (u.bugunNamaz || 0), 0);
 
   return {
     birlik: {
@@ -116,6 +138,9 @@ async function birlikDurumuGetir(kullaniciId, bugun) {
       renk: uyelik.renk,
       liderId: uyelik.lider_id,
       kasa: { erzak: uyelik.erzak, kereste: uyelik.kereste, tas: uyelik.tas },
+      binalar,
+      mesajlar: (mesajlarSor.results ?? []).reverse(),
+      namazToplam,
       disiplinOrani,
       uyeler: uyeListesi,
       gelenTesvikler: gelenTesvikler.results ?? [],
@@ -201,7 +226,7 @@ export async function POST(request) {
   } else if (g.eylem === "bagis") {
     const kaynak = g.kaynak;
     const miktar = Math.floor(Number(g.miktar) || 0);
-    if (!KAYNAKLAR[kaynak] || miktar <= 0) return hata("Geçerli bir kaynak ve miktar girin.");
+    if (!BAGIS_KAYNAKLARI.has(kaynak) || miktar <= 0) return hata("Geçerli bir kaynak (Mahsul, Tahta, Taş) ve miktar girin.");
     if ((durum.envanter[kaynak] ?? 0) < miktar) return hata("Envanterinde yeterli kaynak yok.");
 
     const uyelik = await d
@@ -222,6 +247,52 @@ export async function POST(request) {
           "UPDATE birlik_uyeleri SET bagis_toplam = bagis_toplam + ?1, katki_puani = katki_puani + ?2 WHERE kullanici_id = ?3"
         )
         .bind(miktar, Math.max(1, Math.floor(miktar / 10)), kullanici.id),
+    ]);
+  } else if (g.eylem === "mesajYaz") {
+    const mesaj = String(g.mesaj ?? "").trim();
+    if (mesaj.length < 2 || mesaj.length > 280) return hata("Mesaj 2-280 karakter olmalı.");
+
+    const uyelik = await d
+      .prepare("SELECT birlik_id FROM birlik_uyeleri WHERE kullanici_id = ?")
+      .bind(kullanici.id)
+      .first();
+    if (!uyelik) return hata("Önce bir birliğe katılmalısın.");
+
+    await d.batch([
+      d
+        .prepare("INSERT INTO birlik_mesajlari (birlik_id, kullanici_id, mesaj, olusturma) VALUES (?, ?, ?, ?)")
+        .bind(uyelik.birlik_id, kullanici.id, mesaj, Date.now()),
+      d.prepare("UPDATE birlik_uyeleri SET katki_puani = katki_puani + 2 WHERE kullanici_id = ?").bind(kullanici.id),
+    ]);
+  } else if (g.eylem === "binaYukselt") {
+    const binaId = g.binaId;
+    const tanim = BIRLIK_BINALARI[binaId];
+    if (!tanim) return hata("Geçersiz birlik binası.");
+
+    const veri = await birlikDurumuGetir(kullanici.id, bugun);
+    if (!veri.birlik) return hata("Önce bir birliğe katılmalısın.");
+
+    const mevcutSeviye = veri.birlik.binalar?.[binaId] ?? 1;
+    if (mevcutSeviye >= tanim.maksSeviye) return hata("Bu birlik binası zaten en üst seviyede.");
+
+    const hedefSeviye = mevcutSeviye + 1;
+    const bedel = tanim.bedel?.[hedefSeviye] ?? {};
+    const kontrol = bedelKontrol(bedel, veri.birlik.kasa);
+    if (!kontrol.yeterli) {
+      return hata("Birlik kasasında (ortak vergi sandığında) bu yükseltme için yeterli kaynak yok.");
+    }
+
+    await d.batch([
+      d
+        .prepare("UPDATE birlikler SET erzak = erzak - ?, kereste = kereste - ?, tas = tas - ? WHERE id = ?")
+        .bind(bedel.erzak ?? 0, bedel.kereste ?? 0, bedel.tas ?? 0, veri.birlik.id),
+      d
+        .prepare(
+          `INSERT INTO birlik_binalari (birlik_id, bina_id, seviye) VALUES (?1, ?2, ?3)
+           ON CONFLICT(birlik_id, bina_id) DO UPDATE SET seviye = ?3`
+        )
+        .bind(veri.birlik.id, binaId, hedefSeviye),
+      d.prepare("UPDATE birlik_uyeleri SET katki_puani = katki_puani + 20 WHERE kullanici_id = ?").bind(kullanici.id),
     ]);
   } else if (g.eylem === "tesvik") {
     const aliciId = Number(g.aliciId);

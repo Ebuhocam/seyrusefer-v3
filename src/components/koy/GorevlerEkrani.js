@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { NAMAZ_VAKITLERI, oyunGunu } from "@/lib/oyun/gorevler";
+import { koyDavalariListesi, turkuHikayeleriListesi, gocmenDurumu } from "@/lib/oyun/hikayeler";
 import { BirlikPaneli } from "./BirlikVeFetihEkrani";
 
 // ---------------------------------------------------------------
@@ -222,7 +223,7 @@ export function AileOkumasiKutusu({ oyun, gorevKodu = "aile" }) {
     <div className="space-y-3">
       <div className="rounded-2xl bg-stone-950/75 p-4 ring-1 ring-amber-500/30">
         <span className="text-xs font-bold uppercase tracking-wider text-amber-300/80">
-          🏠 Otağ Aile Okuması · Level {durum.level}
+          ✉️ Haberci&apos;nin Getirdiği Aile Mektubu · Level {durum.level}
         </span>
         <h3 className="mt-1 text-base font-black text-amber-100">{aile?.baslik}</h3>
         <p className="mt-2 text-sm leading-relaxed text-amber-50/95">{aile?.metin}</p>
@@ -556,63 +557,464 @@ export function SosyalMeydanKutusu({ oyun }) {
 }
 
 // ---------------------------------------------------------------
-// 7. SEYYAH SÜRPRİZ İYİLİK GÖREVİ KUTUSU
+// 7. HABERCİ: AİLE MEKTUBU & SÜRPRİZ İYİLİK GÖREVİ KUTUSU
 // ---------------------------------------------------------------
 export function SeyyahKutusu({ oyun, gorevKodu = "seyyah" }) {
-  const { durum, aktifSeyyahGorevi } = oyun;
+  const { aktifSeyyahGorevi } = oyun;
   const gorev =
     oyun.gorevler.find((g) => g.kod === gorevKodu) ??
     oyun.gorevler.find((g) => g.tur === "seyyah");
-  const acik = durum.level >= 4 || !!gorev;
 
   return (
     <div className="space-y-3 text-center">
       <img
         src="/assets/binalar/seyyaherkek.webp"
-        alt="Seyyah"
-        className={`mx-auto h-32 object-contain ${acik ? "" : "grayscale opacity-50"}`}
+        alt="Haberci"
+        className="mx-auto h-28 object-contain"
       />
-      {!acik ? (
-        <p className="rounded-xl bg-stone-900/70 p-3 text-xs text-amber-200/80">
-          🔒 Seyyah Level 4&apos;te köyüne uğrayacak ve her gün sürpriz bir iyilik görevi getirecek.
-        </p>
-      ) : (
-        <>
-          <div className="rounded-2xl bg-stone-950/75 p-4 text-left ring-1 ring-amber-500/30">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                🏇 Günün Seyyah Görevi
-              </span>
-              {gorev && (
-                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-200">
-                  {gorev.yapilan} / {gorev.hedef}
-                </span>
-              )}
-            </div>
-            <p className="mt-2 text-sm leading-relaxed text-amber-50">{aktifSeyyahGorevi}</p>
-          </div>
+      <div className="rounded-2xl bg-stone-950/75 p-4 text-left ring-1 ring-amber-500/30">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
+            🏇 Günün Haberci İyilik Görevi
+          </span>
           {gorev && (
-            <button
-              type="button"
-              disabled={oyun.bekliyor || gorev.tamam || gorev.bugunYapildi}
-              onClick={() => oyun.gorevTamamla(gorev.kod)}
-              className="w-full rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 text-sm font-black text-stone-900 shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
-            >
-              {gorev.tamam
-                ? "✅ Seyyah Görevleri Tamamlandı"
-                : gorev.bugunYapildi
-                ? "✅ Bugünkü İyilik Görevini Yaptın (Yarın Yeni Görev)"
-                : "🏇 Bugünkü İyilik Görevini Yaptım"}
-            </button>
+            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-200">
+              {gorev.yapilan} / {gorev.hedef}
+            </span>
           )}
-        </>
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-amber-50">{aktifSeyyahGorevi}</p>
+      </div>
+      {gorev && (
+        <button
+          type="button"
+          disabled={oyun.bekliyor || gorev.tamam || gorev.bugunYapildi}
+          onClick={() => oyun.gorevTamamla(gorev.kod)}
+          className="w-full rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 text-sm font-black text-stone-900 shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
+        >
+          {gorev.tamam
+            ? "✅ Haberci Görevleri Tamamlandı"
+            : gorev.bugunYapildi
+            ? "✅ Bugünkü İyilik Görevini Yaptın (Yarın Yeni Görev)"
+            : "🏇 Bugünkü İyilik Görevini Yaptım"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function HaberciKutusu({ oyun, varsayilanSekme = "mektup" }) {
+  const [sekme, setSekme] = useState(varsayilanSekme);
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 rounded-xl bg-stone-950/70 p-1 text-xs font-bold">
+        <button
+          type="button"
+          onClick={() => setSekme("mektup")}
+          className={`rounded-lg py-2 ${sekme === "mektup" ? "bg-amber-500 text-stone-900" : "text-amber-200/70"}`}
+        >
+          ✉️ Aile Mektubu
+        </button>
+        <button
+          type="button"
+          onClick={() => setSekme("iyilik")}
+          className={`rounded-lg py-2 ${sekme === "iyilik" ? "bg-amber-500 text-stone-900" : "text-amber-200/70"}`}
+        >
+          🏇 Günün İyiliği
+        </button>
+      </div>
+      {sekme === "mektup" ? <AileOkumasiKutusu oyun={oyun} /> : <SeyyahKutusu oyun={oyun} />}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------
+// 8. OBA: KÖY YÖNETİCİSİ HALK DAVALARI (SORUN ÇÖZME) KUTUSU
+// ---------------------------------------------------------------
+export function ObaDavaKutusu({ oyun }) {
+  const { durum, ayarlar } = oyun;
+  const davalar = koyDavalariListesi(ayarlar);
+  const cozulenler = Array.isArray(durum.cozulenDavalar) ? durum.cozulenDavalar : [];
+  const mutluluk = durum.mutluluk ?? 60;
+  const gorev = oyun.gorevler.find((g) => g.tur === "dava" || g.kod === "dava");
+
+  // Önce bu level veya altındaki çözülmemiş ilk davayı seç
+  const varsayilanIndeks = Math.max(
+    0,
+    davalar.findIndex((d) => !cozulenler.includes(d.id))
+  );
+  const [seciliIdx, setSeciliIdx] = useState(varsayilanIndeks);
+  const [sonCozum, setSonCozum] = useState(null);
+
+  const dava = davalar[seciliIdx] ?? davalar[0];
+  const buCozuldu = dava && cozulenler.includes(dava.id);
+
+  const kararVer = async (secenekIndeks) => {
+    if (!dava) return;
+    const sonuc = await oyun.davaCoz(dava.id, secenekIndeks);
+    if (sonuc) setSonCozum(sonuc);
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Köy Huzur / Mutluluk Durumu */}
+      <div className="rounded-2xl bg-stone-950/80 p-3.5 ring-1 ring-amber-500/30">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-bold text-amber-200">
+            ⚖️ Oba Divanı · Köy Huzuru ve Mutluluğu
+          </span>
+          <span className="font-black text-emerald-300">%{mutluluk}</span>
+        </div>
+        <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-stone-800">
+          <div
+            className={`h-full transition-all ${
+              mutluluk >= 70 ? "bg-emerald-500" : mutluluk >= 40 ? "bg-amber-400" : "bg-red-500"
+            }`}
+            style={{ width: `${mutluluk}%` }}
+          />
+        </div>
+        <p className="mt-1.5 text-[11px] text-amber-200/75">
+          Köyün yöneticisi sensin! Ahali arasındaki anlaşmazlıkları hikmetle çözersen mutluluk (+4 / +2) artar; sert veya adaletsiz kararlarda ise düşer. Mutlu köye Kıraathane&apos;den daha çok <b>👥 İnsan</b> yerleşir!
+        </p>
+      </div>
+
+      {/* Dava Seçici */}
+      <div className="flex flex-wrap gap-1.5">
+        {davalar.map((d, i) => {
+          const cozuldu = cozulenler.includes(d.id);
+          return (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => {
+                setSeciliIdx(i);
+                setSonCozum(null);
+              }}
+              className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                seciliIdx === i
+                  ? "bg-amber-400 text-stone-900"
+                  : cozuldu
+                  ? "bg-emerald-900/60 text-emerald-200 ring-1 ring-emerald-500/40"
+                  : "bg-stone-800 text-stone-300"
+              }`}
+            >
+              {cozuldu ? "✅ " : "⚖️ "}Dava {i + 1}
+            </button>
+          );
+        })}
+      </div>
+
+      {dava && (
+        <div className="space-y-3 rounded-2xl bg-stone-950/75 p-4 ring-1 ring-stone-700">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                👥 {dava.kisi}
+              </span>
+              <h3 className="text-base font-black text-amber-100">{dava.baslik}</h3>
+            </div>
+            {gorev && (
+              <span className="shrink-0 rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-bold text-amber-200">
+                Görev: {gorev.yapilan}/{gorev.hedef}
+              </span>
+            )}
+          </div>
+
+          <p className="text-sm leading-relaxed text-amber-50/95">{dava.hikaye}</p>
+
+          {sonCozum && sonCozum.davaId === dava.id && (
+            <div
+              className={`rounded-xl p-3 text-xs font-semibold ring-1 ${
+                sonCozum.mutlulukDegisimi >= 0
+                  ? "bg-emerald-950/80 text-emerald-100 ring-emerald-400/50"
+                  : "bg-red-950/80 text-red-100 ring-red-400/50"
+              }`}
+            >
+              <b>
+                {sonCozum.mutlulukDegisimi >= 0
+                  ? `🌟 +${sonCozum.mutlulukDegisimi} Mutluluk!`
+                  : `⚠️ ${sonCozum.mutlulukDegisimi} Mutluluk:`}
+              </b>{" "}
+              {sonCozum.aciklama}
+            </div>
+          )}
+
+          {buCozuldu ? (
+            <p className="rounded-xl bg-emerald-900/30 p-3 text-center text-xs font-bold text-emerald-200 ring-1 ring-emerald-500/30">
+              ✅ Bu meseleyi karara bağladın. Yukarıdan diğer davalara göz atabilirsin.
+            </p>
+          ) : (
+            <div className="space-y-2 pt-1">
+              <p className="text-xs font-bold text-amber-300">Hükmün nedir yönetici?</p>
+              {(dava.secenekler ?? []).map((s, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  disabled={oyun.bekliyor}
+                  onClick={() => kararVer(idx)}
+                  className="w-full rounded-xl bg-stone-900/90 p-3 text-left text-xs leading-relaxed text-amber-50 ring-1 ring-stone-700 transition hover:bg-amber-500/20 hover:ring-amber-400"
+                >
+                  <b className="mr-1.5 text-amber-400">{idx + 1}.</b>
+                  {s.metin}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------
-// 8. YÖNETİCİ ÖZEL GÖREV / ETKİNLİK KUTUSU (tur: "onay")
+// 9. KIRAATHANE: OZAN DEDE (TÜRKÜ HİKÂYESİ) & YOLCULAR (İNSAN TOPLA)
+// ---------------------------------------------------------------
+export function KiraathaneKutusu({ oyun, varsayilanSekme = "ozan" }) {
+  const { durum, ayarlar, simdi } = oyun;
+  const [sekme, setSekme] = useState(varsayilanSekme); // 'ozan' | 'yolcular'
+  const turkuler = turkuHikayeleriListesi(ayarlar);
+  const [seciliIdx, setSeciliIdx] = useState(0);
+  const [konusuyor, setKonusuyor] = useState(false);
+  const [agizAcik, setAgizAcik] = useState(false);
+  const [dinlendi, setDinlendi] = useState(false);
+  const sesRef = useRef(null);
+
+  const turku = turkuler[seciliIdx] ?? turkuler[0];
+  const gorev = oyun.gorevler.find((g) => g.tur === "turku" || g.kod === "turku");
+  const gocmen = gocmenDurumu(simdi, durum.sonGocmenKontrol);
+  const mutluluk = durum.mutluluk ?? 60;
+  const olasilik = Math.min(95, Math.max(15, mutluluk));
+
+  // Ozan Dede konuşurken ağzını açıp kapat (lip-sync)
+  useEffect(() => {
+    if (!konusuyor) return;
+    const t = setInterval(() => setAgizAcik((a) => !a), 190);
+    return () => {
+      clearInterval(t);
+      setAgizAcik(false);
+    };
+  }, [konusuyor]);
+
+  // Sekme veya türkü değiştiğinde sesi durdur
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [seciliIdx, sekme]);
+
+  const ozaniBaslatDurdur = () => {
+    if (!turku) return;
+    if (konusuyor) {
+      if (sesRef.current) sesRef.current.pause();
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      setKonusuyor(false);
+      setDinlendi(true);
+      return;
+    }
+
+    setDinlendi(true);
+    if (turku.sesUrl && sesRef.current) {
+      sesRef.current.currentTime = 0;
+      sesRef.current.play().catch(() => {});
+      setKonusuyor(true);
+      return;
+    }
+
+    // Ses dosyası girilmemişse tarayıcı Türkçe seslendirme + 10 sn ağız animasyonu
+    setKonusuyor(true);
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(`${turku.turkuAdi}. ${turku.anlatim}`);
+      u.lang = "tr-TR";
+      u.rate = 0.95;
+      u.onend = () => setKonusuyor(false);
+      u.onerror = () => setKonusuyor(false);
+      window.speechSynthesis.speak(u);
+    } else {
+      setTimeout(() => setKonusuyor(false), 8000);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 rounded-xl bg-stone-950/70 p-1 text-xs font-bold">
+        <button
+          type="button"
+          onClick={() => setSekme("ozan")}
+          className={`rounded-lg py-2 ${sekme === "ozan" ? "bg-amber-500 text-stone-900" : "text-amber-200/70"}`}
+        >
+          🎵 Ozan Dede (Türküler)
+        </button>
+        <button
+          type="button"
+          onClick={() => setSekme("yolcular")}
+          className={`rounded-lg py-2 ${sekme === "yolcular" ? "bg-amber-500 text-stone-900" : "text-amber-200/70"}`}
+        >
+          👥 Yolcular (İnsan Topla)
+        </button>
+      </div>
+
+      {sekme === "ozan" ? (
+        <div className="space-y-3">
+          {turkuler.length > 1 && (
+            <div className="flex flex-wrap gap-1.5">
+              {turkuler.map((t, i) => (
+                <button
+                  key={t.id ?? i}
+                  type="button"
+                  onClick={() => {
+                    setKonusuyor(false);
+                    setSeciliIdx(i);
+                  }}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-bold ${
+                    seciliIdx === i ? "bg-amber-400 text-stone-900" : "bg-stone-800 text-stone-300"
+                  }`}
+                >
+                  🎵 Türkü {i + 1}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {turku && (
+            <div className="rounded-2xl bg-stone-950/80 p-4 ring-1 ring-amber-500/30">
+              <div className="flex flex-col items-center gap-3 sm:flex-row">
+                <div className="relative shrink-0">
+                  <img
+                    src={agizAcik ? "/assets/binalar/ozan_acik.webp" : "/assets/binalar/ozan_kapali.webp"}
+                    alt="Ozan Dede"
+                    className={`h-28 w-28 rounded-2xl object-cover ring-2 ${
+                      konusuyor ? "ring-amber-400 shadow-lg shadow-amber-500/20" : "ring-stone-700"
+                    }`}
+                  />
+                  {konusuyor && (
+                    <span className="absolute -top-2 -right-2 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black text-stone-950 animate-pulse">
+                      🎶 Anlatıyor…
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex-1 text-center sm:text-left">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                    🎵 {turku.turkuAdi}
+                  </span>
+                  <h3 className="text-base font-black text-amber-100">{turku.baslik}</h3>
+                  <button
+                    type="button"
+                    onClick={ozaniBaslatDurdur}
+                    className={`mt-2 inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-black shadow ${
+                      konusuyor
+                        ? "bg-red-600 text-white"
+                        : "bg-gradient-to-b from-amber-400 to-amber-600 text-stone-900"
+                    }`}
+                  >
+                    {konusuyor ? "⏹ Anlatımı Durdur" : "🔊 Ozan Dede'den Dinle"}
+                  </button>
+                </div>
+              </div>
+
+              {turku.sesUrl && (
+                <audio
+                  ref={sesRef}
+                  src={turku.sesUrl}
+                  onEnded={() => setKonusuyor(false)}
+                  onPause={() => setKonusuyor(false)}
+                  onPlay={() => setKonusuyor(true)}
+                  controls
+                  className="mt-3 h-9 w-full"
+                />
+              )}
+
+              <p className="mt-3 rounded-xl bg-stone-900/90 p-3 text-sm leading-relaxed text-amber-50/95">
+                “{turku.anlatim}”
+              </p>
+
+              {turku.odev && (
+                <div className="mt-3 rounded-xl bg-amber-500/15 p-3 text-xs text-amber-100 ring-1 ring-amber-400/30">
+                  <b className="block text-amber-300">📜 Ozan Dede&apos;nin Gönül Ödevi:</b>
+                  {turku.odev}
+                </div>
+              )}
+            </div>
+          )}
+
+          {gorev && (
+            <button
+              type="button"
+              disabled={oyun.bekliyor || gorev.tamam || (!dinlendi && !gorev.tamam)}
+              onClick={() => oyun.gorevTamamla(gorev.kod)}
+              className="w-full rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 py-3 text-sm font-black text-white shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
+            >
+              {gorev.tamam
+                ? "✅ Ozan Dede Görevi Tamamlandı"
+                : dinlendi
+                ? "🎵 Türkünün Hikâyesini Dinledim ve Ödevimi Aldım"
+                : "🔒 Önce 'Ozan Dede'den Dinle' Butonuna Bas"}
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="rounded-2xl bg-stone-950/80 p-4 ring-1 ring-amber-500/30">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-amber-200">👥 Köy Nüfusu (İnsan Kaynağı):</span>
+              <span className="text-sm font-black text-amber-100">👥 {durum.envanter.insan ?? 5} İnsan</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between text-xs">
+              <span className="text-amber-200/80">😊 Köy Mutluluğuna Göre Kabul Şansı:</span>
+              <span className="font-black text-emerald-300">%{olasilik}</span>
+            </div>
+            <p className="mt-2 text-[11px] text-amber-200/70">
+              İnsan da Mahsul, Tahta ve Taş gibi temel bir kaynaktır; binaları inşa etmek ve yükseltmek için köyünde yeterli insan (ahali) bulunmalıdır.
+            </p>
+          </div>
+
+          {gocmen.hazir ? (
+            <div className="rounded-2xl bg-stone-950/80 p-4 ring-1 ring-emerald-500/40">
+              <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
+                🍵 Kıraathane&apos;de Misafir Var!
+              </span>
+              <h3 className="mt-2 text-base font-black text-amber-100">{gocmen.aday.ad}</h3>
+              <p className="text-xs font-bold text-amber-300/80">
+                Meslek: {gocmen.aday.meslek} · Aile/Ekip: +{gocmen.aday.kisiSayisi} 👥 İnsan
+              </p>
+              <p className="mt-2 rounded-xl bg-stone-900 p-3 text-xs italic text-amber-50">
+                “{gocmen.aday.soz}”
+              </p>
+              <button
+                type="button"
+                disabled={oyun.bekliyor}
+                onClick={() => oyun.gocmenTeklifEt()}
+                className="mt-3 w-full rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 text-sm font-black text-stone-900 shadow-lg"
+              >
+                🏡 Köyümüze Ev Kurmayı Teklif Et (+{gocmen.aday.kisiSayisi} 👥 İnsan · %{olasilik} Şans)
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-stone-950/70 p-4 text-center ring-1 ring-stone-800">
+              <div className="text-2xl">⏳</div>
+              <h4 className="mt-1 text-sm font-black text-amber-100">Şu An Kıraathane&apos;de Yeni Yolcu Yok</h4>
+              <p className="mt-1 text-xs text-amber-200/75">
+                Yeni yolcular her 2 saatte bir Kıraathane&apos;ye uğrayıp çay içerler. Yaklaşık{" "}
+                <b>{gocmen.kalanDakika} dakika</b> sonra tekrar bakabilirsin!
+              </p>
+              <p className="mt-2 text-[11px] text-amber-300/70">
+                💡 Bu sırada <b>Oba</b>&apos;ya gidip halkın davalarını hikmetle çözerek köy mutluluğunu artırabilirsin.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------
+// 10. YÖNETİCİ ÖZEL GÖREV / ETKİNLİK KUTUSU (tur: "onay")
 // ---------------------------------------------------------------
 export function OzelGorevKutusu({ gorev, oyun }) {
   if (!gorev) return null;
@@ -646,7 +1048,7 @@ export function OzelGorevKutusu({ gorev, oyun }) {
 }
 
 // ---------------------------------------------------------------
-// 9. BİNA İÇİ TAM GÖRÜNÜMÜ
+// 11. BİNA İÇİ TAM GÖRÜNÜMÜ
 // ---------------------------------------------------------------
 export function BinaIciGorunumu({ binaId, oyun, baslangicSekme = null }) {
   const [sekme, setSekme] = useState(baslangicSekme);
@@ -659,7 +1061,7 @@ export function BinaIciGorunumu({ binaId, oyun, baslangicSekme = null }) {
     );
   }
 
-  if (binaId === "medrese") {
+  if (binaId === "mektep" || binaId === "medrese") {
     const aktif = sekme ?? "hadis";
     return (
       <div className="space-y-3">
@@ -693,6 +1095,10 @@ export function BinaIciGorunumu({ binaId, oyun, baslangicSekme = null }) {
     );
   }
 
+  if (binaId === "kiraathane") {
+    return <KiraathaneKutusu oyun={oyun} varsayilanSekme={baslangicSekme ?? "ozan"} />;
+  }
+
   if (binaId === "otag") {
     const mezun = oyun.durum.level === 10 && (oyun.durum.binalar.otag ?? 1) >= 4 && oyun.tumGorevlerTamam;
     return (
@@ -706,7 +1112,7 @@ export function BinaIciGorunumu({ binaId, oyun, baslangicSekme = null }) {
             </p>
           </div>
         )}
-        <AileOkumasiKutusu oyun={oyun} />
+        <ObaDavaKutusu oyun={oyun} />
       </div>
     );
   }

@@ -11,6 +11,8 @@ import {
   gorevIlerlet,
   namazGuncelle,
   sinavDegerlendir,
+  davaCoz,
+  gocmenTeklifEt,
   gelistiriciEylemleri,
 } from "@/lib/oyun/eylemler";
 
@@ -49,6 +51,12 @@ export async function POST(request) {
     case "sinavCevapla":
       sonuc = sinavDegerlendir(durum, g.cevaplar, simdi, ayarlar);
       break;
+    case "davaCoz":
+      sonuc = davaCoz(durum, g.davaId, g.secenekIndeks, simdi, ayarlar);
+      break;
+    case "gocmenTeklifEt":
+      sonuc = gocmenTeklifEt(durum, simdi);
+      break;
     case "gelistirici": {
       if (!gelistiriciIzni(kullanici)) return hata("Yetkisiz", 403);
       const islem = Object.hasOwn(gelistiriciEylemleri, g.islem) ? gelistiriciEylemleri[g.islem] : null;
@@ -68,13 +76,16 @@ export async function POST(request) {
   }
 
   if (sonuc.hata) return Response.json({ hata: sonuc.hata }, { status: 409 });
-  await durumYaz(kullanici.id, sonuc.durum);
+  await durumYaz(kullanici.id, sonuc.durum, simdi, ayarlar);
 
-  if (["gorevTamamla", "namazIsaretle", "sinavCevapla"].includes(g.eylem)) {
+  if (["gorevTamamla", "namazIsaretle", "sinavCevapla", "davaCoz"].includes(g.eylem)) {
     await tesvikOdulunuKontrolEt(kullanici.id, oyunGunu(simdi));
   }
 
   const guncel =
     g.eylem === "levelAtla" || g.eylem === "gelistirici" ? await durumOku(kullanici.id) : sonuc.durum;
-  return oyunYaniti(kullanici, guncel, sonuc.miktar ? { miktar: sonuc.miktar } : {}, ayarlar);
+  const ek = {};
+  if (sonuc.miktar) ek.miktar = sonuc.miktar;
+  if (sonuc.sonuc) ek.sonuc = sonuc.sonuc;
+  return oyunYaniti(kullanici, guncel, ek, ayarlar);
 }

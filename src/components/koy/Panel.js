@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { BINALAR, KAYNAKLAR, NOKTALAR, DEPO_SAAT, BIRLIK_ACILIS_LEVEL, LEVELLAR } from "@/lib/oyun/sabitler";
+import { BINALAR, BIRLIK_BINALARI, KAYNAKLAR, NOKTALAR, DEPO_SAAT, BIRLIK_ACILIS_LEVEL, LEVELLAR } from "@/lib/oyun/sabitler";
 import { depoKapasitesi, kaynakAcikMi } from "@/lib/oyun/kurallar";
 import { GOREV_TURLERI } from "@/lib/oyun/gorevler";
 import {
@@ -11,6 +11,9 @@ import {
   SinavKutusu,
   SosyalMeydanKutusu,
   SeyyahKutusu,
+  HaberciKutusu,
+  ObaDavaKutusu,
+  KiraathaneKutusu,
   OzelGorevKutusu,
   BinaIciGorunumu,
 } from "./GorevlerEkrani";
@@ -29,10 +32,17 @@ export default function Panel({ secim, oyun, kapat }) {
         {secim.tur === "bina" && <BinaIcerik id={secim.id} oyun={oyun} />}
         {secim.tur === "nokta" && secim.id === "pano" && <PanoIcerik oyun={oyun} kapat={kapat} />}
         {secim.tur === "nokta" && NOKTALAR[secim.id]?.kaynak && <KaynakIcerik id={secim.id} oyun={oyun} />}
-        {secim.tur === "nokta" && secim.id === "seyyah" && (
+        {secim.tur === "nokta" && (secim.id === "haberci" || secim.id === "seyyah") && (
           <>
-            <h2 className="mb-2 text-xl font-black">🏇 Seyyah</h2>
-            <SeyyahKutusu oyun={oyun} />
+            <h2 className="mb-2 text-xl font-black">🏇 Haberci</h2>
+            <HaberciKutusu oyun={oyun} />
+          </>
+        )}
+        {secim.tur === "birlikBina" && <BirlikBinaIcerik id={secim.id} oyun={oyun} />}
+        {secim.tur === "bolge" && (
+          <>
+            <h2 className="mb-3 text-xl font-black">🗺️ Genel Sancak Haritası</h2>
+            <BirlikPaneli oyun={oyun} varsayilanSekme="fetih" seciliBolgeId={secim.id} />
           </>
         )}
         {secim.tur === "birlik" && (
@@ -42,6 +52,39 @@ export default function Panel({ secim, oyun, kapat }) {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function BirlikBinaIcerik({ id, oyun }) {
+  const tanim = BIRLIK_BINALARI[id];
+  if (!tanim) return null;
+
+  if (id === "cami") {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-black">🕌 {tanim.ad}</h2>
+        <NamazCetelesiKutusu oyun={oyun} />
+        <BirlikPaneli oyun={oyun} varsayilanSekme="birlik" binaId="cami" />
+      </div>
+    );
+  }
+
+  if (id === "medrese") {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-black">📚 {tanim.ad}</h2>
+        <BinaIciGorunumu binaId="medrese" oyun={oyun} />
+        <BirlikPaneli oyun={oyun} varsayilanSekme="birlik" binaId="medrese" />
+      </div>
+    );
+  }
+
+  const varsayilanSekme = id === "otag" ? "sohbet" : id === "oyuncadiri" ? "fetih" : "birlik";
+  return (
+    <div className="space-y-3">
+      <h2 className="text-xl font-black">🏕️ {tanim.ad}</h2>
+      <BirlikPaneli oyun={oyun} varsayilanSekme={varsayilanSekme} binaId={id} />
     </div>
   );
 }
@@ -75,6 +118,8 @@ function GorevEkrani({ gorevKodu, oyun, geri }) {
       {tur === "aile" && <AileOkumasiKutusu oyun={oyun} gorevKodu={gorevKodu} />}
       {tur === "namaz" && <NamazCetelesiKutusu oyun={oyun} />}
       {tur === "sinav" && <SinavKutusu oyun={oyun} />}
+      {tur === "turku" && <KiraathaneKutusu oyun={oyun} varsayilanSekme="ozan" />}
+      {tur === "dava" && <ObaDavaKutusu oyun={oyun} />}
       {(tur === "meydan_paylasim" || tur === "meydan_yorum") && <SosyalMeydanKutusu oyun={oyun} />}
       {tur === "seyyah" && <SeyyahKutusu oyun={oyun} gorevKodu={gorevKodu} />}
       {tur === "onay" && <OzelGorevKutusu gorev={gorev} oyun={oyun} />}
@@ -293,7 +338,7 @@ function PanoIcerik({ oyun, kapat }) {
         }}
         className="mt-4 w-full rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 font-black text-stone-900 shadow-lg disabled:from-stone-600 disabled:to-stone-700 disabled:text-stone-400"
       >
-        {sonLevel ? "🎓 Son Level (Mezuniyet için Otağ'a gir)" : `⭐ Level ${durum.level + 1}'e Geç`}
+        {sonLevel ? "🎓 Son Level (Mezuniyet için Oba'ya gir)" : `⭐ Level ${durum.level + 1}'e Geç`}
       </button>
     </>
   );
@@ -331,7 +376,7 @@ function KaynakIcerik({ id, oyun }) {
             <div className={`h-full ${doluluk >= 100 ? "bg-red-500" : "bg-amber-400"}`} style={{ width: `${doluluk}%` }} />
           </div>
           <p className="mt-2 text-xs text-amber-200/60">
-            Depo {DEPO_SAAT[durum.binalar.otag]} saatlik üretim alır (Otağ Lv.{durum.binalar.otag}). Dolunca üretim durur — her gün toplamayı unutma!
+            Depo {DEPO_SAAT[durum.binalar.otag]} saatlik üretim alır (Oba Lv.{durum.binalar.otag}). Dolunca üretim durur — her gün toplamayı unutma!
           </p>
           <button
             disabled={!bekleyen || oyun.bekliyor}

@@ -4,6 +4,7 @@ import { oyunAyarlariniGetir, levelAyariniKaydet, genelAyarlariKaydet } from "@/
 import { govde, hata, oturumZorunlu } from "@/lib/sunucu/api";
 import { BINALAR, LEVELLAR } from "@/lib/oyun/sabitler";
 import { LEVEL_GOREVLERI, LEVEL_ICERIKLERI, SEYYAH_GOREVLERI } from "@/lib/oyun/gorevler";
+import { KOY_DAVALARI, TURKU_HIKAYELERI } from "@/lib/oyun/hikayeler";
 
 /** Varsayılanlarla birleştirilmiş tam yönetim verisini döner */
 async function tamYonetimVerisi() {
@@ -48,6 +49,16 @@ async function tamYonetimVerisi() {
       ? kayitli.seyyahGorevleri
       : SEYYAH_GOREVLERI;
 
+  const turkuler =
+    Array.isArray(kayitli.turkuler) && kayitli.turkuler.length > 0
+      ? kayitli.turkuler
+      : TURKU_HIKAYELERI;
+
+  const davalar =
+    Array.isArray(kayitli.davalar) && kayitli.davalar.length > 0
+      ? kayitli.davalar
+      : KOY_DAVALARI;
+
   const d = await db();
   const kullanicilar = await d
     .prepare(
@@ -64,6 +75,8 @@ async function tamYonetimVerisi() {
     levellar,
     binalar,
     seyyahGorevleri,
+    turkuler,
+    davalar,
     kullanicilar: kullanicilar.results ?? [],
   };
 }
@@ -110,6 +123,8 @@ export async function POST(request) {
       seyyahGorevleri: (Array.isArray(g.seyyahGorevleri) ? g.seyyahGorevleri : [])
         .map((s) => String(s).trim())
         .filter(Boolean),
+      turkuler: Array.isArray(g.turkuler) ? g.turkuler : TURKU_HIKAYELERI,
+      davalar: Array.isArray(g.davalar) ? g.davalar : KOY_DAVALARI,
     });
   } else if (g.islem === "kullaniciGuncelle") {
     const hedefId = Number(g.kullaniciId);

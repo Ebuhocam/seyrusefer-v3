@@ -12,7 +12,11 @@ export const oyunSaati = (durum) => Date.now() + (durum?.zamanKaydirma ?? 0);
 export async function durumOku(kullaniciId) {
   const d = await db();
   const [oyuncu, binalar, kaynaklar] = await d.batch([
-    d.prepare("SELECT level, gorevler_tamam, zaman_kaydirma FROM oyuncu_durumu WHERE kullanici_id = ?").bind(kullaniciId),
+    d
+      .prepare(
+        "SELECT level, gorevler_tamam, zaman_kaydirma, mutluluk, insan, cozulen_davalar, son_gocmen_kontrol FROM oyuncu_durumu WHERE kullanici_id = ?"
+      )
+      .bind(kullaniciId),
     d.prepare("SELECT bina_id, seviye FROM binalar WHERE kullanici_id = ?").bind(kullaniciId),
     d.prepare("SELECT kaynak, envanter, son_toplama FROM kaynaklar WHERE kullanici_id = ?").bind(kullaniciId),
   ]);
@@ -32,12 +36,25 @@ export async function durumOku(kullaniciId) {
   ]);
 
   const n = namaz.results[0];
+  const envanter = Object.fromEntries(kaynaklar.results.map((k) => [k.kaynak, k.envanter]));
+  if (envanter.insan == null) envanter.insan = o.insan ?? 5;
+
+  let cozulenDavalar = [];
+  try {
+    cozulenDavalar = JSON.parse(o.cozulen_davalar || "[]");
+  } catch {
+    cozulenDavalar = [];
+  }
+
   return {
     level: o.level,
     gorevlerTamam: !!o.gorevler_tamam,
     zamanKaydirma: o.zaman_kaydirma,
+    mutluluk: o.mutluluk ?? 60,
+    cozulenDavalar: Array.isArray(cozulenDavalar) ? cozulenDavalar : [],
+    sonGocmenKontrol: o.son_gocmen_kontrol ?? 0,
     binalar: Object.fromEntries(binalar.results.map((b) => [b.bina_id, b.seviye])),
-    envanter: Object.fromEntries(kaynaklar.results.map((k) => [k.kaynak, k.envanter])),
+    envanter,
     sonToplama: Object.fromEntries(kaynaklar.results.map((k) => [k.kaynak, k.son_toplama])),
     gorevIlerlemesi: Object.fromEntries(
       gorevler.results.map((g) => [g.gorev_kodu, { ilerleme: g.ilerleme, sonGun: g.son_gun }])
@@ -56,15 +73,31 @@ export async function durumYaz(kullaniciId, durum, islemSaati = null, ayarlar = 
   const bugun = oyunGunu(simdi);
   const tanimlar = Object.fromEntries(levelGorevTanimlari(durum.level, ayarlar).map((t) => [t.kod, t]));
   const n = durum.bugunNamaz ?? BOS_NAMAZ;
+  const mutluluk = Math.min(100, Math.max(0, Number(durum.mutluluk ?? 60)));
+  const insanSayisi = Math.max(0, Number(durum.envanter?.insan ?? 5));
+  const cozulenJson = JSON.stringify(Array.isArray(durum.cozulenDavalar) ? durum.cozulenDavalar : []);
+  const sonGocmen = Number(durum.sonGocmenKontrol || 0);
 
   const ifadeler = [
     d
       .prepare(
-        `INSERT INTO oyuncu_durumu (kullanici_id, level, gorevler_tamam, zaman_kaydirma, guncelleme)
-         VALUES (?1, ?2, ?3, ?4, ?5)
-         ON CONFLICT(kullanici_id) DO UPDATE SET level = ?2, gorevler_tamam = ?3, zaman_kaydirma = ?4, guncelleme = ?5`
+        `INSERT INTO oyuncu_durumu (kullanici_id, level, gorevler_tamam, zaman_kaydirma, mutluluk, insan, cozulen_davalar, son_gocmen_kontrol, guncelleme)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+         ON CONFLICT(kullanici_id) DO UPDATE SET
+           level = ?2, gorevler_tamam = ?3, zaman_kaydirma = ?4,
+           mutluluk = ?5, insan = ?6, cozulen_davalar = ?7, son_gocmen_kontrol = ?8, guncelleme = ?9`
       )
-      .bind(kullaniciId, durum.level, durum.gorevlerTamam ? 1 : 0, durum.zamanKaydirma, gercekSimdi),
+      .bind(
+        kullaniciId,
+        durum.level,
+        durum.gorevlerTamam ? 1 : 0,
+        durum.zamanKaydirma,
+        mutluluk,
+        insanSayisi,
+        cozulenJson,
+        sonGocmen,
+        gercekSimdi
+      ),
     d.prepare("DELETE FROM binalar WHERE kullanici_id = ?").bind(kullaniciId),
     ...Object.entries(durum.binalar).map(([id, seviye]) =>
       d.prepare("INSERT INTO binalar (kullanici_id, bina_id, seviye) VALUES (?, ?, ?)").bind(kullaniciId, id, seviye)

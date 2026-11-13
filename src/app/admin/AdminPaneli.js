@@ -120,7 +120,7 @@ export default function AdminPaneli() {
         <div className="flex flex-wrap gap-2 rounded-2xl bg-stone-900 p-1.5 ring-1 ring-stone-800">
           {[
             { kod: "levellar", ad: "📜 Level & Görev Tasarım Merkezi (1-10)" },
-            { kod: "binalar", ad: "🏛️ Bina Bedelleri & Seyyah Görevleri" },
+            { kod: "binalar", ad: "🏛️ Binalar, Ozan Dede & Haberci" },
             { kod: "kullanicilar", ad: `👥 Öğrenciler & Roller (${veri.kullanicilar.length})` },
           ].map((s) => (
             <button
@@ -629,22 +629,28 @@ export default function AdminPaneli() {
           </div>
         )}
 
-        {/* SEKME 2: BİNA KAYNAK BEDELLERİ & SEYYAH */}
+        {/* SEKME 2: BİNA KAYNAK BEDELLERİ, OZAN DEDE & HABERCİ */}
         {anaSekme === "binalar" && (
           <div className="space-y-6">
             <section className="rounded-3xl bg-stone-900/90 p-5 ring-1 ring-stone-800 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-black text-amber-300">🏛️ Bina Açılış Levelları ve Kaynak Bedelleri</h2>
-                  <p className="text-xs text-amber-200/70">Her bina seviyesinin açılış levelı ve Erzak / Kereste / Taş bedeli</p>
+                  <h2 className="text-base font-black text-amber-300">🏛️ Köy Binaları Açılış Levelları ve 4 Kaynak Bedeli</h2>
+                  <p className="text-xs text-amber-200/70">Her bina seviyesinin açılış levelı ve Mahsul / Tahta / Taş / İnsan bedeli</p>
                 </div>
                 <button
                   type="button"
                   disabled={kaydediyor}
                   onClick={() =>
                     gonder(
-                      { islem: "genelKaydet", binalar: veri.binalar, seyyahGorevleri: veri.seyyahGorevleri },
-                      "Bina bedelleri ve Seyyah görevleri kaydedildi!"
+                      {
+                        islem: "genelKaydet",
+                        binalar: veri.binalar,
+                        seyyahGorevleri: veri.seyyahGorevleri,
+                        turkuler: veri.turkuler,
+                        davalar: veri.davalar,
+                      },
+                      "Bina bedelleri, Ozan Dede türküleri ve Haberci görevleri kaydedildi!"
                     )
                   }
                   className="rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 px-4 py-2 text-xs font-black text-white shadow-lg"
@@ -663,7 +669,7 @@ export default function AdminPaneli() {
                         const bedel = b.bedel?.[seviye] ?? {};
                         const acilis = b.acilis?.[seviye] ?? 1;
                         return (
-                          <div key={seviye} className="grid grid-cols-5 gap-2 items-center text-xs">
+                          <div key={seviye} className="grid grid-cols-6 gap-2 items-center text-xs">
                             <span className="font-bold text-amber-100">Seviye {seviye}</span>
                             <label className="block">
                               <span className="block text-[10px] text-amber-300/70">Açılış Lv</span>
@@ -696,7 +702,7 @@ export default function AdminPaneli() {
                                 <input
                                   type="number"
                                   min={0}
-                                  step={25}
+                                  step={k === "insan" ? 1 : 25}
                                   value={bedel[k] ?? 0}
                                   onChange={(e) => {
                                     const deger = Number(e.target.value);
@@ -727,11 +733,127 @@ export default function AdminPaneli() {
               </div>
             </section>
 
-            {/* Seyyah Görevleri */}
+            {/* Kıraathane Ozan Dede Türkü Hikâyeleri */}
+            <section className="rounded-3xl bg-stone-900/90 p-5 ring-1 ring-stone-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-black text-amber-300">
+                    🎵 Kıraathane · Ozan Dede Türkü Hikâyeleri ve Seslendirme ({(veri.turkuler ?? []).length})
+                  </h2>
+                  <p className="text-xs text-amber-200/70">
+                    Metni ve MP3/ses URL&apos;sini girdiğinizde Ozan Dede ağzını oynatarak türkünün tarihini anlatır ve ödevi verir
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVeri((eski) => ({
+                      ...eski,
+                      turkuler: [
+                        ...(eski.turkuler ?? []),
+                        {
+                          id: `turku_${Date.now()}`,
+                          level: 1,
+                          baslik: "Yeni Türkü Hikâyesi",
+                          turkuAdi: "Türkü Adı",
+                          anlatim: "",
+                          sesUrl: "",
+                          odev: "",
+                        },
+                      ],
+                    }))
+                  }
+                  className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-black text-stone-900"
+                >
+                  + Türkü Hikâyesi Ekle
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {(veri.turkuler ?? []).map((t, i) => (
+                  <div key={t.id ?? i} className="rounded-2xl bg-stone-950 p-4 ring-1 ring-stone-800 space-y-2">
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <input
+                        value={t.baslik ?? ""}
+                        onChange={(e) => {
+                          const yeni = veri.turkuler.map((x, idx) =>
+                            idx === i ? { ...x, baslik: e.target.value } : x
+                          );
+                          setVeri((eski) => ({ ...eski, turkuler: yeni }));
+                        }}
+                        placeholder="Hikâye Başlığı"
+                        className="rounded-xl bg-stone-900 px-3 py-1.5 text-xs text-amber-50 ring-1 ring-stone-700"
+                      />
+                      <input
+                        value={t.turkuAdi ?? ""}
+                        onChange={(e) => {
+                          const yeni = veri.turkuler.map((x, idx) =>
+                            idx === i ? { ...x, turkuAdi: e.target.value } : x
+                          );
+                          setVeri((eski) => ({ ...eski, turkuler: yeni }));
+                        }}
+                        placeholder="Türkü Adı / Dizesi"
+                        className="rounded-xl bg-stone-900 px-3 py-1.5 text-xs text-amber-50 ring-1 ring-stone-700"
+                      />
+                      <div className="flex gap-2">
+                        <input
+                          value={t.sesUrl ?? ""}
+                          onChange={(e) => {
+                            const yeni = veri.turkuler.map((x, idx) =>
+                              idx === i ? { ...x, sesUrl: e.target.value } : x
+                            );
+                            setVeri((eski) => ({ ...eski, turkuler: yeni }));
+                          }}
+                          placeholder="Seslendirme MP3 URL (boşsa otomatik Türkçe ses)"
+                          className="flex-1 rounded-xl bg-stone-900 px-3 py-1.5 text-xs text-amber-50 ring-1 ring-stone-700"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVeri((eski) => ({
+                              ...eski,
+                              turkuler: eski.turkuler.filter((_, idx) => idx !== i),
+                            }))
+                          }
+                          className="rounded-xl bg-red-950/70 px-3 py-1.5 text-xs font-bold text-red-300"
+                        >
+                          Sil
+                        </button>
+                      </div>
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={t.anlatim ?? ""}
+                      onChange={(e) => {
+                        const yeni = veri.turkuler.map((x, idx) =>
+                          idx === i ? { ...x, anlatim: e.target.value } : x
+                        );
+                        setVeri((eski) => ({ ...eski, turkuler: yeni }));
+                      }}
+                      placeholder="Ozan Dede'nin anlatacağı türkü tarihi ve hikmetli kıssa…"
+                      className="w-full rounded-xl bg-stone-900 px-3 py-2 text-xs text-amber-50 ring-1 ring-stone-700"
+                    />
+                    <input
+                      value={t.odev ?? ""}
+                      onChange={(e) => {
+                        const yeni = veri.turkuler.map((x, idx) =>
+                          idx === i ? { ...x, odev: e.target.value } : x
+                        );
+                        setVeri((eski) => ({ ...eski, turkuler: yeni }));
+                      }}
+                      placeholder="Ozan Dede'nin öğrenciye vereceği gönül ödevi…"
+                      className="w-full rounded-xl bg-stone-900 px-3 py-1.5 text-xs text-amber-50 ring-1 ring-stone-700"
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Haberci Görevleri */}
             <section className="rounded-3xl bg-stone-900/90 p-5 ring-1 ring-stone-800 space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-black text-amber-300">
-                  🏇 Seyyah Günlük İyilik Görevleri Havuzu ({veri.seyyahGorevleri.length})
+                  🏇 Haberci Günlük İyilik Görevleri Havuzu ({veri.seyyahGorevleri.length})
                 </h2>
                 <button
                   type="button"
@@ -740,7 +862,7 @@ export default function AdminPaneli() {
                   }
                   className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-black text-stone-900"
                 >
-                  + Seyyah Görevi Ekle
+                  + Haberci Görevi Ekle
                 </button>
               </div>
 

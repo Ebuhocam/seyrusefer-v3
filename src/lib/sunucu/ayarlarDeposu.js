@@ -20,12 +20,16 @@ export async function oyunAyarlariniGetir() {
   const levellar = {};
   let binalar = null;
   let seyyahGorevleri = null;
+  let turkuler = null;
+  let davalar = null;
 
   for (const s of satirlar.results ?? []) {
     if (s.anahtar === "genel_ayarlar") {
       const genel = guvenliJson(s.deger_json);
       binalar = genel.binalar ?? null;
       seyyahGorevleri = genel.seyyahGorevleri ?? null;
+      turkuler = genel.turkuler ?? null;
+      davalar = genel.davalar ?? null;
     } else if (s.anahtar.startsWith("level_")) {
       const no = Number(s.anahtar.replace("level_", ""));
       if (no >= 1 && no <= 10) {
@@ -34,7 +38,7 @@ export async function oyunAyarlariniGetir() {
     }
   }
 
-  return { levellar, binalar, seyyahGorevleri };
+  return { levellar, binalar, seyyahGorevleri, turkuler, davalar };
 }
 
 export async function levelAyariniKaydet(levelNo, veri) {

@@ -91,6 +91,27 @@ export function useOyun(baslangic) {
   const gorevTamamla = (gorevKodu) => gonder({ eylem: "gorevTamamla", gorevKodu }, "Görev ilerlemesi kaydedildi!");
   const namazIsaretle = (vakit, deger) => gonder({ eylem: "namazIsaretle", vakit, deger });
   const sinavCevapla = (cevaplar) => gonder({ eylem: "sinavCevapla", cevaplar }, "Tebrikler! Sınavı başarıyla geçtin!");
+  const davaCoz = async (davaId, secenekIndeks) => {
+    const j = await gonder({ eylem: "davaCoz", davaId, secenekIndeks });
+    if (j?.sonuc) {
+      const f = j.sonuc.mutlulukDegisimi;
+      setMesaj({
+        tur: f >= 0 ? "tamam" : "hata",
+        metin: `${f >= 0 ? `+${f}` : f} Mutluluk! ${j.sonuc.aciklama ?? ""}`,
+      });
+    }
+    return j?.sonuc ?? null;
+  };
+  const gocmenTeklifEt = async () => {
+    const j = await gonder({ eylem: "gocmenTeklifEt" });
+    if (j?.sonuc) {
+      setMesaj({
+        tur: j.sonuc.kabul ? "tamam" : "hata",
+        metin: j.sonuc.mesaj,
+      });
+    }
+    return j?.sonuc ?? null;
+  };
 
   const gelistiriciIslem = (islem, p = {}) => gonder({ eylem: "gelistirici", islem, ...p });
   const gelistirici = veri.gelistirici
@@ -133,6 +154,8 @@ export function useOyun(baslangic) {
     gorevTamamla,
     namazIsaretle,
     sinavCevapla,
+    davaCoz,
+    gocmenTeklifEt,
     bekleyen,
     topla,
     binaBilgisi: (binaId) => binaDurumu(binaId, kontrolDurumu, ayarlar?.binalar),
