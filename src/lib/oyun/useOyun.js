@@ -78,11 +78,34 @@ export function useOyun(baslangic) {
   const otag = durum.binalar.otag ?? 1;
   const kontrolDurumu = gorevKontrol(durum, ayarlar);
 
-  const bekleyen = (k) => (durum.sonToplama[k] != null ? biriken(k, durum.sonToplama[k], simdi, otag) : 0);
+  const bekleyen = (k) =>
+    durum.sonToplama[k] != null ? biriken(k, durum.sonToplama[k], simdi, otag, durum.isciler?.[k] ?? 1) : 0;
 
   const topla = async (k) => {
     const j = await gonder({ eylem: "topla", kaynak: k });
     if (j?.miktar) setMesaj({ tur: "tamam", metin: `+${j.miktar} toplandı` });
+  };
+
+  const isciAta = (kaynak, degisim) =>
+    gonder(
+      { eylem: "isciAta", kaynak, degisim },
+      degisim > 0 ? "Yeni çalışan görevlendirildi!" : "Çalışan dinlenmeye çekildi."
+    );
+
+  const uretimEtkilesim = async (kaynak) => {
+    const j = await gonder({ eylem: "uretimEtkilesim", kaynak });
+    if (j?.sonuc?.mesaj) {
+      setMesaj({ tur: "tamam", metin: j.sonuc.mesaj });
+    }
+    return j?.sonuc ?? null;
+  };
+
+  const mektupAl = async () => {
+    const j = await gonder({ eylem: "mektupAl" });
+    if (j?.sonuc?.mesaj) {
+      setMesaj({ tur: "tamam", metin: j.sonuc.mesaj });
+    }
+    return j?.sonuc ?? null;
   };
 
   const yukselt = (binaId) => gonder({ eylem: "yukselt", binaId }, "Bina yükseltildi!");
@@ -158,6 +181,9 @@ export function useOyun(baslangic) {
     gocmenTeklifEt,
     bekleyen,
     topla,
+    isciAta,
+    uretimEtkilesim,
+    mektupAl,
     binaBilgisi: (binaId) => binaDurumu(binaId, kontrolDurumu, ayarlar?.binalar),
     yukselt,
     binaIdleri: Object.keys(BINALAR),

@@ -6,6 +6,9 @@ import { govde, hata, oturumZorunlu, oyunYaniti } from "@/lib/sunucu/api";
 import { oyunGunu } from "@/lib/oyun/gorevler";
 import {
   topla,
+  isciAta,
+  uretimEtkilesim,
+  mektupTeslimAl,
   yukselt,
   levelAtla,
   gorevIlerlet,
@@ -35,6 +38,15 @@ export async function POST(request) {
   switch (g.eylem) {
     case "topla":
       sonuc = topla(durum, g.kaynak, simdi);
+      break;
+    case "isciAta":
+      sonuc = isciAta(durum, g.kaynak, Number(g.degisim), simdi);
+      break;
+    case "uretimEtkilesim":
+      sonuc = uretimEtkilesim(durum, g.kaynak, simdi);
+      break;
+    case "mektupAl":
+      sonuc = mektupTeslimAl(durum);
       break;
     case "yukselt":
       sonuc = yukselt(durum, g.binaId, ayarlar);

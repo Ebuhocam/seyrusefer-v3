@@ -31,29 +31,34 @@ export default function KoyHaritasi({ baslangic }) {
     () => (baslangic?.durum?.binalar?.mektep ?? 0) === 0 || (baslangic?.durum?.level ?? 1) === 1
   );
   const [rehberAdimIndeks, setRehberAdimIndeks] = useState(() =>
-    ilkEksikRehberAdimi(baslangic?.durum ?? {}, [])
+    ilkEksikRehberAdimi(
+      baslangic?.durum ?? {},
+      [],
+      (baslangic?.durum?.binalar?.mektep ?? 0) === 0
+    )
   );
 
   const aktifRehberAdimi = REHBER_ADIMLARI[rehberAdimIndeks] ?? REHBER_ADIMLARI[0];
-  const rehberHedefi = rehberAcik && katman === "koy" ? aktifRehberAdimi?.hedef : null;
+  const rehberHedefleri = rehberAcik && katman === "koy" ? aktifRehberAdimi?.hedefler ?? [] : [];
+  const ilkRehberHedefi = rehberHedefleri[0] ?? null;
 
   // Telefonda harita yatayda taşar: açılışta veya rehber adımı değiştiğinde hedefi ortala
   useEffect(() => {
     const el = kaydirRef.current;
     if (!el || !oyun.hazir) return;
     let hedefX = ARSALAR.otag.x;
-    if (rehberHedefi) {
+    if (ilkRehberHedefi) {
       const k =
-        rehberHedefi.tur === "bina"
-          ? ARSALAR[rehberHedefi.id]
-          : NOKTALAR[rehberHedefi.id];
+        ilkRehberHedefi.tur === "bina"
+          ? ARSALAR[ilkRehberHedefi.id]
+          : NOKTALAR[ilkRehberHedefi.id];
       if (k) hedefX = k.x;
     }
     el.scrollTo({
       left: Math.max(0, (hedefX / 100) * el.scrollWidth - el.clientWidth / 2),
       behavior: "smooth",
     });
-  }, [oyun.hazir, katman, rehberHedefi]);
+  }, [oyun.hazir, katman, ilkRehberHedefi]);
 
   // 2. veya 3. katmana geçildiğinde birlik binaları ve bölge liderlerini çek
   useEffect(() => {
@@ -138,7 +143,7 @@ export default function KoyHaritasi({ baslangic }) {
               {Object.entries(ARSALAR).map(([id, a]) => {
                 const seviye = durum.binalar[id] ?? 0;
                 const bilgi = oyun.binaBilgisi(id);
-                const rehberVurgulu = rehberHedefi?.tur === "bina" && rehberHedefi?.id === id;
+                const rehberVurgulu = rehberHedefleri.some((h) => h.tur === "bina" && h.id === id);
                 return seviye > 0 ? (
                   <button
                     key={id}
@@ -187,7 +192,7 @@ export default function KoyHaritasi({ baslangic }) {
                 const acik = n.kaynak ? kaynakAcikMi(n.kaynak, durum.level) : (n.acilisLevel ?? 1) <= durum.level;
                 const bekleyen = n.kaynak ? oyun.bekleyen(n.kaynak) : 0;
                 const dolu = n.kaynak && acik && bekleyen >= depoKapasitesi(n.kaynak, durum.binalar.otag);
-                const rehberVurgulu = rehberHedefi?.tur === "nokta" && rehberHedefi?.id === id;
+                const rehberVurgulu = rehberHedefleri.some((h) => h.tur === "nokta" && h.id === id);
                 return (
                   <button
                     key={id}
@@ -377,10 +382,11 @@ export default function KoyHaritasi({ baslangic }) {
         <Panel
           secim={secim}
           oyun={oyun}
+          onSecimDegistir={setSecim}
           kapat={() => {
             setSecim(null);
             if (rehberAcik) {
-              setRehberAdimIndeks(ilkEksikRehberAdimi(oyun.durum, oyun.gorevler));
+              setRehberAdimIndeks(ilkEksikRehberAdimi(oyun.durum, oyun.gorevler, false));
             }
           }}
         />

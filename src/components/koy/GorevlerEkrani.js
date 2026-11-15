@@ -605,8 +605,11 @@ export function SeyyahKutusu({ oyun, gorevKodu = "seyyah" }) {
   );
 }
 
-export function HaberciKutusu({ oyun, varsayilanSekme = "mektup" }) {
+export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup" }) {
   const [sekme, setSekme] = useState(varsayilanSekme);
+  const { durum, aktifIcerik } = oyun;
+  const mektupAlindiMi = (durum.mektupAlindi ?? 0) >= durum.level;
+
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 rounded-xl bg-stone-950/70 p-1 text-xs font-bold">
@@ -615,7 +618,7 @@ export function HaberciKutusu({ oyun, varsayilanSekme = "mektup" }) {
           onClick={() => setSekme("mektup")}
           className={`rounded-lg py-2 ${sekme === "mektup" ? "bg-amber-500 text-stone-900" : "text-amber-200/70"}`}
         >
-          ✉️ Aile Mektubu
+          ✉️ Aile Mektubu {!mektupAlindiMi && "🔴"}
         </button>
         <button
           type="button"
@@ -625,7 +628,61 @@ export function HaberciKutusu({ oyun, varsayilanSekme = "mektup" }) {
           🏇 Günün İyiliği
         </button>
       </div>
-      {sekme === "mektup" ? <AileOkumasiKutusu oyun={oyun} /> : <SeyyahKutusu oyun={oyun} />}
+      {sekme === "mektup" ? (
+        <div className="space-y-4">
+          <div className="flex flex-col items-center gap-4 rounded-3xl bg-stone-950/85 p-5 ring-1 ring-amber-500/40 sm:flex-row">
+            <img
+              src="/assets/binalar/seyyaherkek.webp"
+              alt="Köy Habercisi"
+              className="h-28 w-28 shrink-0 object-contain"
+            />
+            <div className="flex-1 space-y-2 text-center sm:text-left">
+              <span className="inline-block rounded-full bg-amber-500/20 px-3 py-0.5 text-xs font-black text-amber-300 ring-1 ring-amber-400/40">
+                🏇 Köy Habercisi · Level {durum.level} Aile Mektubu
+              </span>
+              <h3 className="text-base font-black text-amber-100">
+                {aktifIcerik?.aile?.baslik ?? "Aile Meclisi Mektubu"}
+              </h3>
+              {!mektupAlindiMi ? (
+                <p className="text-xs leading-relaxed text-amber-100/90">
+                  “Selamünaleyküm genç beyim! Uzak diyarlardan senin ve kıymetli ailen için mühürlü bir mektup getirdim. Mektubu benden teslim alıp <b>Kendi Evine</b> götür; anne, baba ve kardeşini odaya çağırıp birlikte okuyun!”
+                </p>
+              ) : (
+                <p className="text-xs leading-relaxed text-emerald-200">
+                  ✅ Mektubu Haberci&apos;den teslim aldın! Şimdi <b>Kendi Evine</b> girip aile bireylerini odaya çağırarak mektubu rahlede birlikte okuyabilirsin.
+                </p>
+              )}
+
+              <div className="flex flex-wrap justify-center gap-2 pt-1 sm:justify-start">
+                {!mektupAlindiMi ? (
+                  <button
+                    type="button"
+                    disabled={oyun.bekliyor}
+                    onClick={() => oyun.mektupAl()}
+                    className="animate-bounce rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 px-5 py-3 text-xs font-black text-stone-950 shadow-xl ring-2 ring-amber-200 hover:brightness-110 sm:text-sm"
+                  >
+                    📬 Mektubu Haberci&apos;den Teslim Al
+                  </button>
+                ) : (
+                  onSecimDegistir && (
+                    <button
+                      type="button"
+                      onClick={() => onSecimDegistir({ tur: "bina", id: "kendi_evim" })}
+                      className="rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 px-5 py-3 text-xs font-black text-stone-950 shadow-xl ring-2 ring-emerald-200 hover:brightness-110 sm:text-sm"
+                    >
+                      🏡 Kendi Evime Git ve Aile Bireylerini Çağır →
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+
+          {mektupAlindiMi && <AileOkumasiKutusu oyun={oyun} />}
+        </div>
+      ) : (
+        <SeyyahKutusu oyun={oyun} />
+      )}
     </div>
   );
 }

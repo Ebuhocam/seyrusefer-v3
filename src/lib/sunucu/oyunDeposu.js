@@ -39,12 +39,36 @@ export async function durumOku(kullaniciId) {
   const binaHaritasi = Object.fromEntries(binalar.results.map((b) => [b.bina_id, b.seviye]));
   if (binaHaritasi.kendi_evim == null) binaHaritasi.kendi_evim = 1;
 
-  const envanter = Object.fromEntries(kaynaklar.results.map((k) => [k.kaynak, k.envanter]));
+  const tumKaynakSatirlari = Object.fromEntries(kaynaklar.results.map((k) => [k.kaynak, k]));
+  const GERCEK_KAYNAKLAR = ["erzak", "kereste", "tas", "insan"];
+  const envanter = {};
+  const sonToplama = {};
+  for (const k of GERCEK_KAYNAKLAR) {
+    if (tumKaynakSatirlari[k]) {
+      envanter[k] = tumKaynakSatirlari[k].envanter;
+      sonToplama[k] = tumKaynakSatirlari[k].son_toplama;
+    } else if (k !== "insan") {
+      envanter[k] = 0;
+      sonToplama[k] = simdi;
+    }
+  }
   if (envanter.insan == null) envanter.insan = o.insan ?? 5;
   if (o.level === 1 && !binaHaritasi.mektep && (envanter.erzak ?? 0) === 0 && (envanter.kereste ?? 0) === 0) {
     envanter.erzak = 150;
     envanter.kereste = 150;
   }
+
+  const isciler = {
+    erzak: tumKaynakSatirlari.isci_erzak?.envanter ?? 1,
+    kereste: tumKaynakSatirlari.isci_kereste?.envanter ?? 1,
+    tas: tumKaynakSatirlari.isci_tas?.envanter ?? 0,
+  };
+  const sonEtkilesim = {
+    erzak: tumKaynakSatirlari.isci_erzak?.son_toplama ?? 0,
+    kereste: tumKaynakSatirlari.isci_kereste?.son_toplama ?? 0,
+    tas: tumKaynakSatirlari.isci_tas?.son_toplama ?? 0,
+  };
+  const mektupAlindi = tumKaynakSatirlari.mektup_durumu?.envanter ?? 0;
 
   let cozulenDavalar = [];
   try {
@@ -62,7 +86,10 @@ export async function durumOku(kullaniciId) {
     sonGocmenKontrol: o.son_gocmen_kontrol ?? 0,
     binalar: binaHaritasi,
     envanter,
-    sonToplama: Object.fromEntries(kaynaklar.results.map((k) => [k.kaynak, k.son_toplama])),
+    sonToplama,
+    isciler,
+    sonEtkilesim,
+    mektupAlindi,
     gorevIlerlemesi: Object.fromEntries(
       gorevler.results.map((g) => [g.gorev_kodu, { ilerleme: g.ilerleme, sonGun: g.son_gun }])
     ),
@@ -117,6 +144,20 @@ export async function durumYaz(kullaniciId, durum, islemSaati = null, ayarlar = 
         )
         .bind(kullaniciId, k, durum.envanter[k], durum.sonToplama[k] ?? null)
     ),
+    ...["erzak", "kereste", "tas"].map((k) =>
+      d
+        .prepare(
+          `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, ?2, ?3, ?4)
+           ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET envanter = ?3, son_toplama = ?4`
+        )
+        .bind(kullaniciId, `isci_${k}`, durum.isciler?.[k] ?? (k === "tas" ? 0 : 1), durum.sonEtkilesim?.[k] ?? 0)
+    ),
+    d
+      .prepare(
+        `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, 'mektup_durumu', ?2, 0)
+         ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET envanter = ?2, son_toplama = 0`
+      )
+      .bind(kullaniciId, durum.mektupAlindi ?? 0),
     ...Object.entries(durum.gorevIlerlemesi ?? {}).map(([kod, kayit]) => {
       const hedef = tanimlar[kod]?.hedef ?? 1;
       const tamamlandi = kayit.ilerleme >= hedef ? gercekSimdi : null;

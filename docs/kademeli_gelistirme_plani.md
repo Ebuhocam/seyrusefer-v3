@@ -1,103 +1,77 @@
-# Seyrüsefer v3 — Yeni Köy Düzeni, Rehber ve Tam Ekran Mekanlar Planı
+# Seyrüsefer v3 — 2D Canlı Mekan Sahneleri, Ev İçi, Meydan Yürüyüş Motoru ve Rehber Planı
 
 Son güncelleme: 15 Kasım 2026
 
-Bu doküman, oyuncunun oyuna ilk adım attığı andan itibaren yaşayacağı deneyimi, yeni köy yerleşimini, konut/nüfus sistemini, işçi görevlendirmeyi ve tam ekran bina/üretim sahnelerini **6 sıralı kademeye** böler. Her kademe tek tek onaylanıp tamamlanarak ilerlenecektir.
+Bu doküman; binalara ve üretim alanlarına tıklandığında açılan **2D İnteraktif Oyun Sahnelerini** (Ev İçi, Köy Meydanı Yürüyüş Motoru, Tarlada Sulama, Ormanda Ağaç Kesme), **Haberci → Ev İçi Aile Okuması** akışını, **Oba'nın yeni harita konumunu** ve **Bilge Rehber'in önce köyü tanıtıp sonra görev yaptırma** sistemini sıralı adımlara böler.
 
 ---
 
-## 📌 Temel Tasarım Kararları Özeti
+## 🚀 Sıralı Uygulama Planı
 
-1. **Köy Haritası ve Konut Mahallesi (5+1 Ev):**
-   - Oba'nın haritadaki yeri daha heybetli ve merkezi/hakim bir konuma alınacak.
-   - Köye yeni insanların yerleşebilmesi için **barınma kapasitesi (Ev)** şart olacak. Barınma yeri yoksa Kıraathane'den yeni insan toplanamayacak.
-   - Köyde **1 adet Kendi Evimiz (Yönetici Konağı / Oba)** + **5 adet Köylü Evi Arsası (`ev1`..`ev5`)** olmak üzere **5+1 konut** bulunacak.
-   - Evler **maksimum 3 katlı (Seviye 1: 5 kişi, Seviye 2: 10 kişi, Seviye 3: 15 kişi — Seçenek A onaylandı)** olabilecek; her kat çıkıldığında eve **+5 kişi** kapasite eklenecek (toplam 6 konut × 15 = 90 kişiye kadar nüfus kapasitesi).
-2. **Mektep İlk Kurulum Kuralı:**
-   - Oyuncu oyuna başladığında **Mektep još kurulmadan görev yapamaz**.
-   - Bu yüzden **Mektep Seviye 1**, herhangi bir görev şartı aranmadan (başlangıç kaynaklarıyla) oyuncunun **ilk inşa edeceği bina** olacak. Mektep kurulduktan sonra içindeki eğitim görevleri açılacak.
-3. **Adım Adım Oyun Rehberi (Daktilo Efektli Karakter):**
-   - Oyuna yeni giren çocuğa ne yapacağını ve nereye tıklayacağını gösteren bir **Rehber Karakter** eklenecek.
-   - Konuşma metni karakterin yanında **daktilo gibi harf harf** yazılacak, **"İleri"** ve **"Atla ⏭"** butonları bulunacak.
-   - Haritada tıklanması gereken bina veya alan **parlayan ok/halka (spotlight)** ile işaretlenecek.
-4. **Tam Ekran Mekan Sayfaları (Pop-up Yerine Sahne):**
-   - Binalara ve üretim alanlarına tıklandığında küçük bir pop-up yerine **o mekana özel tam ekran sayfa/sahne** açılacak.
-5. **Üretim Alanlarında İşçi Görevlendirme & Mini Etkileşimler:**
-   - **Tarla, Orman ve Maden/Taş Ocağı**'nda üretim yapılması için köydeki **👥 İnsan** kaynağından işçi görevlendirilmesi gerekecek.
-   - Ayrıca her üretim sahnesinde çocuğun sıkılmadan vakit geçireceği mini etkileşimler yer alacak:
-     - **🌾 Tarla:** Parselleri sulama ve ekin bakımı yapma
-     - **🌲 Orman:** Yaş ağaçları koruyup **kurumuş ağaçları bulup toplama**
-     - **⛏️ Maden / Taş Ocağı:** İşaretli kaya damarlarını kırma
-6. **Davaların Köy Meydanı'nda Tek Tek Görülmesi:**
-   - Halkın davaları tüm liste halinde görünmeyecek.
-   - Köylüler sorunlarını **Köy Meydanı**'na getirecek; oyuncu meydana girdiğinde o an bekleyen **tek bir güncel davayı** dinleyip çözecek.
+### Adım 1 — Haritada Oba Konumu Düzeltmesi ve Bilge Rehber (Önce Tanıtım Turu → Sonra Görevler + Çoklu Ok + Haberci)
+- [x] **1.1. Oba Konumunun Yukarı Taşınması (`sabitler.js`):**
+  - Haritadaki Oba (`otag`), üstteki taş kale terasının tam ortasına oturacak şekilde daha yukarı (`x: 55.2, y: 20.5`) taşınır.
+- [x] **1.2. Bilge Rehber'de Çoklu Hedef Vurgusu (`hedefler` dizisi):**
+  - Rehber bir adımı anlatırken aynı anda birden fazla nokta (ör. **hem Tarla hem Orman hem Taş Ocağı**, veya **tüm 5+1 Evler**) üzerinde **"👇 Buraya Tıkla!"** oku gösterebilir.
+- [x] **1.3. Bilge Rehber 2 Aşamalı Akış (Önce Köy Tanıtımı → Sonra Yapılacak Görevler):**
+  - **Bölüm 1 — Köy Tanıtım Turu (7 Kısa Adım):**
+    1. **Oba:** Hakim tepedeki yönetim ve depo merkezimiz.
+    2. **Mektep:** İlim, hadis, video ve sınav yuvamız.
+    3. **Kıraathane:** Ozan Dede'nin türkü anlattığı ve yolcuların geldiği mekan.
+    4. **Köy Meydanı:** Köylülerin yürüdüğü, sohbet ettiği ve davalarını getirdiği meydan.
+    5. **5+1 Ev Mahallesi:** Kendi Evimiz (ev içi aile okuması) ve yeni insanlar için 3 katlı konut arsaları.
+    6. **Tarla, Orman ve Taş Ocağı:** İşçi görevlendirme, sulama, ağaç kesme ve taş çıkarma alanlarımız (**Tarla + Orman + Taş Ocağı birlikte vurgulanır**).
+    7. **Haberci ve Görev Panosu:** Köy kapısına mektup getiren Haberci ve ortadaki Görev Panosu (**Haberci + Pano birlikte vurgulanır**).
+  - **Bölüm 2 — Şimdi Yapacaklarımız (Adım Adım Görev Yönlendirmesi):**
+    - Tanıtım bitince çocuğa sırasıyla ne yapacağını yaptırır:
+      1. **Mektep 1. Seviyeyi İnşa Et**
+      2. **Tarlada Ekin Sula & Ormanda Kurumuş Ağaç Kes (İşçi Görevlendir)**
+      3. **Haberci'den Aile Mektubunu Al → Kendi Evine Girip Aile Bireylerini Odaya Çağır**
+      4. **Mektep'te Günün Hadisini Oku**
+      5. **Köy Meydanı'nda Yürüyen Köylülerin Davasını Çöz**
 
 ---
 
-## 🚀 Kademeli Uygulama Planı (Adım Adım)
-
-### Kademe 1 — Köy Haritası Görseli, Yeni Oba Yeri ve 5+1 Ev Görselleri ✅ TAMAMLANDI
-> **Hedef:** Önce görsel altyapıyı ve harita yerleşimini oturtmak.
-- [x] **1.1. Köy Haritası Görselinin (`koy.webp`) Yenilenmesi:**
-  - Oba'nın yeri haritanın üst-merkez / hakim taş terasına (`x: 55.2, y: 27.5`) taşındı.
-  - Köy içine **5+1 Konut Mahallesi** (`kendi_evim` + `ev1`..`ev5`) için 6 düzenli taş bordürlü parsel alanı açıldı.
-  - Mektep (`x: 36.8, y: 46.5`), Kıraathane (`x: 74.2, y: 47.0`), Köy Meydanı (`x: 55.2, y: 54.0`), Görev Panosu, Haberci ve 3 üretim alanı (Tarla, Orman, Maden/Taş Ocağı) net ve tıklanabilir konumlara yerleştirildi.
-- [x] **1.2. 3 Katlı Ev Görsellerinin Üretilmesi:**
-  - `ev1.webp` (1 Katlı Ahşap/Taş Köy Evi)
-  - `ev2.webp` (2 Katlı Cumbalı Köy Evi)
-  - `ev3.webp` (3 Katlı Geniş Anadolu Konağı)
-- [x] **1.3. Rehber Karakter Görselinin Üretilmesi:**
-  - Daktilo balonunun yanında duracak **Bilge Rehber** portresi (`rehber_kapali.webp` / `rehber_acik.webp`).
+### Adım 2 — 2D Mekan İçi Görsellerinin Üretilmesi (`public/assets/mekanlar/`)
+- [x] **2.1. `ev_ici.webp` (Anadolu Ev İçi Sahnesi):**
+  - Sedirler, Anadolu kilimi, pencereden görünen köy manzarası, ortada rahle/sehpa ve aile bireylerinin oturacağı minderler.
+- [x] **2.2. `meydan_sahne.webp` (Köy Meydanı 2D Sahnesi):**
+  - Arnavut kaldırımlı geniş meydan zemini, taş çeşme, ulu çınar ağacı ve köylülerin ileri-geri yürüyebileceği sahne alanı.
+- [x] **2.3. `tarla_sahne.webp` (Tarla 2D Sahnesi):**
+  - Su kuyusu, sulama arkı ve üzerinde sulama yapılacak 6 ekin parseli alanı.
+- [x] **2.4. `orman_sahne.webp` (Orman 2D Sahnesi):**
+  - Yeşil çam/meşe ağaçları ve kesilecek kurumuş ağaçların yer aldığı orman açıklığı sahnesi.
 
 ---
 
-### Kademe 2 — Konut (5+1 Ev) & Barınma Kapasitesi ve Mektep İlk Kurulum Kuralı ✅ TAMAMLANDI
-> **Hedef:** Köy ekonomisinin temelini (Ev kapasitesi → İnsan toplama → Mektep kurma) kurallara bağlamak.
-- [x] **2.1. Başlangıç Durumu ve Mektep Seviye 1 Kurulumu:**
-  - Yeni oyuncu oyuna **Kendi Evim (`kendi_evim: 1`, 5 kişilik başlangıç kapasitesi ve 5 👥 İnsan)** ve **Mektep 1. Seviyeyi hemen kurabilecek başlangıç kaynağı (`150 Mahsul, 150 Tahta`)** ile başlar.
-  - **Mektep Seviye 1** için görev şartı kaldırıldı (`ilkKurulumGorevsiz: true`). Mektep 1 kurulmadan eğitim görevleri kilitlidir; kurulduğu anda Level 1 görevleri açılır.
-- [x] **2.2. 5+1 Ev ve Nüfus Kapasitesi Sistemi (Seçenek A):**
-  - `kendi_evim` + `ev1`, `ev2`, `ev3`, `ev4`, `ev5` arsaları tanımlandı.
-  - Her ev Seviye 1'den Seviye 3'e (3 kata) kadar yükseltilebilir ve her kat **+5 👥 İnsan** barınma kapasitesi sağlar (1. Kat: 5, 2. Kat: 10, 3. Kat: 15 → toplam 90 kapasite).
-  - **Kapasite Kuralı:** Boş barınma yeri (yatak kapasitesi) olmadan Kıraathane'deki yolculara ev teklif edilemez (`Mevcut İnsan < Toplam Ev Kapasitesi` şartı).
+### Adım 3 — 2D Canlı Sahne ve Yürüyüş Motoru (`Köy Meydanı` & Karakter Hareketi)
+- [x] **3.1. 2D Sahne ve Yürüyüş Motoru (`src/components/koy/MekanSahnesi.js`):**
+  - Oyuncu mekana girdiğinde **kendisini sahnenin içinde** görür; sahnede tıkladığı noktaya doğru oyuncu karakteri yürür!
+  - Etrafında köylü karakterleri (`NPC`) kendi hızlarında ileri-geri yürür, bazen durup etrafa bakar ve konuşma balonları çıkarır.
+- [x] **3.2. Köy Meydanı'nda Canlı Olay ve Dava Sahnesi:**
+  - Köy Meydanı'na tıklandığında oyuncu kendisini meydanda bulur.
+  - Meydanda bir dava/olay varsa, iki köylü başlarının üzerinde **"⚖️ Davamız Var! (Bize Tıkla)"** balonuyla ileri-geri yürür; oyuncu onlara tıkladığında yanlarına yürür ve tekil dava penceresi açılır!
 
 ---
 
-### Kademe 3 — Daktilo Efektli Adım Adım Oyun Rehberi (Onboarding) ✅ TAMAMLANDI
-> **Hedef:** Çocuğun oyuna girdiğinde hiç bocalamadan adım adım oyunu öğrenmesi.
-- [x] **3.1. Rehber Karakter ve Daktilo Konuşma Balonu Bileşeni (`src/components/koy/RehberKarakter.js`):**
-  - Ekranın alt kısmında **Bilge Rehber** görünür (`rehber_kapali.webp` ↔ `rehber_acik.webp` ağız animasyonu), metin daktilo efektiyle harf harf akar.
-  - **"⏩ Yazıyı Tamamla / Sonraki Adım →"**, **"← Önceki"**, **"🎯 Hedefe Git"** ve **"Atla ⏭"** butonları ile üst barda **"🧭 Rehber"** aç/kapat butonu bulunur.
-- [x] **3.2. Adım Adım Görevlendirici Ok ve Vurgu (Spotlight):**
-  - Haritada aktif adımın işaret ettiği bina veya üretim noktası **"👇 Buraya Tıkla!"** rozeti ve parlayan altın halkayla vurgulanır, harita otomatik olarak hedefe kaydırılır.
+### Adım 4 — Ev İçi Sahnesi (`Kendi Evim`), Haberci Mektup Hatırlatması ve Aile Bireylerini Çağırma
+- [x] **4.1. Haberci'den Mektubu Teslim Alma (`mektupAlindi`):**
+  - Haberci'ye tıklandığında oyuncu **"📬 Aile Mektubunu Haberci'den Teslim Al"** butonuna basarak mektubu alır ve *"Mektubu aldın! Şimdi Kendi Evine gidip aile bireylerini odaya çağırarak birlikte okuyabilirsiniz."* mesajı çıkar.
+- [x] **4.2. 2D Ev İçi Sahnesi (`Kendi Evim` ve Konutlar):**
+  - Evin içine girildiğinde `ev_ici.webp` sahnesi açılır; oyuncu karakteri odanın içindedir (üst sekmeden **🔨 Kat Çık / Yükselt** ekranına da geçilebilir).
+  - **Hatırlatma Sistemi:** Eğer Haberci'de bekleyen bir mektup varsa ve oyuncu henüz Haberci'den teslim almadıysa, evin içinde uyarı balonu görünür: *"📬 Haberci köy kapısına yeni bir Aile Mektubu getirdi! Önce Haberci'ye gidip mektubu teslim almalısın."* (Tek tıkla Haberci'ye gitme butonuyla).
+  - **Aile Bireylerini Çağırma:** Mektup alındıysa oyuncu odadaki **"👨‍👩‍👧‍👦 Aile Bireylerini Odaya Çağır"** butonuna tıklar → Anne, Baba ve Kardeş karakterleri kapıdan yürüyerek odaya girip sedirlere yerleşir! Ardından mektup açılır ve ailece okunup görev tamamlanır.
 
 ---
 
-### Kademe 4 — Binalar İçin Tam Ekran Sahne / Sayfa Görünümü ve Köy Meydanı Davaları ✅ TAMAMLANDI
-> **Hedef:** Basit pop-up yerine her binanın kendi atmosferine sahip tam ekran sayfasına girilmesi.
-- [x] **4.1. Tam Ekran Mekan Görünümü (`src/components/koy/Panel.js`):**
-  - Bir binaya veya noktaya tıklandığında küçük pencere yerine tam ekran mekan sayfası açılır. Üstte **"← Köy Haritasına Dön"** butonu, mekan başlığı ve canlı kaynak çubuğu yer alır.
-  - İnşa edilmiş binalara tıklandığında doğrudan mekan içi çalışma ekranı açılır; üstteki sekmeden **"🔨 Bina İmarı / Yükseltme"** ekranına geçilebilir.
-- [x] **4.2. Davaların Köy Meydanı'na Taşınması (Tek Tek Gösterim):**
-  - Köy Meydanı sayfasında **"⚖️ Halkın Davası (Meydan Divanı)"** ve **"🗣️ Meydan Sohbeti (Paylaşım)"** sekmeleri yer alır.
-  - Davaların tüm listesi görünmez; meydanda o an sadece **sıradaki çözülmemiş tek bir köylünün davası** bekler. Çözüldüğünde mutluluk sonucu gösterilir ve köylü uğurlanır.
-  - **Oba (`otag`)** içi ise Köy Yönetici Divanı (Huzur özeti, 5+1 Konut mahallesi durumu, Üretim depoları bereketi ve Mezuniyet beratı) olarak düzenlendi.
-
----
-
-### Kademe 5 — İşçi Görevlendirme Sistemi (Tarla, Orman, Maden/Taş Ocağı)
-> **Hedef:** Köydeki 👥 İnsan kaynağını üretim alanlarında aktif olarak değerlendirmek.
-- [ ] **5.1. İşçi Atama Mekanizması:**
-  - Köydeki toplam 👥 İnsan nüfusunun bir kısmı **Tarla (Çiftçi)**, **Orman (Oduncu)** ve **Maden/Taş Ocağı (Taş Ustası)** alanlarına `+` / `-` butonlarıyla görevlendirilir.
-  - Boşta kalan insanlar yeni inşaatlarda çalışabilir; üretim alanlarında ise **görevlendirilen işçi sayısına göre** saatlik üretim miktarı artar (işçi atanmamış alanda üretim olmaz veya çok az olur).
-
----
-
-### Kademe 6 — Üretim Alanı İç Mekanları ve Mini Etkileşimler (Sulama, Kurumuş Ağaç, Taş Kırma)
-> **Hedef:** Tarla, Orman ve Maden sayfalarını interaktif hale getirmek.
-- [ ] **6.1. 🌾 Tarla Sayfası — Sulama Etkileşimi:**
-  - Tam ekran tarla görünümünde ekin parselleri yer alır. Kuruyan parsellere tıklayarak **sulama kovasıyla sulama** yapılır; sulanan tarla ekstra mahsul bereketi verir.
-- [ ] **6.2. 🌲 Orman Sayfası — Kurumuş Ağaç Bulma Etkileşimi:**
-  - Orman sahnesinde yemyeşil ağaçların arasında **kurumuş/devrilmiş ağaçlar** yer alır. Oyuncu yaş ağaçlara dokunmadan kurumuş ağaçları bulup tıklayarak ekstra tahta toplar (yaş ağaca tıklarsa *"Yaş kesen baş keser, sadece kurumuş dalları toplayalım!"* uyarısı çıkar).
-- [ ] **6.3. ⛏️ Maden / Taş Ocağı Sayfası — Kaya Kırma Etkileşimi:**
-  - Taş ocağı sahnesinde parlayan kaya damarlarına tıklayarak kazma ile taş çıkarma mini etkileşimi yapılır.
+### Adım 5 — Tarlada Sulama, Ormanda Ağaç Kesme, Taş Ocağında Kaya Kırma ve İşçi Görevlendirme
+- [x] **5.1. İşçi (👥 İnsan) Görevlendirme Sistemi (`eylemler.js`, `oyunDeposu.js`):**
+  - Oyuncu köydeki `👥 İnsan` nüfusunu **Tarla (Çiftçi)**, **Orman (Oduncu)** ve **Taş Ocağı (Taş Ustası)** sahnelerinde `+` / `-` ile görevlendirir. Görevlendirilen işçi sayısı saatlik üretimi doğrudan artırır!
+- [x] **5.2. 🌾 Tarla 2D Sahnesi — Ekin Sulama Oyunu:**
+  - `tarla_sahne.webp` üzerinde **6 adet ekin parseli** ve çalışan çiftçiler görünür.
+  - Kurumuş/susamış parsellere tıkladığında oyuncu karakteri parselin yanına yürür, **💧 Sulama Kovası** animasyonuyla sular, ekinler yeşerip başak verir ve tüm parseller sulandığında **anında `+15 🌾 Mahsul`** kazanılır!
+- [x] **5.3. 🌲 Orman 2D Sahnesi — Kurumuş Ağaç Kesme Oyunu:**
+  - `orman_sahne.webp` üzerinde çalışan oduncular, **canlı yeşil ağaçlar** ve **kurumuş kahverengi ağaçlar** yer alır.
+  - Kurumuş ağaca tıkladığında oyuncu ağacın yanına yürür, **🪓 Balta** ile 3 vuruşta ağacı kesip **anında `+15 🌲 Tahta`** toplar! Yaş ağaca tıklarsa *"🌱 Yaş kesen baş keser! Sadece kurumuş ağaçları keselim."* uyarısı çıkar.
+- [x] **5.4. ⛏️ Taş Ocağı 2D Sahnesi — Kaya Kırma Oyunu:**
+  - Taş ocağı sahnesinde çalışan taş ustaları ve parlayan kaya damarları yer alır; tıklayarak **⛏️ Kazma** ile taş kırılır ve **`+12 🧱 Taş`** kazanılır.

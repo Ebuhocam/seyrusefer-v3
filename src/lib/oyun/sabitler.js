@@ -117,7 +117,7 @@ export const BINALAR = {
 
 // ---------- 1. KATMAN: KÖY HARİTASI YERLEŞİMİ ----------
 export const ARSALAR = {
-  otag: { x: 55.2, y: 27.5, genislik: 15.5 },
+  otag: { x: 55.2, y: 20.5, genislik: 16.0 },
   mektep: { x: 36.8, y: 46.5, genislik: 12.5 },
   kiraathane: { x: 74.2, y: 47.0, genislik: 12.5 },
   sosyalmeydan: { x: 55.2, y: 54.0, genislik: 10.5 },

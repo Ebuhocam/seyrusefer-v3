@@ -6,12 +6,11 @@ import {
   EV_IDLERI,
   KAYNAKLAR,
   NOKTALAR,
-  DEPO_SAAT,
   BIRLIK_ACILIS_LEVEL,
   LEVELLAR,
   toplamKonutKapasitesi,
 } from "@/lib/oyun/sabitler";
-import { depoKapasitesi, kaynakAcikMi } from "@/lib/oyun/kurallar";
+import { kaynakAcikMi } from "@/lib/oyun/kurallar";
 import { GOREV_TURLERI } from "@/lib/oyun/gorevler";
 import {
   HadisKutusu,
@@ -27,6 +26,7 @@ import {
   OzelGorevKutusu,
   BinaIciGorunumu,
 } from "./GorevlerEkrani";
+import { EvIciSahnesi, KoyMeydaniSahnesi, UretimSahnesi } from "./MekanSahnesi";
 import { BirlikPaneli } from "./BirlikVeFetihEkrani";
 
 const MEKAN_IKONLARI = {
@@ -78,7 +78,7 @@ function mekanBasligi(secim, durum) {
   return { ikon: "🤝", baslik: "Birlik ve Alan Mücadelesi", alt: "Kardeşlik Külliyesi" };
 }
 
-export default function Panel({ secim, oyun, kapat }) {
+export default function Panel({ secim, oyun, kapat, onSecimDegistir }) {
   const { durum } = oyun;
   const baslikBilgi = mekanBasligi(secim, durum);
   const mutluluk = durum.mutluluk ?? 60;
@@ -138,10 +138,14 @@ export default function Panel({ secim, oyun, kapat }) {
 
       {/* Tam Ekran Mekan Gövdesi */}
       <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6">
-        <div className="mx-auto max-w-4xl">
-          {secim.tur === "bina" && <BinaIcerik key={secim.id} id={secim.id} oyun={oyun} />}
+        <div className="mx-auto max-w-5xl">
+          {secim.tur === "bina" && (
+            <BinaIcerik key={secim.id} id={secim.id} oyun={oyun} onSecimDegistir={onSecimDegistir} />
+          )}
           {secim.tur === "nokta" && secim.id === "pano" && <PanoIcerik oyun={oyun} kapat={kapat} />}
-          {secim.tur === "nokta" && NOKTALAR[secim.id]?.kaynak && <KaynakIcerik id={secim.id} oyun={oyun} />}
+          {secim.tur === "nokta" && NOKTALAR[secim.id]?.kaynak && (
+            <UretimSahnesi key={secim.id} id={secim.id} oyun={oyun} />
+          )}
           {secim.tur === "nokta" && (secim.id === "haberci" || secim.id === "seyyah") && (
             <div className="space-y-4">
               <div className="rounded-3xl bg-stone-950/75 p-4 ring-1 ring-amber-500/30 sm:p-5">
@@ -149,7 +153,7 @@ export default function Panel({ secim, oyun, kapat }) {
                   Köy kapısına gelen <b>Haberci</b> sana ailenle birlikte okuyacağın mektupları ve günlük iyilik görevlerini ulaştırır.
                 </p>
               </div>
-              <HaberciKutusu oyun={oyun} />
+              <HaberciKutusu oyun={oyun} onSecimDegistir={onSecimDegistir} />
             </div>
           )}
           {secim.tur === "birlikBina" && <BirlikBinaIcerik id={secim.id} oyun={oyun} />}
@@ -237,16 +241,15 @@ function GorevEkrani({ gorevKodu, oyun, geri }) {
   );
 }
 
-function BinaIcerik({ id, oyun }) {
+function BinaIcerik({ id, oyun, onSecimDegistir }) {
   const tanim = BINALAR[id];
   const b = oyun.binaBilgisi(id);
   const env = oyun.durum.envanter;
   const onizleme = tanim.gorsel(b.maks ? b.seviye : b.hedef);
   const aktifGorsel = tanim.gorsel(Math.max(1, b.seviye || 1));
 
-  // Köy Meydanı'nda bina seviyesi 0 olsa bile halkın davaları meydanda dinlenebilir;
-  // diğer binalarda (Mektep, Kıraathane, Oba) ise seviye >= 1 olduğunda doğrudan iç mekan açılır.
-  const icMekanAcik = !tanim.konut && (b.seviye > 0 || id === "sosyalmeydan");
+  // Kurulu tüm binalarda (Kendi Evim ve kurulu konutlar dahil) ve Köy Meydanı'nda doğrudan iç mekan sahnesi açılır
+  const icMekanAcik = b.seviye > 0 || id === "sosyalmeydan";
   const [gorunum, setGorunum] = useState(icMekanAcik ? "icerde" : "insa");
   const [acikGorev, setAcikGorev] = useState(null);
 
@@ -290,8 +293,8 @@ function BinaIcerik({ id, oyun }) {
           </div>
         </div>
 
-        {/* Konut olmayan binalarda İç Mekan <-> Yükseltme Geçiş Sekmeleri */}
-        {!tanim.konut && icMekanAcik && (
+        {/* Kurulu tüm binalarda (Konutlar dahil) İç Mekan <-> Yükseltme Geçiş Sekmeleri */}
+        {icMekanAcik && (
           <div className="flex shrink-0 gap-1.5 rounded-2xl bg-stone-900 p-1.5 ring-1 ring-stone-700">
             <button
               type="button"
@@ -302,7 +305,7 @@ function BinaIcerik({ id, oyun }) {
                   : "text-amber-100 hover:bg-stone-800"
               }`}
             >
-              🚪 {tanim.ad} İçi
+              🚪 {tanim.konut ? "2D Ev İçi" : `${tanim.ad} İçi`}
             </button>
             <button
               type="button"
@@ -313,16 +316,34 @@ function BinaIcerik({ id, oyun }) {
                   : "text-amber-100 hover:bg-stone-800"
               }`}
             >
-              🔨 {b.maks ? "Seviye Tamam" : b.seviye ? `Yükselt (Lv.${b.hedef})` : "İnşa Et"}
+              🔨{" "}
+              {b.maks
+                ? "Seviye Tamam"
+                : tanim.konut
+                ? `${b.hedef}. Katı Çık`
+                : b.seviye
+                ? `Yükselt (Lv.${b.hedef})`
+                : "İnşa Et"}
               {b.yapilabilir && <span className="ml-1 text-emerald-300">▲</span>}
             </button>
           </div>
         )}
       </div>
 
-      {/* 1. GÖRÜNÜM: MEKAN İÇİ ÇALIŞMA SAHNESİ */}
+      {/* 1. GÖRÜNÜM: MEKAN İÇİ 2D SAHNESİ VEYA ÇALIŞMA EKRANI */}
       {gorunum === "icerde" && icMekanAcik ? (
-        <BinaIciGorunumu binaId={id} oyun={oyun} />
+        tanim.konut ? (
+          <EvIciSahnesi
+            binaId={id}
+            oyun={oyun}
+            onSecimDegistir={onSecimDegistir}
+            onYukseltmeAc={() => setGorunum("insa")}
+          />
+        ) : id === "sosyalmeydan" ? (
+          <KoyMeydaniSahnesi oyun={oyun} />
+        ) : (
+          <BinaIciGorunumu binaId={id} oyun={oyun} />
+        )
       ) : (
         /* 2. GÖRÜNÜM: KONUT VEYA BİNA İNŞA / YÜKSELTME SAHNESİ */
         <div className="grid gap-5 md:grid-cols-12">
@@ -620,63 +641,6 @@ function PanoIcerik({ oyun, kapat }) {
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function KaynakIcerik({ id, oyun }) {
-  const n = NOKTALAR[id];
-  const k = n.kaynak;
-  const t = KAYNAKLAR[k];
-  const { durum } = oyun;
-  const acik = kaynakAcikMi(k, durum.level);
-  const kap = depoKapasitesi(k, durum.binalar.otag);
-  const bekleyen = oyun.bekleyen(k);
-  const doluluk = Math.min(100, (bekleyen / kap) * 100);
-
-  return (
-    <div className="rounded-3xl bg-stone-950/80 p-5 ring-1 ring-amber-500/30 sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-black text-amber-100">
-            {n.ikon} {n.ad}
-          </h2>
-          <p className="text-sm text-amber-200/75">
-            {t.ad} üretir · Günde {t.gunluk} {t.ikon}
-          </p>
-        </div>
-      </div>
-
-      {!acik ? (
-        <p className="rounded-2xl bg-stone-800/70 p-4 text-center font-bold">
-          🔒 {`Level ${t.acilisLevel}'de`} açılır
-        </p>
-      ) : (
-        <>
-          <div className="mb-1.5 flex justify-between text-sm font-bold">
-            <span>Üretim Deposu</span>
-            <span className="tabular-nums text-amber-300">
-              {bekleyen} / {kap}
-            </span>
-          </div>
-          <div className="h-3.5 overflow-hidden rounded-full bg-stone-900 ring-1 ring-stone-800">
-            <div
-              className={`h-full transition-all ${doluluk >= 100 ? "bg-red-500" : "bg-amber-400"}`}
-              style={{ width: `${doluluk}%` }}
-            />
-          </div>
-          <p className="mt-2.5 text-xs text-amber-200/70">
-            Depo {DEPO_SAAT[durum.binalar.otag]} saatlik üretim alır (Oba Lv.{durum.binalar.otag}). Dolunca üretim durur — her gün toplamayı unutma!
-          </p>
-          <button
-            disabled={!bekleyen || oyun.bekliyor}
-            onClick={() => oyun.topla(k)}
-            className="mt-4 w-full rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 py-3.5 text-sm font-black text-stone-900 shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
-          >
-            {bekleyen ? `${t.ikon} ${bekleyen} ${t.ad} Topla` : "Henüz birikmedi"}
-          </button>
-        </>
-      )}
     </div>
   );
 }

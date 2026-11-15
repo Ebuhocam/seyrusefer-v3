@@ -7,21 +7,27 @@ import { KAYNAKLAR, DEPO_SAAT, BINALAR, LEVELLAR } from "./sabitler";
 
 const SAAT_MS = 60 * 60 * 1000;
 
-/** Bir kaynağın saatlik üretimi */
-export const saatlikUretim = (kaynak) => KAYNAKLAR[kaynak].gunluk / 24;
+/** Bir kaynağın saatlik üretimi (görevlendirilen işçi sayısına göre artar; 0 işçide üretim durur) */
+export function saatlikUretim(kaynak, isciSayisi = 1) {
+  const isci = Math.max(0, Number(isciSayisi ?? 1));
+  if (isci <= 0) return 0;
+  const temel = (KAYNAKLAR[kaynak]?.gunluk ?? 0) / 24;
+  return temel * (1 + (isci - 1) * 0.35);
+}
 
 /** Otağ seviyesine göre bir kaynağın depo kapasitesi */
 export function depoKapasitesi(kaynak, otagSeviye) {
-  return Math.floor(saatlikUretim(kaynak) * (DEPO_SAAT[otagSeviye] ?? 24));
+  const temelSaatlik = (KAYNAKLAR[kaynak]?.gunluk ?? 0) / 24;
+  return Math.floor(temelSaatlik * (DEPO_SAAT[otagSeviye] ?? 24));
 }
 
 /** Üretim alanı açık mı? */
 export const kaynakAcikMi = (kaynak, oyuncuLevel) => oyuncuLevel >= KAYNAKLAR[kaynak].acilisLevel;
 
 /** Son toplamadan bu yana alanda biriken (henüz toplanmamış) miktar */
-export function biriken(kaynak, sonToplama, simdi, otagSeviye) {
+export function biriken(kaynak, sonToplama, simdi, otagSeviye, isciSayisi = 1) {
   const saat = Math.max(0, (simdi - sonToplama) / SAAT_MS);
-  return Math.min(depoKapasitesi(kaynak, otagSeviye), Math.floor(saat * saatlikUretim(kaynak)));
+  return Math.min(depoKapasitesi(kaynak, otagSeviye), Math.floor(saat * saatlikUretim(kaynak, isciSayisi)));
 }
 
 /** Kaynak bedeli karşılanıyor mu? Eksik olanları da döner. */

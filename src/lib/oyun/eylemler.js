@@ -32,6 +32,9 @@ export function baslangicDurumu(simdi) {
     level: 1,
     binalar,
     envanter,
+    isciler: { erzak: 1, kereste: 1, tas: 0 },
+    sonEtkilesim: { erzak: 0, kereste: 0, tas: 0 },
+    mektupAlindi: 0,
     sonToplama: Object.fromEntries(Object.keys(KAYNAKLAR).map((k) => [k, null])),
     mutluluk: 60,
     cozulenDavalar: [],
@@ -47,12 +50,16 @@ export function baslangicDurumu(simdi) {
 /** Level'a göre açılmış ama henüz başlamamış üretim alanlarını şimdi başlatır */
 export function uretimiBaslat(d, simdi) {
   const sonToplama = { ...d.sonToplama };
+  const isciler = { ...(d.isciler ?? { erzak: 1, kereste: 1, tas: 0 }) };
   for (const [k, tanim] of Object.entries(KAYNAKLAR)) {
     if (tanim.uretim !== false && kaynakAcikMi(k, d.level) && sonToplama[k] == null) {
       sonToplama[k] = simdi;
+      if (k === "tas" && (isciler.tas ?? 0) === 0 && (d.envanter?.insan ?? 5) > (isciler.erzak ?? 1) + (isciler.kereste ?? 1)) {
+        isciler.tas = 1;
+      }
     }
   }
-  return { ...d, sonToplama };
+  return { ...d, sonToplama, isciler };
 }
 
 export const gorevKontrol = (d, ayarlar = null) => ({
@@ -63,7 +70,8 @@ export const gorevKontrol = (d, ayarlar = null) => ({
 export function topla(d, kaynak, simdi) {
   if (!KAYNAKLAR[kaynak] || KAYNAKLAR[kaynak].uretim === false) return { hata: "Bu kaynak üretim alanından toplanmaz" };
   if (!kaynakAcikMi(kaynak, d.level) || d.sonToplama[kaynak] == null) return { hata: "Bu alan henüz açılmadı" };
-  const miktar = biriken(kaynak, d.sonToplama[kaynak], simdi, d.binalar.otag ?? 1);
+  const isciSayisi = d.isciler?.[kaynak] ?? 1;
+  const miktar = biriken(kaynak, d.sonToplama[kaynak], simdi, d.binalar.otag ?? 1, isciSayisi);
   if (!miktar) return { hata: "Henüz birikmedi" };
   return {
     durum: {
@@ -72,6 +80,118 @@ export function topla(d, kaynak, simdi) {
       sonToplama: { ...d.sonToplama, [kaynak]: simdi },
     },
     miktar,
+  };
+}
+
+/**
+ * Üretim alanlarına (Tarla, Orman, Taş Ocağı) köydeki 👥 İnsan nüfusundan işçi görevlendirir (+1 / -1).
+ */
+export function isciAta(d, kaynak, degisim, simdi) {
+  if (!["erzak", "kereste", "tas"].includes(kaynak)) return { hata: "Geçersiz üretim alanı" };
+  if (!kaynakAcikMi(kaynak, d.level)) return { hata: "Bu üretim alanı henüz açılmadı" };
+
+  const isciler = { erzak: 1, kereste: 1, tas: 0, ...(d.isciler ?? {}) };
+  const mevcut = isciler[kaynak] ?? 0;
+  const yeniSayi = mevcut + (Number(degisim) >= 0 ? 1 : -1);
+
+  if (yeniSayi < 0) return { hata: "Bu alanda zaten hiç işçi çalışmıyor" };
+
+  const digerToplam = Object.entries(isciler)
+    .filter(([k]) => k !== kaynak)
+    .reduce((t, [, v]) => t + (Number(v) || 0), 0);
+  const toplamInsan = d.envanter?.insan ?? 5;
+
+  if (digerToplam + yeniSayi > toplamInsan) {
+    return {
+      hata: `Köydeki tüm insanlar (${toplamInsan} 👥) zaten görevde! Daha fazla işçi görevlendirmek için Kıraathane'den yeni insan toplayabilirsin.`,
+    };
+  }
+
+  // İşçi sayısı değişirken o ana kadar biriken üretimi envantere aktar
+  const birikenMiktar =
+    d.sonToplama?.[kaynak] != null
+      ? biriken(kaynak, d.sonToplama[kaynak], simdi, d.binalar.otag ?? 1, mevcut)
+      : 0;
+
+  return {
+    durum: {
+      ...d,
+      envanter: {
+        ...d.envanter,
+        [kaynak]: (d.envanter[kaynak] ?? 0) + birikenMiktar,
+      },
+      sonToplama: {
+        ...d.sonToplama,
+        [kaynak]: simdi,
+      },
+      isciler: {
+        ...isciler,
+        [kaynak]: yeniSayi,
+      },
+    },
+    sonuc: {
+      kaynak,
+      yeniSayi,
+      birikenMiktar,
+    },
+  };
+}
+
+/**
+ * Tarlada sulama, Ormanda kurumuş ağaç kesme veya Taş Ocağında kaya kırma mini oyun ödülünü verir.
+ */
+const ETKILESIM_BEKLEME_MS = 10 * 60 * 1000; // 10 dakikada bir tekrar yapılabilir
+const ETKILESIM_ODULLERI = {
+  erzak: { miktar: 15, mesaj: "🌾 Tarladaki tüm ekinleri suladın! Bereketli hasattan +15 Mahsul kazandın!" },
+  kereste: { miktar: 15, mesaj: "🌲 Ormandaki kurumuş ağaçları temizleyip kestin! +15 Tahta kazandın!" },
+  tas: { miktar: 12, mesaj: "⛏️ Taş ocağındaki kaya damarlarını kırdın! +12 Taş kazandın!" },
+};
+
+export function uretimEtkilesim(d, kaynak, simdi) {
+  const odul = ETKILESIM_ODULLERI[kaynak];
+  if (!odul) return { hata: "Geçersiz etkileşim alanı" };
+  if (!kaynakAcikMi(kaynak, d.level)) return { hata: "Bu alan henüz açılmadı" };
+
+  const son = d.sonEtkilesim?.[kaynak] ?? 0;
+  if (son > 0 && simdi - son < ETKILESIM_BEKLEME_MS) {
+    const kalanDk = Math.max(1, Math.ceil((ETKILESIM_BEKLEME_MS - (simdi - son)) / 60000));
+    return { hata: `Bu alandaki bakım çalışmasını az önce yaptın. ${kalanDk} dakika sonra tekrar yapabilirsin!` };
+  }
+
+  return {
+    durum: {
+      ...d,
+      envanter: {
+        ...d.envanter,
+        [kaynak]: (d.envanter[kaynak] ?? 0) + odul.miktar,
+      },
+      sonEtkilesim: {
+        ...(d.sonEtkilesim ?? {}),
+        [kaynak]: simdi,
+      },
+    },
+    miktar: odul.miktar,
+    sonuc: {
+      kaynak,
+      miktar: odul.miktar,
+      mesaj: odul.mesaj,
+    },
+  };
+}
+
+/**
+ * Haberci'den mevcut levelın Aile Mektubunu teslim alır.
+ * Mektup teslim alındıktan sonra Kendi Evim (Ev İçi) sahnesinde aile bireyleri çağrılarak okunabilir.
+ */
+export function mektupTeslimAl(d) {
+  return {
+    durum: {
+      ...d,
+      mektupAlindi: d.level,
+    },
+    sonuc: {
+      mesaj: "📬 Aile Mektubunu Haberci'den teslim aldın! Şimdi Kendi Evim'in içine girip aile bireylerini odaya çağırabilirsin.",
+    },
   };
 }
 
