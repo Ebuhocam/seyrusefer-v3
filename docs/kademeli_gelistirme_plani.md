@@ -1,77 +1,88 @@
-# Seyrüsefer v3 — 2D Canlı Mekan Sahneleri, Ev İçi, Meydan Yürüyüş Motoru ve Rehber Planı
+# Seyrüsefer v3 — Sisli Harita, 24 Saatlik Dolum & Tarla Görselleri, Cinsiyet/Karakter Seçimi, Meydan Diyalog Sistemi ve Çınar Altı Sosyal Medya Planı
 
-Son güncelleme: 15 Kasım 2026
+Son güncelleme: 15 Kasım 2026 (TAMAMLANDI ✅)
 
-Bu doküman; binalara ve üretim alanlarına tıklandığında açılan **2D İnteraktif Oyun Sahnelerini** (Ev İçi, Köy Meydanı Yürüyüş Motoru, Tarlada Sulama, Ormanda Ağaç Kesme), **Haberci → Ev İçi Aile Okuması** akışını, **Oba'nın yeni harita konumunu** ve **Bilge Rehber'in önce köyü tanıtıp sonra görev yaptırma** sistemini sıralı adımlara böler.
-
----
-
-## 🚀 Sıralı Uygulama Planı
-
-### Adım 1 — Haritada Oba Konumu Düzeltmesi ve Bilge Rehber (Önce Tanıtım Turu → Sonra Görevler + Çoklu Ok + Haberci)
-- [x] **1.1. Oba Konumunun Yukarı Taşınması (`sabitler.js`):**
-  - Haritadaki Oba (`otag`), üstteki taş kale terasının tam ortasına oturacak şekilde daha yukarı (`x: 55.2, y: 20.5`) taşınır.
-- [x] **1.2. Bilge Rehber'de Çoklu Hedef Vurgusu (`hedefler` dizisi):**
-  - Rehber bir adımı anlatırken aynı anda birden fazla nokta (ör. **hem Tarla hem Orman hem Taş Ocağı**, veya **tüm 5+1 Evler**) üzerinde **"👇 Buraya Tıkla!"** oku gösterebilir.
-- [x] **1.3. Bilge Rehber 2 Aşamalı Akış (Önce Köy Tanıtımı → Sonra Yapılacak Görevler):**
-  - **Bölüm 1 — Köy Tanıtım Turu (7 Kısa Adım):**
-    1. **Oba:** Hakim tepedeki yönetim ve depo merkezimiz.
-    2. **Mektep:** İlim, hadis, video ve sınav yuvamız.
-    3. **Kıraathane:** Ozan Dede'nin türkü anlattığı ve yolcuların geldiği mekan.
-    4. **Köy Meydanı:** Köylülerin yürüdüğü, sohbet ettiği ve davalarını getirdiği meydan.
-    5. **5+1 Ev Mahallesi:** Kendi Evimiz (ev içi aile okuması) ve yeni insanlar için 3 katlı konut arsaları.
-    6. **Tarla, Orman ve Taş Ocağı:** İşçi görevlendirme, sulama, ağaç kesme ve taş çıkarma alanlarımız (**Tarla + Orman + Taş Ocağı birlikte vurgulanır**).
-    7. **Haberci ve Görev Panosu:** Köy kapısına mektup getiren Haberci ve ortadaki Görev Panosu (**Haberci + Pano birlikte vurgulanır**).
-  - **Bölüm 2 — Şimdi Yapacaklarımız (Adım Adım Görev Yönlendirmesi):**
-    - Tanıtım bitince çocuğa sırasıyla ne yapacağını yaptırır:
-      1. **Mektep 1. Seviyeyi İnşa Et**
-      2. **Tarlada Ekin Sula & Ormanda Kurumuş Ağaç Kes (İşçi Görevlendir)**
-      3. **Haberci'den Aile Mektubunu Al → Kendi Evine Girip Aile Bireylerini Odaya Çağır**
-      4. **Mektep'te Günün Hadisini Oku**
-      5. **Köy Meydanı'nda Yürüyen Köylülerin Davasını Çöz**
+Bu doküman; kullanıcının istediği tüm yeni mekanikleri 6 sıralı adıma böler ve tamamlanan durumu özetler:
 
 ---
 
-### Adım 2 — 2D Mekan İçi Görsellerinin Üretilmesi (`public/assets/mekanlar/`)
-- [x] **2.1. `ev_ici.webp` (Anadolu Ev İçi Sahnesi):**
-  - Sedirler, Anadolu kilimi, pencereden görünen köy manzarası, ortada rahle/sehpa ve aile bireylerinin oturacağı minderler.
-- [x] **2.2. `meydan_sahne.webp` (Köy Meydanı 2D Sahnesi):**
-  - Arnavut kaldırımlı geniş meydan zemini, taş çeşme, ulu çınar ağacı ve köylülerin ileri-geri yürüyebileceği sahne alanı.
-- [x] **2.3. `tarla_sahne.webp` (Tarla 2D Sahnesi):**
-  - Su kuyusu, sulama arkı ve üzerinde sulama yapılacak 6 ekin parseli alanı.
-- [x] **2.4. `orman_sahne.webp` (Orman 2D Sahnesi):**
-  - Yeşil çam/meşe ağaçları ve kesilecek kurumuş ağaçların yer aldığı orman açıklığı sahnesi.
+## 🚀 Sıralı Uygulama Planı (Tamamlandı)
+
+### Adım 1 — Harita Etrafına Sisli Alan (Overscroll) & Bilge Rehber Tanıtım Turu Düzenlemesi
+- [x] **1.1. Harita Etrafında Sisli Keşif Alanı (`KoyHaritasi.js`):**
+  - Harita tuvalinin dört bir yanına (`px-[18vw] py-[28dvh]`) sisli orman ve bulut dokusu eklendi; oyuncu haritayı kenarlara doğru biraz daha kaydırabiliyor.
+  - Bu sayede altta **Bilge Rehber** penceresi açıkken bile en alttaki **Haberci (`y: 88.5%`)** rahatça yukarı kaydırılıp tam görünüyor.
+- [x] **1.2. Bilge Rehber Tanıtım Kısmı Sadeleştirmesi (`RehberKarakter.js`, `KoyHaritasi.js`):**
+  - Rehberin **1. Bölüm: Köy Tanıtım Turu (`bolum === "tanitim"`)** adımlarında haritada **"👇 Buraya Tıkla!"** oku gösterilmez ve rehber kutusunda **"🚪 Binaya Git / Görevi Aç"** butonu çıkmaz.
+  - Tanıtım turunda sadece kamera ilgili alana yumuşakça odaklanır (`scrollTo` ile hem yatay hem dikey ortalar) ve oyuncu yalnızca **"İlerle →"** (veya **Geri / Atla**) butonuyla köyü tanır.
+  - **"👇 Buraya Tıkla!"** oku ve **"Mekana Git"** butonu yalnızca **2. Bölüm: Yapılacak İşler (`bolum === "gorev"`)** kısmında devreye girer.
 
 ---
 
-### Adım 3 — 2D Canlı Sahne ve Yürüyüş Motoru (`Köy Meydanı` & Karakter Hareketi)
-- [x] **3.1. 2D Sahne ve Yürüyüş Motoru (`src/components/koy/MekanSahnesi.js`):**
-  - Oyuncu mekana girdiğinde **kendisini sahnenin içinde** görür; sahnede tıkladığı noktaya doğru oyuncu karakteri yürür!
-  - Etrafında köylü karakterleri (`NPC`) kendi hızlarında ileri-geri yürür, bazen durup etrafa bakar ve konuşma balonları çıkarır.
-- [x] **3.2. Köy Meydanı'nda Canlı Olay ve Dava Sahnesi:**
-  - Köy Meydanı'na tıklandığında oyuncu kendisini meydanda bulur.
-  - Meydanda bir dava/olay varsa, iki köylü başlarının üzerinde **"⚖️ Davamız Var! (Bize Tıkla)"** balonuyla ileri-geri yürür; oyuncu onlara tıkladığında yanlarına yürür ve tekil dava penceresi açılır!
+### Adım 2 — Ev İçi Aile Çağırma Hassasiyeti (Yetim/Öksüz Çocuk Hassasiyeti)
+- [x] **2.1. Ev İçinde Karakter Gelmemesi ve "Çağırdım" Butonu (`MekanSahnesi.js`):**
+  - Anne veya babası olmayan çocukların üzülmemesi için Ev İçi sahnesinde kapıdan Baba/Anne/Kardeş karakterleri **yürümez ve görünmez**.
+  - Mektup Haberci'den alındıktan sonra Ev İçi sahnesinde önce **"📣 Yanıma Çağır"** butonu yer alır; buna tıklanınca **"✅ Çağırdım"** butonu açılır ve tıklanınca doğrudan mektup okuma penceresine geçilir.
 
 ---
 
-### Adım 4 — Ev İçi Sahnesi (`Kendi Evim`), Haberci Mektup Hatırlatması ve Aile Bireylerini Çağırma
-- [x] **4.1. Haberci'den Mektubu Teslim Alma (`mektupAlindi`):**
-  - Haberci'ye tıklandığında oyuncu **"📬 Aile Mektubunu Haberci'den Teslim Al"** butonuna basarak mektubu alır ve *"Mektubu aldın! Şimdi Kendi Evine gidip aile bireylerini odaya çağırarak birlikte okuyabilirsiniz."* mesajı çıkar.
-- [x] **4.2. 2D Ev İçi Sahnesi (`Kendi Evim` ve Konutlar):**
-  - Evin içine girildiğinde `ev_ici.webp` sahnesi açılır; oyuncu karakteri odanın içindedir (üst sekmeden **🔨 Kat Çık / Yükselt** ekranına da geçilebilir).
-  - **Hatırlatma Sistemi:** Eğer Haberci'de bekleyen bir mektup varsa ve oyuncu henüz Haberci'den teslim almadıysa, evin içinde uyarı balonu görünür: *"📬 Haberci köy kapısına yeni bir Aile Mektubu getirdi! Önce Haberci'ye gidip mektubu teslim almalısın."* (Tek tıkla Haberci'ye gitme butonuyla).
-  - **Aile Bireylerini Çağırma:** Mektup alındıysa oyuncu odadaki **"👨‍👩‍👧‍👦 Aile Bireylerini Odaya Çağır"** butonuna tıklar → Anne, Baba ve Kardeş karakterleri kapıdan yürüyerek odaya girip sedirlere yerleşir! Ardından mektup açılır ve ailece okunup görev tamamlanır.
+### Adım 3 — Kayıtta Cinsiyet & Karakter Seçimi ve Oyun İçi Karakter Değiştirme
+- [x] **3.1. Kız ve Erkek Öğrenci Karakterleri (`sabitler.js`, `public/assets/karakterler/`):**
+  - **Kız Öğrenci Karakterleri:**
+    1. `bala` — **Bala Hatun** (`/assets/karakterler/kiz_bala.webp`)
+    2. `elif` — **Elif Bacı (İlim Talebesi)** (`/assets/karakterler/kiz_elif.webp`)
+  - **Erkek Öğrenci Karakterleri:**
+    1. `alp` — **Genç Alp** (`/assets/karakterler/erkek_alp.webp`)
+    2. `celebi` — **Genç Çelebi (İlim Talebesi)** (`/assets/karakterler/erkek_celebi.webp`)
+- [x] **3.2. Kayıt Ekranında Cinsiyet ve Karakter Seçimi (`GirisFormu.js`, `/api/auth/kayit`):**
+  - Yeni köy kurarken öğrenciye **Cinsiyet (`Erkek Öğrenci` / `Kız Öğrenci`)** sorulur ve seçtiği cinsiyete uygun karakter kartlarından istediğini seçer.
+- [x] **3.3. Oyun İçinde Karakter Değiştirme (`UstBar.js`, `MekanSahnesi.js`):**
+  - Üst bardaki oyuncu karakter rozetine tıklandığında açılan **Karakter Seçim Penceresi** ile öğrenci dilediği zaman karakterini değiştirebilir.
+  - Tüm 2D sahnelerde (Ev İçi, Köy Meydanı, Tarla, Orman, Taş Ocağı) ve Çınar Altı sosyal medyada öğrencinin seçtiği karakter görseli yer alır.
 
 ---
 
-### Adım 5 — Tarlada Sulama, Ormanda Ağaç Kesme, Taş Ocağında Kaya Kırma ve İşçi Görevlendirme
-- [x] **5.1. İşçi (👥 İnsan) Görevlendirme Sistemi (`eylemler.js`, `oyunDeposu.js`):**
-  - Oyuncu köydeki `👥 İnsan` nüfusunu **Tarla (Çiftçi)**, **Orman (Oduncu)** ve **Taş Ocağı (Taş Ustası)** sahnelerinde `+` / `-` ile görevlendirir. Görevlendirilen işçi sayısı saatlik üretimi doğrudan artırır!
-- [x] **5.2. 🌾 Tarla 2D Sahnesi — Ekin Sulama Oyunu:**
-  - `tarla_sahne.webp` üzerinde **6 adet ekin parseli** ve çalışan çiftçiler görünür.
-  - Kurumuş/susamış parsellere tıkladığında oyuncu karakteri parselin yanına yürür, **💧 Sulama Kovası** animasyonuyla sular, ekinler yeşerip başak verir ve tüm parseller sulandığında **anında `+15 🌾 Mahsul`** kazanılır!
-- [x] **5.3. 🌲 Orman 2D Sahnesi — Kurumuş Ağaç Kesme Oyunu:**
-  - `orman_sahne.webp` üzerinde çalışan oduncular, **canlı yeşil ağaçlar** ve **kurumuş kahverengi ağaçlar** yer alır.
-  - Kurumuş ağaca tıkladığında oyuncu ağacın yanına yürür, **🪓 Balta** ile 3 vuruşta ağacı kesip **anında `+15 🌲 Tahta`** toplar! Yaş ağaca tıklarsa *"🌱 Yaş kesen baş keser! Sadece kurumuş ağaçları keselim."* uyarısı çıkar.
-- [x] **5.4. ⛏️ Taş Ocağı 2D Sahnesi — Kaya Kırma Oyunu:**
-  - Taş ocağı sahnesinde çalışan taş ustaları ve parlayan kaya damarları yer alır; tıklayarak **⛏️ Kazma** ile taş kırılır ve **`+12 🧱 Taş`** kazanılır.
+### Adım 4 — 24 Saatlik Kaynak Dolumu (15 Birim / 24 Saat), Doluluk Oranı ve 3 Aşamalı Tarla Görseli
+- [x] **4.1. 24 Saatte 15 Birim Dolum Kurgusu (`kurallar.js`, `eylemler.js`, `MekanSahnesi.js`):**
+  - Saha üretimi (Tarla, Orman, Taş Ocağı) 10 dakika yerine **24 saatte 15 birim (`15/15`, yani 1 işçiyle her 96 dakikada `1` birim)** dolacak şekilde çalışır (işçi çarpanıyla hızlanır).
+  - Eğer henüz hiç kaynak birikmemişse (`0 / 15`, `%0`), oyuncu hiçbir şey toplayamaz / sulayamaz; ekranda **anlık dolum yüzdesi (`%0..%100`)** ve bir sonraki birime kalan dakika görünür.
+  - Eğer örneğin `1/15` veya `5/15` birikmişse, oyuncu sahada tam o kadar birimi sulayıp/kesip toplayabilir!
+- [x] **4.2. Köy Haritasında Dolum Oranı, 3 Aşamalı Tarla Görseli ve Orman/Tarla Hover Efekti (`KoyHaritasi.js`, `public/assets/binalar/`):**
+  - Köy haritasında Tarla, Orman ve Taş Ocağı üzerinde **dolum oranı çubuğu (`%Doluluk` ve `X/15`)** sürekli görünür.
+  - **Tarla Görselleri:**
+    - Tamamen boşken (`0/15`): `tarla_bos.webp` (Sürülmüş boş toprak)
+    - Birazı doluyken (`1..14/15`): `tarla_yari.webp` (Yeşil filizli yarı dolu tarla)
+    - Tamamı doluyken (`15/15`): `tarla_dolu.webp` (Altın başaklı tam dolu tarla)
+  - Tarla, Orman ve Taş Ocağı da diğer binalar gibi üzerine fare (mouse) getirildiğinde **hafif öne gelme / büyüme (`hover:-translate-y-1.5 hover:scale-110`)** efektine sahiptir.
+
+---
+
+### Adım 5 — Köy Meydanı: Sabit Bekleyen Karakterler, Diyalog Kutusu, Tam Ekran Karar Sonucu ve Günlük Olay (Dava veya Yeni İnsan Daveti)
+- [x] **5.1. Sabit Bekleme ve Yanlarına Gidince Konuşma (`KoyMeydaniSahnesi`):**
+  - Meydandaki karakterler sağa sola yürümez; sabit noktalarında beklerler.
+  - Oyuncu karakterini onların yanına götürdüğünde (veya onlara tıkladığında), karakter yanlarına yürür ve **başlarının üstünde konuşma balonu + altta Rehber gibi daktilo diyalog kutusu** açılır!
+  - Konuşma tamamlandığında **"⚖️ Karar Ekranına Geç"** veya **"🏡 Ev Teklifi Ekranına Geç"** butonuyla seçim ekranı açılır.
+- [x] **5.2. Tam Ekran Karar Sonucu Ekranı:**
+  - Karar verildiğinde üstteki küçük bildirim yerine **karar ekranı büyüklüğünde geniş, detaylı bir Sonuç Ekranı** açılır (Huzur değişimi, köylülerin tepkisi, hikmetli ders) ve **"✅ Tamam"** butonuna basınca kapanır.
+- [x] **5.3. Günde 1 Meydan Olayı (Bitince Kaybolma + Bazen Dava, Bazen Yeni İnsan Daveti):**
+  - Meydandaki olay (dava veya göçmen daveti) çözüldüğünde karakterler meydandan ayrılır/kaybolur! Hemen peşinden yenisi gelmez; **bir sonraki oyun günü (24 saat sonra)** yeni olay gelir (`sonMeydanOlayZamani`).
+  - Meydana her gün sadece dava gelmez; sırayla bir gün anlaşmazlığı olan köylüler (**⚖️ Köylü Davası**), bir sonraki gün ise köye yerleşmek isteyen yeni aileler (**🏡 Köye Yeni İnsan Daveti**) meydanda bekler!
+
+---
+
+### Adım 6 — Çınar Altı Sohbeti: Tam Sayfa Sosyal Medya Düzeni ve Dinamik Köy Huzuru Mekaniği
+- [x] **6.1. Pop-up Yerine Tam Sayfa Sosyal Medya (`GorevlerEkrani.js`, `MekanSahnesi.js`):**
+  - Köy Meydanı'nda **Çınar Altı Sohbeti**'ne tıklandığında küçük modal yerine **tam ekran sosyal medya sayfası** açılır (`← Köy Meydanı'na Dön`).
+- [x] **6.2. Gündem İçi ve Gündem Harici Paylaşım + Söz/Hikâye/YouTube/Instagram Video:**
+  - İlk levelın gündem konusu küçük çocukların da kolayca katılabileceği şekilde (*"Beğendiğin güzel bir sözü, kısa bir hikâyeyi, bir duayı veya bir iyilik fikrini kardeşlerinle paylaş"*) olarak güncellendi ve tek tıkla ilham şablonları eklendi.
+  - Öğrenciler paylaşım yaparken tür ve kategori seçebilir:
+    - **📌 Gündem İçi Paylaşım** → Paylaşıldığında **Köy Huzuru `+3 😊`** artar!
+    - **💬 Gündem Harici (Serbest Paylaşım)** → Paylaşıldığında **Köy Huzuru `+1 😊`** artar (`✨ Güzel Söz`, `📖 Kısa Hikâye / Kıssa`, `🤲 Dua & Dilek`, `💭 Hatıra`, `🎬 Video Paylaşımı`).
+    - **🎬 Video Paylaşımı (YouTube veya Instagram Linki)** → Paylaşılan YouTube ve Instagram videoları akış içinde gömülü (`iframe`) olarak izlenebilir.
+- [x] **6.3. Beğeni (+Huzur), Yorum, Yöneticiye Şikayet ve Öğrenci Profili (`/api/meydan`):**
+  - **❤️ Beğen:** Her beğeni paylaşımı yapan öğrencinin **Köy Huzurunu `+1 😊`** artırır!
+  - **💬 Yorum Yap:** Paylaşımların altına yorum yazma.
+  - **🚩 Yöneticiye Şikayet Et:** Uygunsuz paylaşımları sebep seçerek yöneticiye bildirme (`meydan_sikayetler`).
+  - **👤 Profile Git:** Paylaşım yapan öğrencinin adına/karakterine tıklanınca o öğrencinin **Köy Seviyesi, Seçtiği Karakter, Toplam Beğenisi ve Tüm Paylaşımlarını** gösteren profil sayfası açılır.
+- [x] **6.4. Dinamik Köy Huzuru (Mutluluk) Mekaniği:**
+  - Köy Huzuru zamanla (her 12 saatte `-2`, en az `25`'e kadar) kendiliğinden hafifçe azalır; yüksek tutmak için meydanda dava çözmek (`+4`), gündem paylaşımı yapmak (`+3`), beğeni almak (`+1`) ve günlük görev yapmak (`+2`) gerekir.

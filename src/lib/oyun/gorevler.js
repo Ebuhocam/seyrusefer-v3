@@ -106,12 +106,13 @@ export const LEVEL_ICERIKLERI = {
       sureSn: 15,
     },
     aile: {
-      baslik: "Ailene Mektup: Niyet ve İhlas",
+      baslik: "Ev Halkımızla Okuma Mektubu: Niyet ve İhlas",
       metin:
-        "Sevgili ailem, bugün Seyrüsefer yolculuğuna başladım. Peygamber Efendimiz (s.a.v.) 'Ameller niyetlere göredir' buyuruyor. Evimizde yaptığımız her güzel işi birbirimize sevgiyle ve Allah'ın rızasını kazanmak niyetiyle yapmaya söz verelim.",
-      soru: "Ailenle konuş: Günlük hayatta sıradan bir işi (yemek hazırlamak, ders çalışmak, selam vermek) güzel bir niyetle ibadete nasıl dönüştürebiliriz?",
+        "Sevgili büyüklerim ve ev halkımız, bugün Seyrüsefer yolculuğuna başladım. Peygamber Efendimiz (s.a.v.) 'Ameller niyetlere göredir' buyuruyor. Yaptığımız her güzel işi birbirimize sevgiyle ve Allah'ın rızasını kazanmak niyetiyle yapmaya söz verelim.",
+      soru: "Yanındaki büyüklerinle veya sevdiklerinle konuş: Günlük hayatta sıradan bir işi (sofra kurmak, ders çalışmak, selam vermek) güzel bir niyetle ibadete nasıl dönüştürebiliriz?",
     },
-    gundemSorusu: "Güzel bir niyetle başladığın ve bereketini gördüğün bir anını paylaşır mısın?",
+    gundemSorusu:
+      "Beğendiğin güzel bir sözü, kısa bir hikâyeyi, bir duayı veya bugün öğrendiğin bir iyiliği paylaşır mısın?",
     sinav: [],
   },
   2: {
@@ -348,7 +349,7 @@ export const LEVEL_ICERIKLERI = {
 };
 
 export const SEYYAH_GOREVLERI = [
-  "Bugün anne veya babana hiç beklemedikleri bir anda sarılıp 'İyi ki varsınız' de ve bir ev işine yardım et.",
+  "Bugün evdeki büyüklerine veya sevdiklerine hiç beklemedikleri bir anda 'İyi ki varsınız' de ve bir işe yardım et.",
   "Bugün okulda veya mahallede uzun zamandır konuşmadığın bir arkadaşına güler yüzle selam verip halini hatırını sor.",
   "Bugün sokaktaki bir kedi veya kuş için bir kap su ve yiyecek bırak.",
   "Bugün yemekten sonra sofrayı toplamaya gönüllü olarak yardım et ve yemeği hazırlayana teşekkür et.",

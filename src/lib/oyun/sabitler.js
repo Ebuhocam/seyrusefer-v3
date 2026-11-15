@@ -5,13 +5,55 @@
 // 3. Katman: Genel Harita (6 Stratejik Sancak Bölgesi)
 // =============================================================
 
+// ---------- ÖĞRENCİ KARAKTERLERİ (KIZ & ERKEK SEÇİLEBİLİR) ----------
+export const KARAKTERLER = {
+  alp: {
+    id: "alp",
+    ad: "Genç Alp",
+    cinsiyet: "erkek",
+    unvan: "Cesur Yiğit",
+    ikon: "👦",
+    gorsel: "/assets/karakterler/erkek_alp.webp",
+  },
+  celebi: {
+    id: "celebi",
+    ad: "Genç Çelebi",
+    cinsiyet: "erkek",
+    unvan: "İlim Talebesi",
+    ikon: "🧑",
+    gorsel: "/assets/karakterler/erkek_celebi.webp",
+  },
+  bala: {
+    id: "bala",
+    ad: "Bala Hatun",
+    cinsiyet: "kiz",
+    unvan: "Oba Beyi Kızı",
+    ikon: "👧",
+    gorsel: "/assets/karakterler/kiz_bala.webp",
+  },
+  elif: {
+    id: "elif",
+    ad: "Elif Bacı",
+    cinsiyet: "kiz",
+    unvan: "İlim & Hikmet Talebesi",
+    ikon: "🧕",
+    gorsel: "/assets/karakterler/kiz_elif.webp",
+  },
+};
+
+export function oyuncuKarakteriBul(karakterId, cinsiyet = "erkek") {
+  if (karakterId && KARAKTERLER[karakterId]) return KARAKTERLER[karakterId];
+  return cinsiyet === "kiz" ? KARAKTERLER.bala : KARAKTERLER.alp;
+}
+
 // ---------- 4 TEMEL KAYNAK ----------
-// Mahsul, Tahta, Taş üretim alanlarından saatlik birikir.
-// İnsan (Ahali) ise Kıraathane'ye gelen yolculara ev kurma teklif edilerek (Mutluluk oranına göre) kazanılır.
+// Mahsul, Tahta, Taş üretim alanlarından 24 saatte 15 birim (her 96 dakikada 1 birim) dolacak şekilde birikir.
+// İnsan (Ahali) ise Köy Meydanı ve Kıraathane'ye gelen yolculara ev kurma teklif edilerek kazanılır.
+export const SAHA_MAKS_BIRIM = 15;
 export const KAYNAKLAR = {
-  erzak: { ad: "Mahsul", ikon: "🌾", alan: "tarla", gunluk: 100, acilisLevel: 1, uretim: true },
-  kereste: { ad: "Tahta", ikon: "🌲", alan: "orman", gunluk: 80, acilisLevel: 1, uretim: true },
-  tas: { ad: "Taş", ikon: "🧱", alan: "maden", gunluk: 60, acilisLevel: 2, uretim: true },
+  erzak: { ad: "Mahsul", ikon: "🌾", alan: "tarla", gunluk: 15, acilisLevel: 1, uretim: true },
+  kereste: { ad: "Tahta", ikon: "🌲", alan: "orman", gunluk: 15, acilisLevel: 1, uretim: true },
+  tas: { ad: "Taş", ikon: "🧱", alan: "maden", gunluk: 15, acilisLevel: 2, uretim: true },
   insan: { ad: "İnsan", ikon: "👥", alan: "kiraathane", gunluk: 0, acilisLevel: 1, uretim: false },
 };
 

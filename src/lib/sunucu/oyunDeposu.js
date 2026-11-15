@@ -58,6 +58,8 @@ export async function durumOku(kullaniciId) {
     envanter.kereste = 150;
   }
 
+const KARAKTER_KODLARI = ["alp", "celebi", "bala", "elif"];
+
   const isciler = {
     erzak: tumKaynakSatirlari.isci_erzak?.envanter ?? 1,
     kereste: tumKaynakSatirlari.isci_kereste?.envanter ?? 1,
@@ -69,6 +71,19 @@ export async function durumOku(kullaniciId) {
     tas: tumKaynakSatirlari.isci_tas?.son_toplama ?? 0,
   };
   const mektupAlindi = tumKaynakSatirlari.mektup_durumu?.envanter ?? 0;
+  const karakterIndeks = tumKaynakSatirlari.oyuncu_karakter?.envanter ?? 0;
+  const karakter = KARAKTER_KODLARI[karakterIndeks] ?? "alp";
+  const cinsiyet = karakter === "bala" || karakter === "elif" ? "kiz" : "erkek";
+  const sonMeydanOlayZamani = tumKaynakSatirlari.oyuncu_karakter?.son_toplama ?? 0;
+
+  // Dinamik Huzur (Mutluluk) Mekanizması: Her 12 saatte bir ilgilenilmezse huzur -2 azalır (en az 25'e kadar)
+  const sonHuzurKontrol = tumKaynakSatirlari.huzur_kontrol?.son_toplama ?? simdi;
+  const gecenOnIkiSaat = Math.floor(Math.max(0, simdi - sonHuzurKontrol) / (12 * 60 * 60 * 1000));
+  const hamMutluluk = o.mutluluk ?? 60;
+  const guncelMutluluk =
+    gecenOnIkiSaat > 0 ? Math.max(25, hamMutluluk - gecenOnIkiSaat * 2) : hamMutluluk;
+  const guncelHuzurKontrol =
+    gecenOnIkiSaat > 0 ? sonHuzurKontrol + gecenOnIkiSaat * 12 * 60 * 60 * 1000 : sonHuzurKontrol;
 
   let cozulenDavalar = [];
   try {
@@ -79,11 +94,15 @@ export async function durumOku(kullaniciId) {
 
   return {
     level: o.level,
+    cinsiyet,
+    karakter,
     gorevlerTamam: !!o.gorevler_tamam,
     zamanKaydirma: o.zaman_kaydirma,
-    mutluluk: o.mutluluk ?? 60,
+    mutluluk: guncelMutluluk,
+    sonHuzurKontrol: guncelHuzurKontrol,
     cozulenDavalar: Array.isArray(cozulenDavalar) ? cozulenDavalar : [],
     sonGocmenKontrol: o.son_gocmen_kontrol ?? 0,
+    sonMeydanOlayZamani,
     binalar: binaHaritasi,
     envanter,
     sonToplama,
@@ -158,6 +177,22 @@ export async function durumYaz(kullaniciId, durum, islemSaati = null, ayarlar = 
          ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET envanter = ?2, son_toplama = 0`
       )
       .bind(kullaniciId, durum.mektupAlindi ?? 0),
+    d
+      .prepare(
+        `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, 'oyuncu_karakter', ?2, ?3)
+         ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET envanter = ?2, son_toplama = ?3`
+      )
+      .bind(
+        kullaniciId,
+        Math.max(0, ["alp", "celebi", "bala", "elif"].indexOf(durum.karakter ?? "alp")),
+        durum.sonMeydanOlayZamani ?? 0
+      ),
+    d
+      .prepare(
+        `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, 'huzur_kontrol', 0, ?2)
+         ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET son_toplama = ?2`
+      )
+      .bind(kullaniciId, durum.sonHuzurKontrol ?? simdi),
     ...Object.entries(durum.gorevIlerlemesi ?? {}).map(([kod, kayit]) => {
       const hedef = tanimlar[kod]?.hedef ?? 1;
       const tamamlandi = kayit.ilerleme >= hedef ? gercekSimdi : null;
@@ -183,10 +218,10 @@ export async function durumYaz(kullaniciId, durum, islemSaati = null, ayarlar = 
 }
 
 /** Durumu okur; oyuncunun kaydı yoksa başlangıç durumunu oluşturur */
-export async function durumGetir(kullaniciId) {
+export async function durumGetir(kullaniciId, cinsiyet = "erkek", karakter = null) {
   const mevcut = await durumOku(kullaniciId);
   if (mevcut) return mevcut;
-  const yeni = baslangicDurumu(Date.now());
+  const yeni = baslangicDurumu(Date.now(), cinsiyet, karakter);
   await durumYaz(kullaniciId, yeni);
   return yeni;
 }

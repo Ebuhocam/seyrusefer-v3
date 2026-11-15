@@ -9,6 +9,7 @@ import {
   isciAta,
   uretimEtkilesim,
   mektupTeslimAl,
+  karakterSec,
   yukselt,
   levelAtla,
   gorevIlerlet,
@@ -48,6 +49,9 @@ export async function POST(request) {
     case "mektupAl":
       sonuc = mektupTeslimAl(durum);
       break;
+    case "karakterSec":
+      sonuc = karakterSec(durum, g.karakter, g.cinsiyet);
+      break;
     case "yukselt":
       sonuc = yukselt(durum, g.binaId, ayarlar);
       break;
@@ -67,7 +71,7 @@ export async function POST(request) {
       sonuc = davaCoz(durum, g.davaId, g.secenekIndeks, simdi, ayarlar);
       break;
     case "gocmenTeklifEt":
-      sonuc = gocmenTeklifEt(durum, simdi);
+      sonuc = gocmenTeklifEt(durum, simdi, Boolean(g.meydandanMi));
       break;
     case "gelistirici": {
       if (!gelistiriciIzni(kullanici)) return hata("Yetkisiz", 403);

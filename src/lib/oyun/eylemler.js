@@ -3,7 +3,7 @@
 // Bir oyun durumunu alıp yeni durumu döner. Sunucu (API) bunları kullanır;
 // istemci sadece sonucu gösterir. Geçersiz eylemde { hata } döner.
 // =============================================================
-import { KAYNAKLAR, BINALAR, LEVELLAR, toplamKonutKapasitesi } from "./sabitler";
+import { KAYNAKLAR, BINALAR, LEVELLAR, KARAKTERLER, oyuncuKarakteriBul, toplamKonutKapasitesi } from "./sabitler";
 import { biriken, binaDurumu, kaynakAcikMi, levelDurumu } from "./kurallar";
 import {
   NAMAZ_VAKITLERI,
@@ -19,9 +19,10 @@ const SAAT_MS = 60 * 60 * 1000;
 const BOS_NAMAZ = { sabah: 0, ogle: 0, ikindi: 0, aksam: 0, yatsi: 0 };
 
 /** Yeni oyuncunun başlangıç durumu (Mektep Lv.1'i hemen kurabilecek başlangıç kaynağı ve 1 katlı Kendi Evim ile başlar) */
-export function baslangicDurumu(simdi) {
+export function baslangicDurumu(simdi, cinsiyet = "erkek", karakter = null) {
   const binalar = {};
   for (const [id, t] of Object.entries(BINALAR)) if (t.baslangicSeviye) binalar[id] = t.baslangicSeviye;
+  const secilenKarakter = oyuncuKarakteriBul(karakter, cinsiyet);
   const envanter = {
     erzak: 150,
     kereste: 150,
@@ -30,11 +31,14 @@ export function baslangicDurumu(simdi) {
   };
   const d = {
     level: 1,
+    cinsiyet: secilenKarakter.cinsiyet,
+    karakter: secilenKarakter.id,
     binalar,
     envanter,
     isciler: { erzak: 1, kereste: 1, tas: 0 },
     sonEtkilesim: { erzak: 0, kereste: 0, tas: 0 },
     mektupAlindi: 0,
+    sonMeydanOlayZamani: 0,
     sonToplama: Object.fromEntries(Object.keys(KAYNAKLAR).map((k) => [k, null])),
     mutluluk: 60,
     cozulenDavalar: [],
@@ -47,13 +51,14 @@ export function baslangicDurumu(simdi) {
   return uretimiBaslat(d, simdi);
 }
 
-/** Level'a göre açılmış ama henüz başlamamış üretim alanlarını şimdi başlatır */
+/** Level'a göre açılmış ama henüz başlamamış üretim alanlarını başlatır (ilk açılışta 3 birim birikmiş olarak başlar) */
 export function uretimiBaslat(d, simdi) {
   const sonToplama = { ...d.sonToplama };
   const isciler = { ...(d.isciler ?? { erzak: 1, kereste: 1, tas: 0 }) };
   for (const [k, tanim] of Object.entries(KAYNAKLAR)) {
     if (tanim.uretim !== false && kaynakAcikMi(k, d.level) && sonToplama[k] == null) {
-      sonToplama[k] = simdi;
+      // İlk kez açıldığında 3 birim (yaklaşık 5 saatlik) hazır olsun ki öğrenci hemen sulama/kesme deneyebilsin, sonra sıfırlansın
+      sonToplama[k] = simdi - 5 * SAAT_MS;
       if (k === "tas" && (isciler.tas ?? 0) === 0 && (d.envanter?.insan ?? 5) > (isciler.erzak ?? 1) + (isciler.kereste ?? 1)) {
         isciler.tas = 1;
       }
@@ -72,14 +77,24 @@ export function topla(d, kaynak, simdi) {
   if (!kaynakAcikMi(kaynak, d.level) || d.sonToplama[kaynak] == null) return { hata: "Bu alan henüz açılmadı" };
   const isciSayisi = d.isciler?.[kaynak] ?? 1;
   const miktar = biriken(kaynak, d.sonToplama[kaynak], simdi, d.binalar.otag ?? 1, isciSayisi);
-  if (!miktar) return { hata: "Henüz birikmedi" };
+  if (!miktar) {
+    return {
+      hata: "Henüz toplanacak kaynak birikmedi! 24 saatte 15 birim (her 96 dakikada 1 birim) dolar.",
+    };
+  }
   return {
     durum: {
       ...d,
       envanter: { ...d.envanter, [kaynak]: (d.envanter[kaynak] ?? 0) + miktar },
       sonToplama: { ...d.sonToplama, [kaynak]: simdi },
+      sonEtkilesim: { ...(d.sonEtkilesim ?? {}), [kaynak]: simdi },
     },
     miktar,
+    sonuc: {
+      kaynak,
+      miktar,
+      mesaj: `${KAYNAKLAR[kaynak].ikon} +${miktar} ${KAYNAKLAR[kaynak].ad} toplandı!`,
+    },
   };
 }
 
@@ -138,43 +153,70 @@ export function isciAta(d, kaynak, degisim, simdi) {
 }
 
 /**
- * Tarlada sulama, Ormanda kurumuş ağaç kesme veya Taş Ocağında kaya kırma mini oyun ödülünü verir.
+ * Tarlada sulama, Ormanda kurumuş ağaç kesme veya Taş Ocağında kaya kırma işlemi:
+ * 24 saatte 15 birim (her 96 dakikada 1 birim) dolan birikmiş kaynağı toplar ve sayacı sıfırlar.
+ * Eğer henüz hiç kaynak birikmemişse (0/15), toplamaya izin vermez.
  */
-const ETKILESIM_BEKLEME_MS = 10 * 60 * 1000; // 10 dakikada bir tekrar yapılabilir
-const ETKILESIM_ODULLERI = {
-  erzak: { miktar: 15, mesaj: "🌾 Tarladaki tüm ekinleri suladın! Bereketli hasattan +15 Mahsul kazandın!" },
-  kereste: { miktar: 15, mesaj: "🌲 Ormandaki kurumuş ağaçları temizleyip kestin! +15 Tahta kazandın!" },
-  tas: { miktar: 12, mesaj: "⛏️ Taş ocağındaki kaya damarlarını kırdın! +12 Taş kazandın!" },
-};
-
 export function uretimEtkilesim(d, kaynak, simdi) {
-  const odul = ETKILESIM_ODULLERI[kaynak];
-  if (!odul) return { hata: "Geçersiz etkileşim alanı" };
-  if (!kaynakAcikMi(kaynak, d.level)) return { hata: "Bu alan henüz açılmadı" };
-
-  const son = d.sonEtkilesim?.[kaynak] ?? 0;
-  if (son > 0 && simdi - son < ETKILESIM_BEKLEME_MS) {
-    const kalanDk = Math.max(1, Math.ceil((ETKILESIM_BEKLEME_MS - (simdi - son)) / 60000));
-    return { hata: `Bu alandaki bakım çalışmasını az önce yaptın. ${kalanDk} dakika sonra tekrar yapabilirsin!` };
+  if (!["erzak", "kereste", "tas"].includes(kaynak)) return { hata: "Geçersiz üretim alanı" };
+  if (!kaynakAcikMi(kaynak, d.level) || d.sonToplama?.[kaynak] == null) {
+    return { hata: "Bu alan henüz açılmadı" };
   }
+
+  const isciSayisi = d.isciler?.[kaynak] ?? 1;
+  const miktar = biriken(kaynak, d.sonToplama[kaynak], simdi, d.binalar.otag ?? 1, isciSayisi);
+  if (miktar <= 0) {
+    return {
+      hata: "Henüz toplanacak kaynak birikmedi! 24 saatte 15 birim (her 96 dakikada 1 birim) dolar.",
+    };
+  }
+
+  const mesajlar = {
+    erzak: `🌾 Tarladaki biriken ekinleri sulayıp hasat ettin! +${miktar} Mahsul kazandın!`,
+    kereste: `🌲 Ormandaki kurumuş ağaçları kesip topladın! +${miktar} Tahta kazandın!`,
+    tas: `⛏️ Taş ocağındaki kaya damarlarını işledin! +${miktar} Taş kazandın!`,
+  };
 
   return {
     durum: {
       ...d,
       envanter: {
         ...d.envanter,
-        [kaynak]: (d.envanter[kaynak] ?? 0) + odul.miktar,
+        [kaynak]: (d.envanter[kaynak] ?? 0) + miktar,
+      },
+      sonToplama: {
+        ...d.sonToplama,
+        [kaynak]: simdi,
       },
       sonEtkilesim: {
         ...(d.sonEtkilesim ?? {}),
         [kaynak]: simdi,
       },
     },
-    miktar: odul.miktar,
+    miktar,
     sonuc: {
       kaynak,
-      miktar: odul.miktar,
-      mesaj: odul.mesaj,
+      miktar,
+      mesaj: mesajlar[kaynak],
+    },
+  };
+}
+
+/**
+ * Öğrencinin oyun içi karakterini ve cinsiyetini günceller.
+ */
+export function karakterSec(d, karakterId, cinsiyet) {
+  const secilen = KARAKTERLER[karakterId] ?? oyuncuKarakteriBul(karakterId, cinsiyet);
+  return {
+    durum: {
+      ...d,
+      cinsiyet: secilen.cinsiyet,
+      karakter: secilen.id,
+    },
+    sonuc: {
+      karakter: secilen.id,
+      cinsiyet: secilen.cinsiyet,
+      mesaj: `✨ Karakterin "${secilen.ad} (${secilen.unvan})" olarak güncellendi!`,
     },
   };
 }
@@ -249,9 +291,12 @@ export function gorevIlerlet(d, gorevKodu, simdi, ayarlar = null) {
   }
 
   const yeni = { ilerleme: mevcut.ilerleme + 1, sonGun: bugun };
+  // Görev tamamlamak köyün huzurunu +2 artırır
+  const yeniMutluluk = Math.min(100, (d.mutluluk ?? 60) + 2);
   return {
     durum: {
       ...d,
+      mutluluk: yeniMutluluk,
       gorevIlerlemesi: { ...d.gorevIlerlemesi, [tanim.kod]: yeni },
     },
     gorev: tanim,
@@ -325,6 +370,7 @@ export function davaCoz(d, davaId, secenekIndeks, simdi, ayarlar = null) {
     ...d,
     mutluluk: yeniMutluluk,
     cozulenDavalar: [...cozulenler, davaId],
+    sonMeydanOlayZamani: simdi,
   };
 
   // Eğer olumlu bir çözüm seçildiyse o leveldaki "dava" görevini de otomatik ilerlet
@@ -348,7 +394,7 @@ export function davaCoz(d, davaId, secenekIndeks, simdi, ayarlar = null) {
  * Kıraathane'ye uğrayan yolculara köyde ev kurmayı teklif eder.
  * Kabul edilme ihtimali köyün mutluluk (huzur) oranına bağlıdır.
  */
-export function gocmenTeklifEt(d, simdi) {
+export function gocmenTeklifEt(d, simdi, meydandanMi = false) {
   const kapasite = toplamKonutKapasitesi(d.binalar);
   const mevcutInsan = d.envanter?.insan ?? 5;
   const bosYer = Math.max(0, kapasite - mevcutInsan);
@@ -359,8 +405,8 @@ export function gocmenTeklifEt(d, simdi) {
     };
   }
 
-  const { hazir, kalanDakika, aday } = gocmenDurumu(simdi, d.sonGocmenKontrol);
-  if (!hazir) {
+  const { hazir, kalanDakika, aday } = gocmenDurumu(simdi, meydandanMi ? 0 : d.sonGocmenKontrol);
+  if (!hazir && !meydandanMi) {
     return {
       hata: `Kıraathane'ye henüz yeni yolcu uğramadı. Yaklaşık ${kalanDakika} dakika sonra tekrar uğra!`,
     };
@@ -376,6 +422,7 @@ export function gocmenTeklifEt(d, simdi) {
   const yeniDurum = {
     ...d,
     sonGocmenKontrol: simdi,
+    ...(meydandanMi ? { sonMeydanOlayZamani: simdi } : {}),
     envanter: {
       ...d.envanter,
       insan: yeniInsan,

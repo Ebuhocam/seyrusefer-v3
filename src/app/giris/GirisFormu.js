@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { KARAKTERLER } from "@/lib/oyun/sabitler";
 
 export default function GirisFormu() {
   const router = useRouter();
@@ -8,6 +9,8 @@ export default function GirisFormu() {
   const [kullaniciAdi, setKullaniciAdi] = useState("");
   const [ad, setAd] = useState("");
   const [sifre, setSifre] = useState("");
+  const [cinsiyet, setCinsiyet] = useState("erkek"); // 'erkek' | 'kiz'
+  const [karakter, setKarakter] = useState("alp");
   const [hata, setHata] = useState(null);
   const [yukleniyor, setYukleniyor] = useState(false);
 
@@ -20,7 +23,7 @@ export default function GirisFormu() {
       const r = await fetch(adres, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kullaniciAdi, sifre, ad }),
+        body: JSON.stringify({ kullaniciAdi, sifre, ad, cinsiyet, karakter }),
       });
       const j = await r.json();
       if (!r.ok) {
@@ -35,6 +38,8 @@ export default function GirisFormu() {
       setYukleniyor(false);
     }
   };
+
+  const cinsiyetKarakterleri = Object.values(KARAKTERLER).filter((k) => k.cinsiyet === cinsiyet);
 
   return (
     <main className="relative fixed inset-0 grid place-items-center overflow-auto bg-[#1f3315] p-4 text-amber-50">
@@ -76,17 +81,88 @@ export default function GirisFormu() {
 
         <form onSubmit={gonder} className="space-y-3">
           {kip === "kayit" && (
-            <label className="block">
-              <span className="mb-1 block text-xs font-bold text-amber-200/80">Adın Soyadın</span>
-              <input
-                required
-                value={ad}
-                onChange={(e) => setAd(e.target.value)}
-                placeholder="Örn: Ahmet Yılmaz"
-                autoComplete="name"
-                className="w-full rounded-xl bg-stone-950/80 px-3.5 py-2.5 text-sm text-amber-50 ring-1 ring-stone-700 focus:ring-2 focus:ring-amber-400 focus:outline-none"
-              />
-            </label>
+            <>
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-amber-200/80">Adın Soyadın</span>
+                <input
+                  required
+                  value={ad}
+                  onChange={(e) => setAd(e.target.value)}
+                  placeholder="Örn: Ahmet Yılmaz / Elif Kaya"
+                  autoComplete="name"
+                  className="w-full rounded-xl bg-stone-950/80 px-3.5 py-2.5 text-sm text-amber-50 ring-1 ring-stone-700 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                />
+              </label>
+
+              {/* Cinsiyet Seçimi */}
+              <div>
+                <span className="mb-1 block text-xs font-bold text-amber-200/80">Cinsiyetin</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCinsiyet("erkek");
+                      setKarakter("alp");
+                    }}
+                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black ring-1 transition ${
+                      cinsiyet === "erkek"
+                        ? "bg-amber-400 text-stone-950 ring-amber-200 shadow"
+                        : "bg-stone-950/70 text-amber-100 ring-stone-700"
+                    }`}
+                  >
+                    <span>👦</span>
+                    <span>Erkek Öğrenci</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCinsiyet("kiz");
+                      setKarakter("bala");
+                    }}
+                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black ring-1 transition ${
+                      cinsiyet === "kiz"
+                        ? "bg-amber-400 text-stone-950 ring-amber-200 shadow"
+                        : "bg-stone-950/70 text-amber-100 ring-stone-700"
+                    }`}
+                  >
+                    <span>👧</span>
+                    <span>Kız Öğrenci</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Oyun Karakteri Seçimi */}
+              <div>
+                <span className="mb-1 block text-xs font-bold text-amber-200/80">
+                  Oyun Karakterini Seç (Sonradan oyun içinde de değiştirebilirsin)
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {cinsiyetKarakterleri.map((k) => {
+                    const secili = karakter === k.id;
+                    return (
+                      <button
+                        key={k.id}
+                        type="button"
+                        onClick={() => setKarakter(k.id)}
+                        className={`flex flex-col items-center rounded-2xl p-2.5 text-center ring-2 transition ${
+                          secili
+                            ? "bg-amber-500/25 text-amber-100 ring-amber-400 shadow-lg"
+                            : "bg-stone-950/70 text-stone-300 ring-stone-800 hover:bg-stone-900"
+                        }`}
+                      >
+                        <img
+                          src={k.gorsel}
+                          alt={k.ad}
+                          className="h-14 w-14 rounded-full object-cover ring-2 ring-amber-400/60"
+                        />
+                        <span className="mt-1.5 text-xs font-black text-amber-100">{k.ad}</span>
+                        <span className="text-[10px] text-amber-300/80">{k.unvan}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
           )}
 
           <label className="block">

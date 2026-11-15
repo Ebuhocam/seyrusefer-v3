@@ -2,14 +2,14 @@
 import { useEffect, useState } from "react";
 
 export const REHBER_ADIMLARI = [
-  // ================= BÖLÜM 1: KÖY TANITIM TURU (7 ADIM) =================
+  // ================= BÖLÜM 1: KÖY TANITIM TURU (7 ADIM — SADECE KAMERA YAKLAŞIR) =================
   {
     kod: "tanitim_oba",
     bolum: "tanitim",
     baslik: "Tanıtım 1/7: Oba (Yönetim Merkezi)",
     metin:
-      "Selamün aleyküm genç yönetici! Ben Bilge Rehber. İşlere başlamadan önce gel köyümüzdeki alanları sırayla tanıyalım. En yukarıdaki taş kalenin üzerinde duran bu görkemli çadır senin Oba'n; köyün genel idaresi ve üretim depolarının bereketi buradan yönetilir.",
-    hedefler: [{ tur: "bina", id: "otag", etiket: "🏕️ Oba'yı İncele" }],
+      "Selamün aleyküm genç yönetici! Ben Bilge Rehber. İşlere başlamadan önce gel köyümüzdeki alanları sırayla gezelim. En yukarıdaki taş kalenin üzerinde duran bu görkemli çadır senin Oba'n; köyün genel idaresi ve üretim depolarının bereketi buradan yönetilir.",
+    hedefler: [{ tur: "bina", id: "otag" }],
   },
   {
     kod: "tanitim_mektep",
@@ -17,7 +17,7 @@ export const REHBER_ADIMLARI = [
     baslik: "Tanıtım 2/7: Mektep (İlim Yuvası)",
     metin:
       "Meydanın solundaki bu taş teras Mektep alanımızdır. Köyümüzde görev yapabilmek için önce Mektep'in 1. Seviyesini kurmalıyız. Günlük hadis, video dersi ve ilim sınavlarımızı Mektep'in içinde yapacağız.",
-    hedefler: [{ tur: "bina", id: "mektep", etiket: "🏛️ Mektep Alanı" }],
+    hedefler: [{ tur: "bina", id: "mektep" }],
   },
   {
     kod: "tanitim_kiraathane",
@@ -25,25 +25,25 @@ export const REHBER_ADIMLARI = [
     baslik: "Tanıtım 3/7: Kıraathane (Ozan Dede & Yolcular)",
     metin:
       "Meydanın sağındaki teras Kıraathane alanımızdır. İçeride Ozan Dede ağzı oynayarak türkülerimizin tarihini anlatır; ayrıca köye uğrayan yolculara burada ev kurmayı teklif ederek 👥 İnsan kaynağımızı artırırız.",
-    hedefler: [{ tur: "bina", id: "kiraathane", etiket: "🍵 Kıraathane Alanı" }],
+    hedefler: [{ tur: "bina", id: "kiraathane" }],
   },
   {
     kod: "tanitim_meydan",
     bolum: "tanitim",
-    baslik: "Tanıtım 4/7: Köy Meydanı (Canlı Meydan & Davalar)",
+    baslik: "Tanıtım 4/7: Köy Meydanı & Çınar Altı Sohbeti",
     metin:
-      "Tam ortadaki taş döşeli alan Köy Meydanı'dır! Tıkladığında kendini meydanın içinde yürürken göreceksin. Köylüler aralarındaki anlaşmazlıkları (davaları) buraya getirir ve meydanda ileri geri yürüyerek senin hükmünü beklerler.",
-    hedefler: [{ tur: "bina", id: "sosyalmeydan", etiket: "⚖️ Köy Meydanı" }],
+      "Tam ortadaki taş döşeli alan Köy Meydanı'dır! Meydanda bekleyen köylülerin yanına giderek davalarını dinleyip hüküm verirsin; Çınar Altı Sohbeti'nde ise diğer öğrencilerle söz, hikâye ve video paylaşırsın.",
+    hedefler: [{ tur: "bina", id: "sosyalmeydan" }],
   },
   {
     kod: "tanitim_evler",
     bolum: "tanitim",
     baslik: "Tanıtım 5/7: 5+1 Ev Mahallesi ve Ev İçi",
     metin:
-      "Aşağıdaki 6 taş bordürlü parsel 5+1 Konut Mahallemizdir! Kendi Evim'e tıkladığında evinin odasına girip aile bireylerini çağırarak mektup okuyabilirsin. Diğer 5 arsaya da 3 kata kadar evler kurarak köye yeni insanlar için barınma yeri (+5 👥/kat) açarsın.",
+      "Aşağıdaki 6 taş bordürlü parsel 5+1 Konut Mahallemizdir! Kendi Evim senin hanendir; diğer 5 arsaya da 3 kata kadar evler kurarak köye yeni insanlar için barınma yeri (+5 👥/kat) açarsın.",
     hedefler: [
-      { tur: "bina", id: "kendi_evim", etiket: "🏡 Kendi Evim (Ev İçi)" },
-      { tur: "bina", id: "ev1", etiket: "🏠 Köy Evi 1" },
+      { tur: "bina", id: "kendi_evim" },
+      { tur: "bina", id: "ev1" },
       { tur: "bina", id: "ev2" },
       { tur: "bina", id: "ev3" },
       { tur: "bina", id: "ev4" },
@@ -55,11 +55,11 @@ export const REHBER_ADIMLARI = [
     bolum: "tanitim",
     baslik: "Tanıtım 6/7: Tarla, Orman ve Taş Ocağı",
     metin:
-      "Köyümüzün çevresindeki Tarla, Orman ve Taş Ocağı üretim sahnelerimizdir! İçlerine girdiğinde köylülerini işçi olarak görevlendirebilir, Tarlada ekinleri sulayabilir, Ormanda kurumuş ağaçları kesebilir ve Taş Ocağında kaya kırabilirsin.",
+      "Köyümüzün çevresindeki Tarla, Orman ve Taş Ocağı üretim alanlarımızdır! 24 saat boyunca dolum oranlarına göre birikirler; içlerinde işçi görevlendirebilir, tarlada sulama ve ormanda kurumuş ağaç kesimi yapabilirsin.",
     hedefler: [
-      { tur: "nokta", id: "tarla", etiket: "🌾 Tarla Sahnesi" },
-      { tur: "nokta", id: "orman", etiket: "🌲 Orman Sahnesi" },
-      { tur: "nokta", id: "maden", etiket: "⛏️ Taş Ocağı" },
+      { tur: "nokta", id: "tarla" },
+      { tur: "nokta", id: "orman" },
+      { tur: "nokta", id: "maden" },
     ],
   },
   {
@@ -67,10 +67,10 @@ export const REHBER_ADIMLARI = [
     bolum: "tanitim",
     baslik: "Tanıtım 7/7: Haberci ve Görev Panosu",
     metin:
-      "Güney kapısındaki Haberci köye Aile Mektupları ve günlük iyilik görevleri getirir; Haberci'den aldığın mektubu Kendi Evim'in içinde ailenle okursun. Ortadaki Görev Panosu'ndan ise level hedeflerini takip edersin. Şimdi yapılacak işlere geçelim!",
+      "Güney kapısındaki Haberci köye okuma mektupları ve günlük iyilik görevleri getirir. Ortadaki Görev Panosu'ndan ise level hedeflerini takip edersin. Köyümüzü tanıdığımıza göre şimdi yapılacak işlere geçebiliriz!",
     hedefler: [
-      { tur: "nokta", id: "haberci", etiket: "🏇 Haberci" },
-      { tur: "nokta", id: "pano", etiket: "📜 Görev Panosu" },
+      { tur: "nokta", id: "haberci" },
+      { tur: "nokta", id: "pano" },
     ],
   },
 
@@ -186,7 +186,8 @@ export default function RehberKarakter({
 
   const buAdimTamam = adim.tamamMi ? adim.tamamMi(durum, gorevler) : false;
   const gosterilenMetin = tamMetin.slice(0, harfSayisi);
-  const butonluHedefler = (adim.hedefler ?? []).filter((h) => h.etiket);
+  const butonluHedefler =
+    adim.bolum === "gorev" ? (adim.hedefler ?? []).filter((h) => h.etiket) : [];
 
   const ileriTikla = () => {
     if (yaziliyor) {
@@ -335,7 +336,7 @@ export default function RehberKarakter({
                   {yaziliyor
                     ? "⏩ Yazıyı Tamamla"
                     : adimIndeks < REHBER_ADIMLARI.length - 1
-                    ? "Sonraki →"
+                    ? "İlerle →"
                     : "✅ Rehberi Bitir"}
                 </button>
               </div>

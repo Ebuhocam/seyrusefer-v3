@@ -4,8 +4,8 @@
 // Durumun ve ayarların asıl sahibi sunucudur (D1).
 // =============================================================
 import { useCallback, useEffect, useState } from "react";
-import { BINALAR } from "./sabitler";
-import { biriken, binaDurumu, levelDurumu } from "./kurallar";
+import { BINALAR, oyuncuKarakteriBul } from "./sabitler";
+import { biriken, dolumBilgisi, binaDurumu, levelDurumu } from "./kurallar";
 import { gorevKontrol, levelAtlanabilirMi } from "./eylemler";
 import { levelGorevListesi, levelIcerigi, gununSeyyahGorevi, tumLevelGorevleriTamamMi } from "./gorevler";
 
@@ -81,6 +81,11 @@ export function useOyun(baslangic) {
   const bekleyen = (k) =>
     durum.sonToplama[k] != null ? biriken(k, durum.sonToplama[k], simdi, otag, durum.isciler?.[k] ?? 1) : 0;
 
+  const dolum = (k) =>
+    dolumBilgisi(k, durum.sonToplama?.[k], simdi, otag, durum.isciler?.[k] ?? 1);
+
+  const karakter = oyuncuKarakteriBul(durum.karakter, durum.cinsiyet);
+
   const topla = async (k) => {
     const j = await gonder({ eylem: "topla", kaynak: k });
     if (j?.miktar) setMesaj({ tur: "tamam", metin: `+${j.miktar} toplandı` });
@@ -108,6 +113,14 @@ export function useOyun(baslangic) {
     return j?.sonuc ?? null;
   };
 
+  const karakterSec = async (yeniKarakter, yeniCinsiyet) => {
+    const j = await gonder({ eylem: "karakterSec", karakter: yeniKarakter, cinsiyet: yeniCinsiyet });
+    if (j?.sonuc?.mesaj) {
+      setMesaj({ tur: "tamam", metin: j.sonuc.mesaj });
+    }
+    return j?.sonuc ?? null;
+  };
+
   const yukselt = (binaId) => gonder({ eylem: "yukselt", binaId }, "Bina yükseltildi!");
   const levelAtla = () => gonder({ eylem: "levelAtla" }, `Level ${durum.level + 1}'e geçildi!`);
 
@@ -116,18 +129,11 @@ export function useOyun(baslangic) {
   const sinavCevapla = (cevaplar) => gonder({ eylem: "sinavCevapla", cevaplar }, "Tebrikler! Sınavı başarıyla geçtin!");
   const davaCoz = async (davaId, secenekIndeks) => {
     const j = await gonder({ eylem: "davaCoz", davaId, secenekIndeks });
-    if (j?.sonuc) {
-      const f = j.sonuc.mutlulukDegisimi;
-      setMesaj({
-        tur: f >= 0 ? "tamam" : "hata",
-        metin: `${f >= 0 ? `+${f}` : f} Mutluluk! ${j.sonuc.aciklama ?? ""}`,
-      });
-    }
     return j?.sonuc ?? null;
   };
-  const gocmenTeklifEt = async () => {
-    const j = await gonder({ eylem: "gocmenTeklifEt" });
-    if (j?.sonuc) {
+  const gocmenTeklifEt = async (meydandanMi = false) => {
+    const j = await gonder({ eylem: "gocmenTeklifEt", meydandanMi });
+    if (j?.sonuc && !meydandanMi) {
       setMesaj({
         tur: j.sonuc.kabul ? "tamam" : "hata",
         metin: j.sonuc.mesaj,
@@ -180,10 +186,13 @@ export function useOyun(baslangic) {
     davaCoz,
     gocmenTeklifEt,
     bekleyen,
+    dolum,
     topla,
     isciAta,
     uretimEtkilesim,
     mektupAl,
+    karakter,
+    karakterSec,
     binaBilgisi: (binaId) => binaDurumu(binaId, kontrolDurumu, ayarlar?.binalar),
     yukselt,
     binaIdleri: Object.keys(BINALAR),

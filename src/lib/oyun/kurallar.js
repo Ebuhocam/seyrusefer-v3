@@ -7,27 +7,64 @@ import { KAYNAKLAR, DEPO_SAAT, BINALAR, LEVELLAR } from "./sabitler";
 
 const SAAT_MS = 60 * 60 * 1000;
 
-/** Bir kaynağın saatlik üretimi (görevlendirilen işçi sayısına göre artar; 0 işçide üretim durur) */
+/** Bir kaynağın saatlik üretimi (1 işçide 24 saatte 15 birim = her 96 dakikada 1 birim; 0 işçide üretim durur) */
 export function saatlikUretim(kaynak, isciSayisi = 1) {
   const isci = Math.max(0, Number(isciSayisi ?? 1));
   if (isci <= 0) return 0;
-  const temel = (KAYNAKLAR[kaynak]?.gunluk ?? 0) / 24;
-  return temel * (1 + (isci - 1) * 0.35);
+  const temel = (KAYNAKLAR[kaynak]?.gunluk ?? 15) / 24;
+  return temel * (1 + (isci - 1) * 0.25);
 }
 
-/** Otağ seviyesine göre bir kaynağın depo kapasitesi */
-export function depoKapasitesi(kaynak, otagSeviye) {
-  const temelSaatlik = (KAYNAKLAR[kaynak]?.gunluk ?? 0) / 24;
-  return Math.floor(temelSaatlik * (DEPO_SAAT[otagSeviye] ?? 24));
+/** Oba seviyesine göre bir kaynağın depo kapasitesi (Lv.1'de 24 saat = 15 birim) */
+export function depoKapasitesi(kaynak, otagSeviye = 1) {
+  const temelSaatlik = (KAYNAKLAR[kaynak]?.gunluk ?? 15) / 24;
+  return Math.max(15, Math.round(temelSaatlik * (DEPO_SAAT[otagSeviye] ?? 24)));
 }
 
 /** Üretim alanı açık mı? */
 export const kaynakAcikMi = (kaynak, oyuncuLevel) => oyuncuLevel >= KAYNAKLAR[kaynak].acilisLevel;
 
-/** Son toplamadan bu yana alanda biriken (henüz toplanmamış) miktar */
-export function biriken(kaynak, sonToplama, simdi, otagSeviye, isciSayisi = 1) {
+/** Son toplamadan bu yana alanda biriken (henüz toplanmamış) tam sayı miktar */
+export function biriken(kaynak, sonToplama, simdi, otagSeviye = 1, isciSayisi = 1) {
+  if (sonToplama == null) return 0;
   const saat = Math.max(0, (simdi - sonToplama) / SAAT_MS);
   return Math.min(depoKapasitesi(kaynak, otagSeviye), Math.floor(saat * saatlikUretim(kaynak, isciSayisi)));
+}
+
+/**
+ * Bir üretim alanının (Tarla, Orman, Taş Ocağı) anlık 24 saatlik dolum oranını,
+ * toplanabilir birim sayısını, bir sonraki 1 birime kalan dakikayı ve görsel evresini döner.
+ */
+export function dolumBilgisi(kaynak, sonToplama, simdi, otagSeviye = 1, isciSayisi = 1) {
+  const kapasite = depoKapasitesi(kaynak, otagSeviye);
+  const saatlik = saatlikUretim(kaynak, isciSayisi);
+  if (sonToplama == null || saatlik <= 0) {
+    return {
+      biriken: 0,
+      kapasite,
+      dolumOrani: 0,
+      birimYuzdesi: 0,
+      sonrakiBirimDakika: null,
+      evre: "bos",
+    };
+  }
+  const gecenSaat = Math.max(0, (simdi - sonToplama) / SAAT_MS);
+  const hamMiktar = Math.min(kapasite, gecenSaat * saatlik);
+  const tamBirim = Math.floor(hamMiktar);
+  const dolumOrani = Math.min(100, Math.round((hamMiktar / kapasite) * 100));
+  const birimYuzdesi = tamBirim >= kapasite ? 100 : Math.min(99, Math.round((hamMiktar - tamBirim) * 100));
+  const sonrakiBirimDakika =
+    tamBirim >= kapasite ? 0 : Math.max(1, Math.ceil(((tamBirim + 1 - hamMiktar) / saatlik) * 60));
+  const evre = tamBirim <= 0 ? "bos" : tamBirim >= kapasite ? "dolu" : "yari";
+
+  return {
+    biriken: tamBirim,
+    kapasite,
+    dolumOrani,
+    birimYuzdesi,
+    sonrakiBirimDakika,
+    evre,
+  };
 }
 
 /** Kaynak bedeli karşılanıyor mu? Eksik olanları da döner. */

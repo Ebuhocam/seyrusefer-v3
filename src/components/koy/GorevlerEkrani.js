@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { BINALAR, DEPO_SAAT, EV_IDLERI, KAYNAKLAR, toplamKonutKapasitesi } from "@/lib/oyun/sabitler";
+import { BINALAR, DEPO_SAAT, EV_IDLERI, KARAKTERLER, KAYNAKLAR, toplamKonutKapasitesi } from "@/lib/oyun/sabitler";
 import { depoKapasitesi, kaynakAcikMi } from "@/lib/oyun/kurallar";
 import { NAMAZ_VAKITLERI, oyunGunu } from "@/lib/oyun/gorevler";
 import { koyDavalariListesi, turkuHikayeleriListesi, gocmenDurumu } from "@/lib/oyun/hikayeler";
@@ -402,16 +402,79 @@ export function SinavKutusu({ oyun }) {
 }
 
 // ---------------------------------------------------------------
-// 6. SOSYAL MEYDAN KUTUSU (Gündem Paylaşımı & Yorumlar)
+// 6. ÇINAR ALTI SOSYAL MEDYA SAYFASI (Gündem İçi / Dışı, Söz/Hikâye/Video, Beğeni, Yorum, Şikayet, Profil)
 // ---------------------------------------------------------------
-export function SosyalMeydanKutusu({ oyun }) {
+const PAYLASIM_TURLERI = [
+  { id: "soz", etiket: "✨ Güzel Söz" },
+  { id: "hikaye", etiket: "📖 Kısa Hikâye / Kıssa" },
+  { id: "dua", etiket: "🤲 Dua / İyi Dilek" },
+  { id: "ani", etiket: "💭 Hatıra / Düşünce" },
+  { id: "video", etiket: "🎬 Video (YouTube / Instagram)" },
+];
+
+const HAZIR_ILHAMLAR = [
+  {
+    altTur: "soz",
+    metin: "“Güzel söz sadakadır; tebessüm etmek ise gönüllere şifadır.” Bugün karşılaştığım herkese güler yüzle selam vermeye niyet ettim.",
+  },
+  {
+    altTur: "hikaye",
+    metin: "Bir zamanlar Anadolu'da yolcular için çeşme yaptıran bir hayırsever, taşına 'Su içen dua etsin, kuşlar bile nasiplensin' yazdırmış. Küçük bir iyilik asırlar boyu yaşar.",
+  },
+  {
+    altTur: "dua",
+    metin: "Rabbim köyümüze bereket, kalplerimize ihlas ve tüm kardeşlerimize huzur nasip eylesin. Hayırlı günler!",
+  },
+];
+
+function youtubeIdCikar(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1).split("/")[0];
+    if (u.hostname.includes("youtube.com")) {
+      if (u.searchParams.get("v")) return u.searchParams.get("v");
+      const m = u.pathname.match(/\/(?:embed|shorts)\/([^/?]+)/);
+      if (m) return m[1];
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function instagramEmbedUrlCikar(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (!u.hostname.includes("instagram.com")) return null;
+    const m = u.pathname.match(/\/(p|reel|tv)\/([^/?]+)/);
+    if (m) return `https://www.instagram.com/${m[1]}/${m[2]}/embed`;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
   const { durum, aktifIcerik } = oyun;
   const gundemSorusu = aktifIcerik?.gundemSorusu;
   const [paylasimlar, setPaylasimlar] = useState([]);
   const [yukleniyor, setYukleniyor] = useState(true);
+
+  // Paylaşım oluşturma state'leri
+  const [kategori, setKategori] = useState("gundem"); // 'gundem' | 'serbest'
+  const [altTur, setAltTur] = useState("soz");
   const [metin, setMetin] = useState("");
+  const [medyaUrl, setMedyaUrl] = useState("");
+
+  // Akış filtreleme ve etkileşim state'leri
+  const [akisFiltre, setAkisFiltre] = useState("tumu"); // 'tumu' | 'gundem' | 'serbest' | 'video'
   const [acikYorumId, setAcikYorumId] = useState(null);
   const [yorumMetni, setYorumMetni] = useState("");
+  const [sikayetPaylasimId, setSikayetPaylasimId] = useState(null);
+  const [sikayetSebep, setSikayetSebep] = useState("Kırıcı veya uygunsuz ifade");
+  const [seciliProfil, setSeciliProfil] = useState(null); // { yazar_id, yazar_ad, yazar_kullanici, yazar_karakter, yazar_level, yazar_mutluluk }
 
   useEffect(() => {
     let iptal = false;
@@ -435,7 +498,13 @@ export function SosyalMeydanKutusu({ oyun }) {
     const r = await fetch("/api/meydan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tur: "paylasim", icerik: metin }),
+      body: JSON.stringify({
+        tur: "paylasim",
+        icerik: metin,
+        kategori,
+        altTur,
+        medyaUrl: medyaUrl.trim(),
+      }),
     });
     const j = await r.json();
     if (!r.ok) {
@@ -443,9 +512,29 @@ export function SosyalMeydanKutusu({ oyun }) {
       return;
     }
     setMetin("");
+    setMedyaUrl("");
     setPaylasimlar(j.paylasimlar ?? []);
     oyun.veriUygula(j);
-    oyun.setMesaj({ tur: "tamam", metin: "Paylaşımın Sosyal Meydan'a eklendi!" });
+    oyun.setMesaj({
+      tur: "tamam",
+      metin:
+        kategori === "gundem"
+          ? "🌟 Gündem paylaşımın eklendi! Köy Huzurun +3 😊 arttı!"
+          : "💬 Serbest paylaşımın Çınar Altı akışına eklendi (+1 😊 Huzur)!",
+    });
+  };
+
+  const begeniDegistir = async (paylasimId) => {
+    const r = await fetch("/api/meydan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tur: "begeni", paylasimId }),
+    });
+    const j = await r.json();
+    if (r.ok) {
+      setPaylasimlar(j.paylasimlar ?? []);
+      oyun.veriUygula(j);
+    }
   };
 
   const yorumGonder = async (paylasimId) => {
@@ -467,91 +556,470 @@ export function SosyalMeydanKutusu({ oyun }) {
     oyun.setMesaj({ tur: "tamam", metin: "Yorumun eklendi!" });
   };
 
+  const sikayetGonder = async (paylasimId) => {
+    const r = await fetch("/api/meydan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tur: "sikayet", paylasimId, sebep: sikayetSebep }),
+    });
+    const j = await r.json();
+    setSikayetPaylasimId(null);
+    if (r.ok) {
+      oyun.setMesaj({
+        tur: "tamam",
+        metin: j.bildirim ?? "🚩 Şikayetin yöneticiye iletildi.",
+      });
+    }
+  };
+
+  // ÖĞRENCİ SOSYAL PROFİL SAYFASI GÖRÜNÜMÜ
+  if (seciliProfil) {
+    const profilKarakter = KARAKTERLER[seciliProfil.yazar_karakter] ?? KARAKTERLER.alp;
+    const kullaniciPaylasimlari = paylasimlar.filter(
+      (p) => p.yazar_kullanici === seciliProfil.yazar_kullanici
+    );
+    const toplamBegeni = kullaniciPaylasimlari.reduce((t, p) => t + (p.begeniSayisi ?? 0), 0);
+
+    return (
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={() => setSeciliProfil(null)}
+          className="inline-flex items-center gap-1.5 rounded-2xl bg-stone-800 px-4 py-2 text-xs font-black text-amber-200 ring-1 ring-amber-400/40 hover:bg-stone-700"
+        >
+          ← Çınar Altı Sosyal Akışına Dön
+        </button>
+
+        {/* Profil Üst Kartı */}
+        <div className="flex flex-col items-center gap-4 rounded-3xl bg-gradient-to-b from-stone-900 to-stone-950 p-6 text-center shadow-xl ring-2 ring-amber-400/60 sm:flex-row sm:text-left">
+          <img
+            src={profilKarakter.gorsel}
+            alt={seciliProfil.yazar_ad}
+            className="h-24 w-24 rounded-full object-cover ring-4 ring-amber-400 shadow-xl"
+          />
+          <div className="flex-1 space-y-1.5">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <h3 className="text-xl font-black text-amber-100">{seciliProfil.yazar_ad}</h3>
+              <span className="rounded-full bg-stone-800 px-2.5 py-0.5 text-xs font-bold text-amber-300">
+                @{seciliProfil.yazar_kullanici}
+              </span>
+            </div>
+            <p className="text-xs font-bold text-amber-200/80">
+              {profilKarakter.ikon} {profilKarakter.ad} ({profilKarakter.unvan})
+            </p>
+            <div className="flex flex-wrap justify-center gap-2 pt-1 sm:justify-start">
+              <span className="rounded-xl bg-amber-500/20 px-3 py-1 text-xs font-black text-amber-200 ring-1 ring-amber-400/40">
+                ⭐ Köy Seviyesi: Lv.{seciliProfil.yazar_level ?? 1}
+              </span>
+              <span className="rounded-xl bg-emerald-500/20 px-3 py-1 text-xs font-black text-emerald-300 ring-1 ring-emerald-400/40">
+                😊 Köy Huzuru: %{seciliProfil.yazar_mutluluk ?? 60}
+              </span>
+              <span className="rounded-xl bg-rose-500/20 px-3 py-1 text-xs font-black text-rose-200 ring-1 ring-rose-400/40">
+                ❤️ Aldığı Beğeni: {toplamBegeni}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <h4 className="text-xs font-black uppercase tracking-wider text-amber-300">
+          📜 {seciliProfil.yazar_ad} Kardeşimizin Paylaşımları ({kullaniciPaylasimlari.length})
+        </h4>
+        <div className="space-y-3">
+          {kullaniciPaylasimlari.map((p) => (
+            <div key={p.id} className="rounded-2xl bg-stone-950/85 p-4 text-xs ring-1 ring-stone-800">
+              <p className="text-sm leading-relaxed text-amber-50">{p.icerik}</p>
+              <div className="mt-2 flex items-center gap-3 text-[11px] text-amber-300/80">
+                <span>❤️ {p.begeniSayisi ?? 0} Beğeni</span>
+                <span>💬 {p.yorumlar?.length ?? 0} Yorum</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const filtrelenmisPaylasimlar = paylasimlar.filter((p) => {
+    if (akisFiltre === "gundem") return p.kategori === "gundem";
+    if (akisFiltre === "serbest") return p.kategori === "serbest";
+    if (akisFiltre === "video") return Boolean(p.medyaUrl) || p.altTur === "video";
+    return true;
+  });
+
   return (
-    <div className="space-y-3">
-      <div className="rounded-2xl bg-amber-500/10 p-3.5 ring-1 ring-amber-500/30">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
-          💬 Level {durum.level} Meydan Gündemi
-        </span>
-        <p className="mt-1 text-sm font-semibold text-amber-50">{gundemSorusu}</p>
+    <div className="space-y-5">
+      {/* Üst Başlık ve Köy Meydanına Dönüş Çubuğu */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-stone-950/90 p-4 ring-1 ring-amber-500/40 sm:p-5">
+        <div className="flex items-center gap-3">
+          {onGeriDon && (
+            <button
+              type="button"
+              onClick={onGeriDon}
+              className="rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 px-3.5 py-2 text-xs font-black text-stone-950 shadow hover:brightness-110"
+            >
+              ← Köy Meydanı&apos;na Dön
+            </button>
+          )}
+          <div>
+            <h2 className="text-base font-black text-amber-100 sm:text-lg">
+              🌳 Çınar Altı Sohbeti · Köy Sosyal Medya Meydanı
+            </h2>
+            <p className="text-xs text-amber-200/80">
+              Gündem içi paylaşımlar <b>+3 😊 Huzur</b>, aldığın her beğeni <b>+1 😊 Huzur</b> kazandırır! Söz, hikâye, dua veya video paylaşabilirsin.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 rounded-2xl bg-stone-900 px-3 py-1.5 text-xs font-black text-emerald-300 ring-1 ring-emerald-500/40">
+          <span>😊 Köy Huzurun:</span>
+          <span>%{durum.mutluluk ?? 60}</span>
+        </div>
       </div>
 
-      <form onSubmit={paylas} className="space-y-2">
+      {/* Paylaşım Oluşturma Kartı */}
+      <form onSubmit={paylas} className="space-y-3.5 rounded-3xl bg-stone-950/85 p-4 shadow-xl ring-1 ring-amber-500/35 sm:p-5">
+        {/* 1. Kategori Seçimi: Gündem İçi vs Gündem Harici Serbest Kürsü */}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setKategori("gundem")}
+            className={`flex items-center justify-between rounded-2xl px-3.5 py-2.5 text-left text-xs font-black ring-1 transition ${
+              kategori === "gundem"
+                ? "bg-amber-500 text-stone-950 ring-amber-200 shadow"
+                : "bg-stone-900 text-amber-100 ring-stone-800 hover:bg-stone-800"
+            }`}
+          >
+            <span>📌 Level {durum.level} Gündem Paylaşımı</span>
+            <span className="rounded-full bg-stone-950/25 px-2 py-0.5 text-[10px]">+3 😊 Huzur</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setKategori("serbest")}
+            className={`flex items-center justify-between rounded-2xl px-3.5 py-2.5 text-left text-xs font-black ring-1 transition ${
+              kategori === "serbest"
+                ? "bg-emerald-500 text-stone-950 ring-emerald-200 shadow"
+                : "bg-stone-900 text-amber-100 ring-stone-800 hover:bg-stone-800"
+            }`}
+          >
+            <span>🌿 Gündem Harici (Serbest Kürsü)</span>
+            <span className="rounded-full bg-stone-950/25 px-2 py-0.5 text-[10px]">+1 😊 Huzur</span>
+          </button>
+        </div>
+
+        {/* Gündem Sorusu Kutusu */}
+        {kategori === "gundem" && (
+          <div className="rounded-2xl bg-amber-500/15 p-3.5 ring-1 ring-amber-500/30">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+              📌 Level {durum.level} Gündem Konusu (Söz, Kısa Hikâye, Dua veya Video Paylaşabilirsin)
+            </span>
+            <p className="mt-1 text-sm font-semibold text-amber-50">{gundemSorusu}</p>
+          </div>
+        )}
+
+        {/* 2. Paylaşım Türü Etiketi (Söz / Hikâye / Dua / Anı / Video) */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-xs font-bold text-amber-200/80">Tür:</span>
+          {PAYLASIM_TURLERI.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setAltTur(t.id)}
+              className={`rounded-xl px-2.5 py-1 text-xs font-bold transition ${
+                altTur === t.id
+                  ? "bg-amber-400 text-stone-950 shadow"
+                  : "bg-stone-900 text-stone-300 ring-1 ring-stone-800 hover:bg-stone-800"
+              }`}
+            >
+              {t.etiket}
+            </button>
+          ))}
+        </div>
+
+        {/* Küçük Çocuklar İçin Tek Tıkla İlham Şablonları */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-bold text-amber-300/80">💡 Ne yazacağını bilemedin mi? Örnek seç:</span>
+          {HAZIR_ILHAMLAR.map((ornek, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => {
+                setAltTur(ornek.altTur);
+                setMetin(ornek.metin);
+              }}
+              className="rounded-lg bg-stone-900 px-2 py-1 text-[11px] font-semibold text-amber-200 ring-1 ring-amber-500/30 hover:bg-stone-800"
+            >
+              +{ornek.altTur === "soz" ? "Güzel Söz Örneği" : ornek.altTur === "hikaye" ? "Kısa Kıssa Örneği" : "Dua Örneği"}
+            </button>
+          ))}
+        </div>
+
         <textarea
-          rows={2}
+          rows={3}
           value={metin}
           onChange={(e) => setMetin(e.target.value)}
-          placeholder="Gündem hakkındaki düşünceni veya tecrübeni yaz…"
-          className="w-full rounded-xl bg-stone-950/80 p-3 text-xs text-amber-50 ring-1 ring-stone-700 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+          placeholder="Güzel bir söz, kısa bir hikâye, öğrendiğin bir bilgi, dua veya videonun açıklamasını buraya yaz…"
+          className="w-full rounded-2xl bg-stone-900/90 p-3.5 text-xs text-amber-50 ring-1 ring-stone-700 focus:ring-2 focus:ring-amber-400 focus:outline-none sm:text-sm"
         />
+
+        {/* YouTube veya Instagram Video Link Alanı */}
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
+          <span className="shrink-0 text-xs font-bold text-amber-200/85">
+            🎬 Video Linki (İsteğe Bağlı):
+          </span>
+          <input
+            type="url"
+            value={medyaUrl}
+            onChange={(e) => {
+              setMedyaUrl(e.target.value);
+              if (e.target.value.trim()) setAltTur("video");
+            }}
+            placeholder="YouTube veya Instagram video linki yapıştır (https://youtube.com/... veya https://instagram.com/reel/...)"
+            className="flex-1 rounded-xl bg-stone-900/90 px-3 py-2 text-xs text-amber-50 ring-1 ring-stone-700 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+          />
+        </div>
+
         <button
           type="submit"
-          disabled={metin.trim().length < 5}
-          className="w-full rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 py-2.5 text-xs font-black text-stone-900 shadow disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
+          disabled={metin.trim().length < 3}
+          className="w-full rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 text-xs font-black text-stone-950 shadow-lg hover:brightness-110 disabled:from-stone-800 disabled:to-stone-800 disabled:text-stone-500 sm:text-sm"
         >
-          💬 Meydan&apos;da Paylaş
+          {kategori === "gundem"
+            ? "📌 Gündem İçinde Paylaş (+3 😊 Köy Huzuru)"
+            : "🌿 Serbest Kürsüde Paylaş (+1 😊 Köy Huzuru)"}
         </button>
       </form>
 
-      <div className="space-y-2 pt-1">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300/80">
-          Son Paylaşımlar ({paylasimlar.length})
-        </h4>
+      {/* Akış Filtre Sekmeleri */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { id: "tumu", etiket: `🌐 Tüm Akış (${paylasimlar.length})` },
+            { id: "gundem", etiket: "📌 Gündem İçi" },
+            { id: "serbest", etiket: "🌿 Gündem Harici" },
+            { id: "video", etiket: "🎬 Videolar" },
+          ].map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setAkisFiltre(f.id)}
+              className={`rounded-xl px-3 py-1.5 text-xs font-black transition ${
+                akisFiltre === f.id
+                  ? "bg-amber-400 text-stone-950 shadow"
+                  : "bg-stone-900 text-amber-100/80 ring-1 ring-stone-800 hover:bg-stone-800"
+              }`}
+            >
+              {f.etiket}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Sosyal Medya Akış Kartları */}
+      <div className="space-y-4">
         {yukleniyor ? (
-          <p className="text-xs text-stone-400">Yükleniyor…</p>
-        ) : paylasimlar.length === 0 ? (
-          <p className="rounded-xl bg-stone-950/50 p-3 text-center text-xs text-stone-400">
-            Bu gündemde ilk paylaşımı sen yap!
-          </p>
+          <p className="text-center text-xs text-stone-400">Çınar Altı akışı yükleniyor…</p>
+        ) : filtrelenmisPaylasimlar.length === 0 ? (
+          <div className="rounded-3xl bg-stone-950/70 p-6 text-center text-xs text-stone-400 ring-1 ring-stone-800">
+            Bu kategoride henüz paylaşım yok. İlk paylaşımı sen yap!
+          </div>
         ) : (
-          paylasimlar.map((p) => (
-            <div key={p.id} className="rounded-2xl bg-stone-950/75 p-3 text-xs ring-1 ring-stone-800">
-              <div className="flex items-center justify-between text-[11px] text-amber-300/80">
-                <b>{p.yazar_ad}</b>
-                <span>@{p.yazar_kullanici}</span>
-              </div>
-              <p className="mt-1.5 text-amber-50/95">{p.icerik}</p>
+          filtrelenmisPaylasimlar.map((p) => {
+            const yazarKarakter = KARAKTERLER[p.yazar_karakter] ?? KARAKTERLER.alp;
+            const ytId = youtubeIdCikar(p.medyaUrl);
+            const igEmbed = instagramEmbedUrlCikar(p.medyaUrl);
+            const turBilgi = PAYLASIM_TURLERI.find((x) => x.id === p.altTur) ?? PAYLASIM_TURLERI[0];
 
-              {p.yorumlar?.length > 0 && (
-                <div className="mt-2 space-y-1 border-l-2 border-amber-500/40 pl-2.5">
-                  {p.yorumlar.map((y) => (
-                    <p key={y.id} className="text-[11px] text-amber-100/85">
-                      <b className="text-amber-300">{y.yazar_ad}:</b> {y.icerik}
-                    </p>
-                  ))}
-                </div>
-              )}
-
-              {acikYorumId === p.id ? (
-                <div className="mt-2 flex gap-1.5">
-                  <input
-                    value={yorumMetni}
-                    onChange={(e) => setYorumMetni(e.target.value)}
-                    placeholder="Kardeşine güzel bir yorum yaz…"
-                    className="flex-1 rounded-lg bg-stone-900 px-2.5 py-1.5 text-xs text-amber-50 ring-1 ring-stone-700"
-                  />
+            return (
+              <article
+                key={p.id}
+                className="space-y-3 rounded-3xl bg-stone-950/90 p-4 shadow-lg ring-1 ring-stone-800 sm:p-5"
+              >
+                {/* Üst Yazar Barı + Profile Git */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <button
                     type="button"
-                    onClick={() => yorumGonder(p.id)}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white"
+                    onClick={() => setSeciliProfil(p)}
+                    className="group flex items-center gap-2.5 text-left"
                   >
-                    Gönder
+                    <img
+                      src={yazarKarakter.gorsel}
+                      alt={p.yazar_ad}
+                      className="h-11 w-11 rounded-full object-cover ring-2 ring-amber-400/70 transition group-hover:scale-105"
+                    />
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-black text-amber-100 group-hover:text-amber-300 group-hover:underline">
+                          {p.yazar_ad}
+                        </span>
+                        <span className="rounded-md bg-stone-800 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                          Lv.{p.yazar_level ?? 1}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-amber-200/70">
+                        @{p.yazar_kullanici} · {yazarKarakter.ad} · 😊 %{p.yazar_mutluluk ?? 60}
+                      </span>
+                    </div>
+                  </button>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-black ${
+                        p.kategori === "serbest"
+                          ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
+                          : "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40"
+                      }`}
+                    >
+                      {p.kategori === "serbest" ? "🌿 Gündem Harici" : `📌 Level ${p.level} Gündemi`}
+                    </span>
+                    <span className="rounded-full bg-stone-900 px-2.5 py-0.5 text-[10px] font-bold text-stone-300 ring-1 ring-stone-700">
+                      {turBilgi.etiket}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Paylaşım Metni */}
+                <p className="whitespace-pre-line text-sm leading-relaxed text-amber-50/95">{p.icerik}</p>
+
+                {/* Gömülü YouTube veya Instagram Videosu */}
+                {ytId && (
+                  <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black ring-1 ring-stone-700">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${ytId}`}
+                      title="YouTube video"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="h-full w-full border-0"
+                    />
+                  </div>
+                )}
+
+                {!ytId && igEmbed && (
+                  <div className="overflow-hidden rounded-2xl bg-stone-900 ring-1 ring-stone-700">
+                    <iframe
+                      src={igEmbed}
+                      title="Instagram video"
+                      className="h-[420px] w-full border-0"
+                    />
+                  </div>
+                )}
+
+                {!ytId && !igEmbed && p.medyaUrl && (
+                  <a
+                    href={p.medyaUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-stone-900 px-3 py-2 text-xs font-bold text-sky-300 ring-1 ring-sky-500/40 hover:bg-stone-800"
+                  >
+                    🎬 Paylaşılan Videoyu / Bağlantıyı Aç ↗
+                  </a>
+                )}
+
+                {/* Sosyal Medya Etkileşim Çubuğu: Beğen, Yorum, Profil, Şikayet */}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-800/90 pt-2.5 text-xs">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => begeniDegistir(p.id)}
+                      className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-black transition ${
+                        p.benBegendim
+                          ? "bg-rose-600 text-white shadow"
+                          : "bg-stone-900 text-amber-100 ring-1 ring-stone-700 hover:bg-stone-800"
+                      }`}
+                    >
+                      <span>{p.benBegendim ? "❤️" : "🤍"}</span>
+                      <span>Beğen ({p.begeniSayisi ?? 0})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAcikYorumId(acikYorumId === p.id ? null : p.id);
+                        setYorumMetni("");
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-stone-900 px-3 py-1.5 font-bold text-amber-200 ring-1 ring-stone-700 hover:bg-stone-800"
+                    >
+                      <span>💬</span>
+                      <span>Yorum Yap ({p.yorumlar?.length ?? 0})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSeciliProfil(p)}
+                      className="inline-flex items-center gap-1 rounded-xl bg-stone-900 px-3 py-1.5 font-bold text-sky-200 ring-1 ring-stone-700 hover:bg-stone-800"
+                    >
+                      <span>👤</span>
+                      <span>Profile Git</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSikayetPaylasimId(sikayetPaylasimId === p.id ? null : p.id)
+                    }
+                    className="inline-flex items-center gap-1 rounded-xl bg-stone-900 px-2.5 py-1.5 text-[11px] font-bold text-stone-400 ring-1 ring-stone-800 hover:bg-red-950/60 hover:text-red-300"
+                  >
+                    <span>🚩</span>
+                    <span>Yöneticiye Şikayet Et</span>
                   </button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAcikYorumId(p.id);
-                    setYorumMetni("");
-                  }}
-                  className="mt-2 text-[11px] font-bold text-amber-300 hover:underline"
-                >
-                  🤝 Yorum Yap ({p.yorumlar?.length ?? 0})
-                </button>
-              )}
-            </div>
-          ))
+
+                {/* Şikayet Kutusu */}
+                {sikayetPaylasimId === p.id && (
+                  <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-red-950/50 p-3 ring-1 ring-red-500/40">
+                    <select
+                      value={sikayetSebep}
+                      onChange={(e) => setSikayetSebep(e.target.value)}
+                      className="rounded-xl bg-stone-900 px-3 py-1.5 text-xs text-amber-50 ring-1 ring-stone-700"
+                    >
+                      <option value="Kırıcı veya uygunsuz ifade">Kırıcı veya uygunsuz ifade</option>
+                      <option value="Uygunsuz video veya bağlantı">Uygunsuz video veya bağlantı</option>
+                      <option value="Anlamsız / Spam paylaşım">Anlamsız / Spam paylaşım</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => sikayetGonder(p.id)}
+                      className="rounded-xl bg-red-600 px-3 py-1.5 text-xs font-black text-white"
+                    >
+                      🚩 Yöneticiye Bildir
+                    </button>
+                  </div>
+                )}
+
+                {/* Yorumlar Listesi */}
+                {p.yorumlar?.length > 0 && (
+                  <div className="space-y-1.5 rounded-2xl bg-stone-900/75 p-3 ring-1 ring-stone-800">
+                    {p.yorumlar.map((y) => (
+                      <div key={y.id} className="flex items-start gap-2 text-xs">
+                        <span className="font-black text-amber-300">{y.yazar_ad}:</span>
+                        <span className="text-amber-50/90">{y.icerik}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Yeni Yorum Yazma */}
+                {acikYorumId === p.id && (
+                  <div className="flex gap-2">
+                    <input
+                      value={yorumMetni}
+                      onChange={(e) => setYorumMetni(e.target.value)}
+                      placeholder="Kardeşine güzel ve yapıcı bir yorum yaz…"
+                      className="flex-1 rounded-xl bg-stone-900 px-3 py-2 text-xs text-amber-50 ring-1 ring-stone-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => yorumGonder(p.id)}
+                      className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white"
+                    >
+                      Gönder
+                    </button>
+                  </div>
+                )}
+              </article>
+            );
+          })
         )}
       </div>
     </div>
@@ -645,11 +1113,11 @@ export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup
               </h3>
               {!mektupAlindiMi ? (
                 <p className="text-xs leading-relaxed text-amber-100/90">
-                  “Selamünaleyküm genç beyim! Uzak diyarlardan senin ve kıymetli ailen için mühürlü bir mektup getirdim. Mektubu benden teslim alıp <b>Kendi Evine</b> götür; anne, baba ve kardeşini odaya çağırıp birlikte okuyun!”
+                  “Selamünaleyküm! Uzak diyarlardan senin ve ev halkın için mühürlü bir okuma mektubu getirdim. Mektubu benden teslim alıp <b>Kendi Evine</b> götür; yanına büyüklerini veya sevdiklerini çağırarak birlikte okuyun!”
                 </p>
               ) : (
                 <p className="text-xs leading-relaxed text-emerald-200">
-                  ✅ Mektubu Haberci&apos;den teslim aldın! Şimdi <b>Kendi Evine</b> girip aile bireylerini odaya çağırarak mektubu rahlede birlikte okuyabilirsin.
+                  ✅ Mektubu Haberci&apos;den teslim aldın! Şimdi <b>Kendi Evine</b> girip &ldquo;Çağırdım&rdquo; butonuna tıklayarak mektubu okuyabilirsin.
                 </p>
               )}
 
@@ -670,7 +1138,7 @@ export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup
                       onClick={() => onSecimDegistir({ tur: "bina", id: "kendi_evim" })}
                       className="rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 px-5 py-3 text-xs font-black text-stone-950 shadow-xl ring-2 ring-emerald-200 hover:brightness-110 sm:text-sm"
                     >
-                      🏡 Kendi Evime Git ve Aile Bireylerini Çağır →
+                      🏡 Kendi Evime Git ve Mektubu Oku →
                     </button>
                   )
                 )}
@@ -690,7 +1158,7 @@ export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup
 // ---------------------------------------------------------------
 // 8. KÖY MEYDANI DİVANI: HALK DAVALARI (TEKİL SORUN ÇÖZME) KUTUSU
 // ---------------------------------------------------------------
-export function ObaDavaKutusu({ oyun }) {
+export function ObaDavaKutusu({ oyun, onTamamKapat }) {
   const { durum, ayarlar } = oyun;
   const davalar = koyDavalariListesi(ayarlar);
   const cozulenler = Array.isArray(durum.cozulenDavalar) ? durum.cozulenDavalar : [];
@@ -711,6 +1179,64 @@ export function ObaDavaKutusu({ oyun }) {
       setSonCozum({ ...sonuc, dava: secilenDava });
     }
   };
+
+  // Karar verildikten sonra küçük bildirim yerine TAM EKRAN KARAR SONUCU KARTI
+  if (sonCozum) {
+    const olumlu = sonCozum.mutlulukDegisimi >= 0;
+    return (
+      <div
+        className={`space-y-5 rounded-3xl p-6 text-center shadow-2xl ring-2 sm:p-8 ${
+          olumlu
+            ? "bg-gradient-to-b from-emerald-950/95 to-stone-950 text-emerald-50 ring-emerald-400"
+            : "bg-gradient-to-b from-red-950/95 to-stone-950 text-red-50 ring-red-400"
+        }`}
+      >
+        <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-stone-900/90 text-5xl shadow-xl ring-2 ring-amber-400">
+          {olumlu ? "🌟" : "⚠️"}
+        </div>
+
+        <div className="space-y-2">
+          <span
+            className={`inline-block rounded-full px-4 py-1 text-sm font-black shadow ${
+              olumlu ? "bg-emerald-400 text-stone-950" : "bg-red-500 text-white"
+            }`}
+          >
+            {olumlu
+              ? `+${sonCozum.mutlulukDegisimi} 😊 Köy Huzuru Arttı!`
+              : `${sonCozum.mutlulukDegisimi} 😟 Köy Huzuru Azaldı`}
+          </span>
+          <h3 className="text-xl font-black text-amber-100 sm:text-2xl">
+            {olumlu ? "Hikmetli Hükmün Köyde Huzur Sağladı!" : "Bu Karar Köylüleri Üzdü"}
+          </h3>
+        </div>
+
+        <div className="mx-auto max-w-xl rounded-2xl bg-stone-900/90 p-5 text-sm leading-relaxed text-amber-50 ring-1 ring-stone-700 sm:text-base">
+          “{sonCozum.aciklama}”
+        </div>
+
+        <div className="mx-auto max-w-md rounded-2xl bg-stone-950/80 p-3.5 text-xs text-amber-200 ring-1 ring-stone-800">
+          <div className="flex items-center justify-between font-bold">
+            <span>😊 Güncel Köy Huzuru:</span>
+            <span className="text-sm font-black text-emerald-300">%{sonCozum.yeniMutluluk ?? mutluluk}</span>
+          </div>
+          <p className="mt-1.5 text-[11px] text-amber-200/75">
+            Köylüler hükmünü dinleyip teşekkür ederek meydandan ayrıldılar. Yarın (1 gün sonra) meydanda yeni bir olay veya köye yerleşmek isteyen yeni misafirler seni bekleyecek!
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSonCozum(null);
+            if (onTamamKapat) onTamamKapat();
+          }}
+          className="w-full max-w-md rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 py-4 text-base font-black text-stone-950 shadow-xl ring-2 ring-amber-200 transition hover:brightness-110"
+        >
+          ✅ Tamam
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -760,54 +1286,25 @@ export function ObaDavaKutusu({ oyun }) {
             “{gosterilenDava.hikaye}”
           </div>
 
-          {sonCozum ? (
-            <div className="space-y-3">
-              <div
-                className={`rounded-2xl p-4 text-sm font-semibold ring-2 ${
-                  sonCozum.mutlulukDegisimi >= 0
-                    ? "bg-emerald-950/85 text-emerald-100 ring-emerald-400/60"
-                    : "bg-red-950/85 text-red-100 ring-red-400/60"
-                }`}
-              >
-                <div className="mb-1 text-base font-black">
-                  {sonCozum.mutlulukDegisimi >= 0
-                    ? `🌟 Hükmün Köyde Huzur Sağladı (+${sonCozum.mutlulukDegisimi} Mutluluk!)`
-                    : `⚠️ Hükmün Köyde Üzüntüye Yol Açtı (${sonCozum.mutlulukDegisimi} Mutluluk)`}
-                </div>
-                <p className="text-xs leading-relaxed sm:text-sm">{sonCozum.aciklama}</p>
-              </div>
-
+          <div className="space-y-2.5 pt-1">
+            <p className="text-xs font-black uppercase tracking-wider text-amber-300">
+              ⚖️ Hükmün nedir genç yönetici?
+            </p>
+            {(gosterilenDava.secenekler ?? []).map((s, idx) => (
               <button
+                key={idx}
                 type="button"
-                onClick={() => setSonCozum(null)}
-                className="w-full rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 py-3.5 text-sm font-black text-stone-950 shadow-lg hover:brightness-110"
+                disabled={oyun.bekliyor}
+                onClick={() => kararVer(idx)}
+                className="w-full rounded-2xl bg-stone-900/95 p-3.5 text-left text-xs leading-relaxed text-amber-50 ring-1 ring-stone-700 transition hover:bg-amber-500/20 hover:ring-amber-400 sm:text-sm"
               >
-                {siradakiDava
-                  ? "👋 Köylüleri Uğurla ve Meydandaki Sıradaki Meseleye Bak →"
-                  : "👋 Köylüleri Huzurla Uğurla"}
+                <b className="mr-2 inline-grid h-6 w-6 place-items-center rounded-lg bg-amber-500/20 text-amber-300">
+                  {idx + 1}
+                </b>
+                {s.metin}
               </button>
-            </div>
-          ) : (
-            <div className="space-y-2.5 pt-1">
-              <p className="text-xs font-black uppercase tracking-wider text-amber-300">
-                ⚖️ Hükmün nedir genç yönetici?
-              </p>
-              {(gosterilenDava.secenekler ?? []).map((s, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  disabled={oyun.bekliyor}
-                  onClick={() => kararVer(idx)}
-                  className="w-full rounded-2xl bg-stone-900/95 p-3.5 text-left text-xs leading-relaxed text-amber-50 ring-1 ring-stone-700 transition hover:bg-amber-500/20 hover:ring-amber-400 sm:text-sm"
-                >
-                  <b className="mr-2 inline-grid h-6 w-6 place-items-center rounded-lg bg-amber-500/20 text-amber-300">
-                    {idx + 1}
-                  </b>
-                  {s.metin}
-                </button>
-              ))}
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       ) : (
         <div className="rounded-3xl bg-stone-950/80 p-6 text-center ring-1 ring-emerald-500/40">
