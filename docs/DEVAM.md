@@ -30,14 +30,18 @@ Son güncelleme: 13 Kasım 2026
 - **Teknoloji:** Next.js 16 (App Router, JS) + Tailwind 4 → Cloudflare (OpenNext) + D1 (`seyrusefer-v3-db`, `e23293e1-7e9a-4ce1-b319-6fe0eec32a45`).
 - Canlı eski sisteme (`Desktop\seyrusefer\seyrusefer-app`, `seyrusefer.org`) **dokunulmaz**.
 
-## Tamamlanan Fazlar (Faz 0 – Faz 6 + 3 Katmanlı Yeniden Tasarım + Kademe 1 & 2)
+## Tamamlanan Fazlar (Faz 0 – Faz 6 + 3 Katmanlı Yeniden Tasarım + Kademe 1, 2, 3 & 4)
 - **Migrationlar (`0001` – `0004`):** Hem yerel hem uzak D1 veritabanına (`seyrusefer-v3-db`) uygulandı.
 - **Kademe 1 & Kademe 2 (15 Kasım 2026 — TAMAMLANDI):**
   - Yeni köy haritası (`public/assets/harita/koy.webp`): Oba hakim üst taş terasta (`x: 55.2, y: 27.5`), ortada Köy Meydanı ve Görev Panosu, iki yanda Mektep ve Kıraathane, alt mahallede 6 taş bordürlü konut arsası (`kendi_evim` + `ev1`..`ev5`).
   - 3 katlı konut görselleri (`public/assets/binalar/ev1.webp`, `ev2.webp`, `ev3.webp`) ve Bilge Rehber karakter portreleri (`rehber_kapali.webp`, `rehber_acik.webp`) üretildi.
   - Seçenek A uygulandı: Her konut 3 kata kadar yükseltilebilir ve her kat `+5 👥 İnsan` kapasite sağlar (`toplamKonutKapasitesi`). Boş ev kapasitesi olmadan Kıraathane'den yeni insan toplanamaz.
   - Mektep Seviye 1 için görev şartı kaldırıldı (`ilkKurulumGorevsiz: true`) ve başlangıç kaynakları `{ erzak: 150, kereste: 150, tas: 0, insan: 5 }` yapıldı; Mektep 1 kurulmadan görevler yapılamaz.
-- **Sıradaki Adım:** [kademeli_gelistirme_plani.md](./kademeli_gelistirme_plani.md) içindeki **Kademe 3 (Daktilo Efektli Adım Adım Oyun Rehberi)**, ardından **Kademe 4 (Tam Ekran Mekan Sayfaları ve Köy Meydanı Tekil Davalar)**, **Kademe 5 (İşçi Görevlendirme)** ve **Kademe 6 (Tarla Sulama, Orman Kurumuş Ağaç, Taş Ocağı Mini Etkileşimleri)**.
+- **Kademe 3 & Kademe 4 (15 Kasım 2026 — TAMAMLANDI):**
+  - Daktilo efektli ve ağız animasyonlu **Bilge Rehber (`src/components/koy/RehberKarakter.js`)** eklendi; haritada tıklanacak binayı **"👇 Buraya Tıkla!"** rozetiyle vurgular ve otomatik ortalar (`Atla ⏭` ve üst barda `🧭 Rehber` butonu mevcut).
+  - Tüm bina ve mekanlar küçük pop-up yerine **Tam Ekran Mekan Sayfası (`src/components/koy/Panel.js`)** olarak açılır (`← Köy Haritasına Dön` + üst canlı kaynak barı).
+  - Halkın davaları **Köy Meydanı (`sosyalmeydan`)** içine taşındı ve tüm liste yerine sadece **sıradaki çözülmemiş tek dava** gösterilir. Oba (`otag`) ise Köy İdare ve Bereket Divanı oldu.
+- **Sıradaki Adım:** [kademeli_gelistirme_plani.md](./kademeli_gelistirme_plani.md) içindeki **Kademe 5 (Üretim Alanlarında İşçi Görevlendirme)** ve **Kademe 6 (Tarla Sulama, Orman Kurumuş Ağaç, Taş Ocağı Mini Etkileşimleri)**.
 - **Yeni Görseller (`public/assets/`):**
   - `public/assets/binalar/kiraathane.webp`, `public/assets/binalar/mektep.webp`
   - `public/assets/binalar/ozan_kapali.webp`, `public/assets/binalar/ozan_acik.webp`

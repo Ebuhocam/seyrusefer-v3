@@ -15,6 +15,7 @@ import { useOyun } from "@/lib/oyun/useOyun";
 import UstBar from "./UstBar";
 import Panel from "./Panel";
 import GelistiriciPaneli from "./GelistiriciPaneli";
+import RehberKarakter, { REHBER_ADIMLARI, ilkEksikRehberAdimi } from "./RehberKarakter";
 
 const HARITA_ORAN = 1710 / 920;
 
@@ -26,12 +27,33 @@ export default function KoyHaritasi({ baslangic }) {
   const [birlikOzeti, setBirlikOzeti] = useState(null);
   const [duzenle, setDuzenle] = useState(false);
   const [koordinat, setKoordinat] = useState(null);
+  const [rehberAcik, setRehberAcik] = useState(
+    () => (baslangic?.durum?.binalar?.mektep ?? 0) === 0 || (baslangic?.durum?.level ?? 1) === 1
+  );
+  const [rehberAdimIndeks, setRehberAdimIndeks] = useState(() =>
+    ilkEksikRehberAdimi(baslangic?.durum ?? {}, [])
+  );
 
-  // Telefonda harita yatayda taşar: açılışta Oba'yı ortala
+  const aktifRehberAdimi = REHBER_ADIMLARI[rehberAdimIndeks] ?? REHBER_ADIMLARI[0];
+  const rehberHedefi = rehberAcik && katman === "koy" ? aktifRehberAdimi?.hedef : null;
+
+  // Telefonda harita yatayda taşar: açılışta veya rehber adımı değiştiğinde hedefi ortala
   useEffect(() => {
     const el = kaydirRef.current;
-    if (el && oyun.hazir) el.scrollLeft = (ARSALAR.otag.x / 100) * el.scrollWidth - el.clientWidth / 2;
-  }, [oyun.hazir, katman]);
+    if (!el || !oyun.hazir) return;
+    let hedefX = ARSALAR.otag.x;
+    if (rehberHedefi) {
+      const k =
+        rehberHedefi.tur === "bina"
+          ? ARSALAR[rehberHedefi.id]
+          : NOKTALAR[rehberHedefi.id];
+      if (k) hedefX = k.x;
+    }
+    el.scrollTo({
+      left: Math.max(0, (hedefX / 100) * el.scrollWidth - el.clientWidth / 2),
+      behavior: "smooth",
+    });
+  }, [oyun.hazir, katman, rehberHedefi]);
 
   // 2. veya 3. katmana geçildiğinde birlik binaları ve bölge liderlerini çek
   useEffect(() => {
@@ -116,23 +138,31 @@ export default function KoyHaritasi({ baslangic }) {
               {Object.entries(ARSALAR).map(([id, a]) => {
                 const seviye = durum.binalar[id] ?? 0;
                 const bilgi = oyun.binaBilgisi(id);
+                const rehberVurgulu = rehberHedefi?.tur === "bina" && rehberHedefi?.id === id;
                 return seviye > 0 ? (
                   <button
                     key={id}
                     onClick={() => setSecim({ tur: "bina", id })}
-                    className="group absolute"
+                    className={`group absolute ${rehberVurgulu ? "z-[240]" : ""}`}
                     style={{
                       left: `${a.x}%`,
                       top: `${a.y}%`,
                       width: `${a.genislik}%`,
                       transform: "translate(-50%, -80%)",
-                      zIndex: Math.round(a.y),
+                      zIndex: rehberVurgulu ? 240 : Math.round(a.y),
                     }}
                   >
+                    {rehberVurgulu && (
+                      <span className="pointer-events-none absolute -top-11 left-1/2 z-30 -translate-x-1/2 animate-bounce whitespace-nowrap rounded-full bg-amber-400 px-3 py-1 text-xs font-black text-stone-950 shadow-xl ring-2 ring-white">
+                        👇 Buraya Tıkla!
+                      </span>
+                    )}
                     <img
                       src={BINALAR[id].gorsel(seviye)}
                       alt={BINALAR[id].ad}
-                      className="w-full drop-shadow-[0_8px_8px_rgba(0,0,0,0.45)] transition-transform group-hover:scale-105"
+                      className={`w-full drop-shadow-[0_8px_8px_rgba(0,0,0,0.45)] transition-transform group-hover:scale-105 ${
+                        rehberVurgulu ? "rounded-3xl ring-4 ring-amber-300" : ""
+                      }`}
                       draggable={false}
                     />
                     <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-stone-900/90 px-2 py-0.5 text-[11px] font-bold text-amber-100 ring-1 ring-amber-500/60">
@@ -141,7 +171,14 @@ export default function KoyHaritasi({ baslangic }) {
                     </span>
                   </button>
                 ) : (
-                  <BosArsa key={id} id={id} a={a} bilgi={bilgi} onClick={() => setSecim({ tur: "bina", id })} />
+                  <BosArsa
+                    key={id}
+                    id={id}
+                    a={a}
+                    bilgi={bilgi}
+                    rehberVurgulu={rehberVurgulu}
+                    onClick={() => setSecim({ tur: "bina", id })}
+                  />
                 );
               })}
 
@@ -150,13 +187,24 @@ export default function KoyHaritasi({ baslangic }) {
                 const acik = n.kaynak ? kaynakAcikMi(n.kaynak, durum.level) : (n.acilisLevel ?? 1) <= durum.level;
                 const bekleyen = n.kaynak ? oyun.bekleyen(n.kaynak) : 0;
                 const dolu = n.kaynak && acik && bekleyen >= depoKapasitesi(n.kaynak, durum.binalar.otag);
+                const rehberVurgulu = rehberHedefi?.tur === "nokta" && rehberHedefi?.id === id;
                 return (
                   <button
                     key={id}
                     onClick={() => setSecim({ tur: "nokta", id })}
                     className="absolute flex flex-col items-center"
-                    style={{ left: `${n.x}%`, top: `${n.y}%`, transform: "translate(-50%, -50%)", zIndex: 200 }}
+                    style={{
+                      left: `${n.x}%`,
+                      top: `${n.y}%`,
+                      transform: "translate(-50%, -50%)",
+                      zIndex: rehberVurgulu ? 245 : 200,
+                    }}
                   >
+                    {rehberVurgulu && (
+                      <span className="mb-1 animate-bounce whitespace-nowrap rounded-full bg-amber-400 px-3 py-1 text-xs font-black text-stone-950 shadow-xl ring-2 ring-white">
+                        👇 Buraya Tıkla!
+                      </span>
+                    )}
                     {n.kaynak && acik && bekleyen > 0 && (
                       <span
                         className={`mb-1 rounded-full px-2 py-0.5 text-xs font-black shadow-lg ${
@@ -173,7 +221,11 @@ export default function KoyHaritasi({ baslangic }) {
                     )}
                     <span
                       className={`grid h-9 w-9 place-items-center rounded-full text-lg shadow-lg ring-2 ${
-                        acik ? "bg-stone-900/85 ring-amber-400" : "bg-stone-700/80 ring-stone-500 grayscale"
+                        rehberVurgulu
+                          ? "scale-125 bg-amber-400 text-stone-950 ring-4 ring-white"
+                          : acik
+                          ? "bg-stone-900/85 ring-amber-400"
+                          : "bg-stone-700/80 ring-stone-500 grayscale"
                       }`}
                     >
                       {acik ? n.ikon : "🔒"}
@@ -285,7 +337,31 @@ export default function KoyHaritasi({ baslangic }) {
         katman={katman}
         onKatmanSec={katmanDegistir}
         onLevelTikla={() => setSecim({ tur: "nokta", id: "pano" })}
+        rehberAcik={rehberAcik}
+        onRehberAcKapat={() => {
+          if (!rehberAcik) {
+            setRehberAdimIndeks(ilkEksikRehberAdimi(durum, oyun.gorevler));
+            setKatman("koy");
+            setRehberAcik(true);
+          } else {
+            setRehberAcik(false);
+          }
+        }}
       />
+
+      {!secim && katman === "koy" && (
+        <RehberKarakter
+          acik={rehberAcik}
+          adimIndeks={rehberAdimIndeks}
+          setAdimIndeks={setRehberAdimIndeks}
+          onKapat={() => setRehberAcik(false)}
+          onHedefSec={(hedef) => {
+            if (hedef) setSecim({ tur: hedef.tur, id: hedef.id });
+          }}
+          durum={durum}
+          gorevler={oyun.gorevler}
+        />
+      )}
 
       {oyun.mesaj && (
         <div
@@ -297,7 +373,18 @@ export default function KoyHaritasi({ baslangic }) {
         </div>
       )}
 
-      {secim && <Panel secim={secim} oyun={oyun} kapat={() => setSecim(null)} />}
+      {secim && (
+        <Panel
+          secim={secim}
+          oyun={oyun}
+          kapat={() => {
+            setSecim(null);
+            if (rehberAcik) {
+              setRehberAdimIndeks(ilkEksikRehberAdimi(oyun.durum, oyun.gorevler));
+            }
+          }}
+        />
+      )}
 
       {oyun.gelistirici && <GelistiriciPaneli oyun={oyun} duzenle={duzenle} setDuzenle={setDuzenle} />}
 
@@ -310,17 +397,29 @@ export default function KoyHaritasi({ baslangic }) {
   );
 }
 
-function BosArsa({ id, a, bilgi, onClick }) {
+function BosArsa({ id, a, bilgi, rehberVurgulu = false, onClick }) {
   const insaEdilebilir = bilgi.levelYeterli;
   return (
     <button
       onClick={onClick}
       className="absolute flex flex-col items-center"
-      style={{ left: `${a.x}%`, top: `${a.y}%`, transform: "translate(-50%, -50%)", zIndex: Math.round(a.y) }}
+      style={{
+        left: `${a.x}%`,
+        top: `${a.y}%`,
+        transform: "translate(-50%, -50%)",
+        zIndex: rehberVurgulu ? 245 : Math.round(a.y),
+      }}
     >
+      {rehberVurgulu && (
+        <span className="mb-1.5 animate-bounce whitespace-nowrap rounded-full bg-amber-400 px-3 py-1 text-xs font-black text-stone-950 shadow-xl ring-2 ring-white">
+          👇 Buraya Tıkla!
+        </span>
+      )}
       <span
         className={`grid h-10 w-10 place-items-center rounded-full text-lg shadow-lg ring-2 ${
-          bilgi.yapilabilir
+          rehberVurgulu
+            ? "scale-125 bg-emerald-500 ring-4 ring-amber-300"
+            : bilgi.yapilabilir
             ? "animate-pulse bg-emerald-600 ring-emerald-200"
             : insaEdilebilir
             ? "bg-amber-600/90 ring-amber-200"

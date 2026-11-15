@@ -19,7 +19,7 @@ export const GOREV_TURLERI = {
   namaz: { ad: "Namaz Çetelesi", ikon: "🕌", yer: "Ulu Cami / Pano" },
   sinav: { ad: "İlim Sınavı", ikon: "✍️", yer: "Mektep / Medrese" },
   turku: { ad: "Ozan Dede Türküsü", ikon: "🎵", yer: "Kıraathane" },
-  dava: { ad: "Oba Halk Davası", ikon: "⚖️", yer: "Oba" },
+  dava: { ad: "Köy Meydanı Halk Davası", ikon: "⚖️", yer: "Köy Meydanı" },
   meydan_paylasim: { ad: "Meydan Paylaşımı", ikon: "💬", yer: "Köy Meydanı" },
   meydan_yorum: { ad: "Kardeş Yorumu", ikon: "🤝", yer: "Köy Meydanı" },
   seyyah: { ad: "Haberci İyilik Görevi", ikon: "🏇", yer: "Haberci" },
@@ -37,13 +37,13 @@ export const LEVEL_GOREVLERI = {
   2: [
     { kod: "namaz", tur: "namaz", ad: "5 Gün Namaz Çetelesi Doldur", hedef: 5, gunluk: true, bina: "sosyalmeydan" },
     { kod: "hadis", tur: "hadis", ad: "Mektep'te 5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "sosyalmeydan" },
-    { kod: "dava", tur: "dava", ad: "Oba'da 1 Köy Sorununu Hikmetle Çöz", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
+    { kod: "dava", tur: "dava", ad: "Köy Meydanı'nda 1 Halk Sorununu Hikmetle Çöz", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
     { kod: "aile", tur: "aile", ad: "Haberci'nin Namaz Sohbeti Mektubunu Oku", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
   ],
   3: [
     { kod: "sinav", tur: "sinav", ad: "Mektep Hadis ve İlim Sınavı", hedef: 1, gunluk: false, bina: "otag" },
     { kod: "meydan_paylasim", tur: "meydan_paylasim", ad: "Köy Meydanı'nda İlk Paylaşımını Yap", hedef: 1, gunluk: false, bina: "otag" },
-    { kod: "dava", tur: "dava", ad: "Oba'da Halkın 1 Davasını Çöz", hedef: 1, gunluk: false, bina: "otag" },
+    { kod: "dava", tur: "dava", ad: "Köy Meydanı'nda Halkın 1 Davasını Çöz", hedef: 1, gunluk: false, bina: "otag" },
     { kod: "hadis", tur: "hadis", ad: "3 Günlük Hadis Oku", hedef: 3, gunluk: true, bina: "otag" },
   ],
   4: [
@@ -57,7 +57,7 @@ export const LEVEL_GOREVLERI = {
     { kod: "hadis", tur: "hadis", ad: "5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "kiraathane" },
     { kod: "sinav", tur: "sinav", ad: "Dürüstlük ve Ahlak Sınavı", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
     { kod: "meydan_yorum", tur: "meydan_yorum", ad: "Köy Meydanı'nda 3 Paylaşıma Yorum Yap", hedef: 3, gunluk: false, bina: "sosyalmeydan" },
-    { kod: "dava", tur: "dava", ad: "Oba'da Dürüstlük Davasını Çöz", hedef: 1, gunluk: false, bina: "kiraathane" },
+    { kod: "dava", tur: "dava", ad: "Köy Meydanı'nda Dürüstlük Davasını Çöz", hedef: 1, gunluk: false, bina: "kiraathane" },
   ],
   6: [
     { kod: "seyyah", tur: "seyyah", ad: "Haberci'nin 3 Yardım Görevini Yap", hedef: 3, gunluk: true, bina: "mektep" },
@@ -74,7 +74,7 @@ export const LEVEL_GOREVLERI = {
   8: [
     { kod: "namaz", tur: "namaz", ad: "7 Gün Namaz Çetelesi Doldur", hedef: 7, gunluk: true, bina: "mektep" },
     { kod: "hadis", tur: "hadis", ad: "5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "mektep" },
-    { kod: "dava", tur: "dava", ad: "Oba'da Sabır ve Kanaat Davasını Çöz", hedef: 1, gunluk: false, bina: "mektep" },
+    { kod: "dava", tur: "dava", ad: "Köy Meydanı'nda Sabır ve Kanaat Davasını Çöz", hedef: 1, gunluk: false, bina: "mektep" },
     { kod: "aile", tur: "aile", ad: "Haberci Mektubu: Sabır ve Şükür", hedef: 1, gunluk: false, bina: "mektep" },
   ],
   9: [

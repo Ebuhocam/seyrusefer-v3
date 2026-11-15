@@ -63,26 +63,25 @@ Bu doküman, oyuncunun oyuna ilk adım attığı andan itibaren yaşayacağı de
 
 ---
 
-### Kademe 3 — Daktilo Efektli Adım Adım Oyun Rehberi (Onboarding)
+### Kademe 3 — Daktilo Efektli Adım Adım Oyun Rehberi (Onboarding) ✅ TAMAMLANDI
 > **Hedef:** Çocuğun oyuna girdiğinde hiç bocalamadan adım adım oyunu öğrenmesi.
-- [ ] **3.1. Rehber Karakter ve Daktilo Konuşma Balonu Bileşeni:**
-  - Ekranın alt kısmında Rehber Karakter görünür, metin daktilo sesi/efektiyle harf harf akar.
-  - **"Yazıyı Tamamla / İleri →"** ve **"Rehberi Atla ⏭"** butonları bulunur.
-- [ ] **3.2. Adım Adım Görevlendirici Ok ve Vurgu (Spotlight):**
-  1. **Adım 1:** *"Hoş geldin! Önce köyümüzün ilim yuvası olan **Mektep** arsasını seçip 1. seviyesini inşa edelim."* (Mektep arsası parlar)
-  2. **Adım 2:** *"Şimdi **Tarla** ve **Orman**'a gidip köylülerimizi çalışmaya görevlendirelim."* (Tarla ve Orman parlar)
-  3. **Adım 3:** *"Mektebimiz hazır! İçine girip ilk hadisimizi okuyalım."* (Mektep parlar)
-  4. **Adım 4:** *"Yeni insanlar toplamak için **Ev** inşa etmeyi ve **Kıraathane**'ye uğramayı, halkın davalarını dinlemek için **Köy Meydanı**'na bakmayı unutma!"*
+- [x] **3.1. Rehber Karakter ve Daktilo Konuşma Balonu Bileşeni (`src/components/koy/RehberKarakter.js`):**
+  - Ekranın alt kısmında **Bilge Rehber** görünür (`rehber_kapali.webp` ↔ `rehber_acik.webp` ağız animasyonu), metin daktilo efektiyle harf harf akar.
+  - **"⏩ Yazıyı Tamamla / Sonraki Adım →"**, **"← Önceki"**, **"🎯 Hedefe Git"** ve **"Atla ⏭"** butonları ile üst barda **"🧭 Rehber"** aç/kapat butonu bulunur.
+- [x] **3.2. Adım Adım Görevlendirici Ok ve Vurgu (Spotlight):**
+  - Haritada aktif adımın işaret ettiği bina veya üretim noktası **"👇 Buraya Tıkla!"** rozeti ve parlayan altın halkayla vurgulanır, harita otomatik olarak hedefe kaydırılır.
 
 ---
 
-### Kademe 4 — Binalar İçin Tam Ekran Sahne / Sayfa Görünümü ve Köy Meydanı Davaları
+### Kademe 4 — Binalar İçin Tam Ekran Sahne / Sayfa Görünümü ve Köy Meydanı Davaları ✅ TAMAMLANDI
 > **Hedef:** Basit pop-up yerine her binanın kendi atmosferine sahip tam ekran sayfasına girilmesi.
-- [ ] **4.1. Tam Ekran Mekan Görünümü (`MekanSahnesi`):**
-  - Bir binaya (Mektep, Kıraathane, Köy Meydanı, Oba, Evler) tıklandığında küçük pencere yerine tam ekran iç mekan sayfası açılır. Üstte **"← Köy Haritasına Dön"** butonu yer alır.
-- [ ] **4.2. Davaların Köy Meydanı'na Taşınması (Tek Tek Gösterim):**
-  - Köy Meydanı sayfasında **"🗣️ Meydan Sohbeti (Gündem Paylaşımı)"** ve **"⚖️ Halkın Davası"** bölümleri yer alır.
-  - Davaların tüm listesi görünmez; meydanda o an sadece **sıradaki tek bir köylü ve davası** bekler. Çözüldüğünde köylü teşekkür edip ayrılır, yeni dava sonraki günde/adımda gelir.
+- [x] **4.1. Tam Ekran Mekan Görünümü (`src/components/koy/Panel.js`):**
+  - Bir binaya veya noktaya tıklandığında küçük pencere yerine tam ekran mekan sayfası açılır. Üstte **"← Köy Haritasına Dön"** butonu, mekan başlığı ve canlı kaynak çubuğu yer alır.
+  - İnşa edilmiş binalara tıklandığında doğrudan mekan içi çalışma ekranı açılır; üstteki sekmeden **"🔨 Bina İmarı / Yükseltme"** ekranına geçilebilir.
+- [x] **4.2. Davaların Köy Meydanı'na Taşınması (Tek Tek Gösterim):**
+  - Köy Meydanı sayfasında **"⚖️ Halkın Davası (Meydan Divanı)"** ve **"🗣️ Meydan Sohbeti (Paylaşım)"** sekmeleri yer alır.
+  - Davaların tüm listesi görünmez; meydanda o an sadece **sıradaki çözülmemiş tek bir köylünün davası** bekler. Çözüldüğünde mutluluk sonucu gösterilir ve köylü uğurlanır.
+  - **Oba (`otag`)** içi ise Köy Yönetici Divanı (Huzur özeti, 5+1 Konut mahallesi durumu, Üretim depoları bereketi ve Mezuniyet beratı) olarak düzenlendi.
 
 ---
 

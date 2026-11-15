@@ -3,7 +3,7 @@ import Link from "next/link";
 import { KAYNAKLAR, BIRLIK_ACILIS_LEVEL, ALAN_MUCADELESI_LEVEL, toplamKonutKapasitesi } from "@/lib/oyun/sabitler";
 import { kaynakAcikMi } from "@/lib/oyun/kurallar";
 
-export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla }) {
+export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla, rehberAcik, onRehberAcKapat }) {
   const { durum, level, kullanici } = oyun;
   const birlikAcik = durum.level >= BIRLIK_ACILIS_LEVEL;
   const genelHaritaAcik = durum.level >= ALAN_MUCADELESI_LEVEL;
@@ -79,6 +79,20 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
             <span className="hidden md:inline">Genel Harita</span>
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={onRehberAcKapat}
+          title="Adım Adım Oyun Rehberi (Bilge Rehber)"
+          className={`flex items-center gap-1 rounded-2xl px-2.5 py-2 text-xs font-black shadow-xl ring-1 backdrop-blur transition ${
+            rehberAcik
+              ? "bg-amber-400 text-stone-950 ring-amber-200"
+              : "bg-stone-900/90 text-amber-200 ring-amber-500/50 hover:bg-stone-800"
+          }`}
+        >
+          <span>🧭</span>
+          <span className="hidden sm:inline">Rehber</span>
+        </button>
 
         {yoneticiMi && (
           <Link
