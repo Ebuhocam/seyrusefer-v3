@@ -62,7 +62,8 @@ export function binaDurumu(binaId, durum, ozelBinalar = null) {
   const levelYeterli = durum.level >= gerekenLevel;
   const bedel = tanim.bedel[hedef] ?? {};
   const kaynak = bedelKontrol(bedel, durum.envanter);
-  const gorevTamam = levelYeterli && durum.gorevlerTamam(binaId, hedef);
+  const gorevGerekmez = !!tanim.gorevSartsiz || (!!tanim.ilkKurulumGorevsiz && hedef === 1);
+  const gorevTamam = levelYeterli && (gorevGerekmez || durum.gorevlerTamam(binaId, hedef));
 
   return {
     binaId,
@@ -71,6 +72,7 @@ export function binaDurumu(binaId, durum, ozelBinalar = null) {
     maks: false,
     gerekenLevel,
     levelYeterli,
+    gorevGerekmez,
     gorevTamam,
     bedel,
     kaynakYeterli: kaynak.yeterli,

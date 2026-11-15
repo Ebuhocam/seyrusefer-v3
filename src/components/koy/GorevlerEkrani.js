@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { toplamKonutKapasitesi } from "@/lib/oyun/sabitler";
 import { NAMAZ_VAKITLERI, oyunGunu } from "@/lib/oyun/gorevler";
 import { koyDavalariListesi, turkuHikayeleriListesi, gocmenDurumu } from "@/lib/oyun/hikayeler";
 import { BirlikPaneli } from "./BirlikVeFetihEkrani";
@@ -784,6 +785,9 @@ export function KiraathaneKutusu({ oyun, varsayilanSekme = "ozan" }) {
   const gocmen = gocmenDurumu(simdi, durum.sonGocmenKontrol);
   const mutluluk = durum.mutluluk ?? 60;
   const olasilik = Math.min(95, Math.max(15, mutluluk));
+  const kapasite = toplamKonutKapasitesi(durum.binalar);
+  const mevcutInsan = durum.envanter.insan ?? 5;
+  const bosYer = Math.max(0, kapasite - mevcutInsan);
 
   // Ozan Dede konuşurken ağzını açıp kapat (lip-sync)
   useEffect(() => {
@@ -961,17 +965,26 @@ export function KiraathaneKutusu({ oyun, varsayilanSekme = "ozan" }) {
         <div className="space-y-3">
           <div className="rounded-2xl bg-stone-950/80 p-4 ring-1 ring-amber-500/30">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-amber-200">👥 Köy Nüfusu (İnsan Kaynağı):</span>
-              <span className="text-sm font-black text-amber-100">👥 {durum.envanter.insan ?? 5} İnsan</span>
+              <span className="font-bold text-amber-200">🏠 Köy Barınma (Ev) Kapasitesi:</span>
+              <span className="text-sm font-black text-amber-100">
+                👥 {mevcutInsan} / {kapasite} Kişi (Boş Yatak: {bosYer})
+              </span>
             </div>
             <div className="mt-1 flex items-center justify-between text-xs">
               <span className="text-amber-200/80">😊 Köy Mutluluğuna Göre Kabul Şansı:</span>
               <span className="font-black text-emerald-300">%{olasilik}</span>
             </div>
             <p className="mt-2 text-[11px] text-amber-200/70">
-              İnsan da Mahsul, Tahta ve Taş gibi temel bir kaynaktır; binaları inşa etmek ve yükseltmek için köyünde yeterli insan (ahali) bulunmalıdır.
+              Yeni insanların köye yerleşebilmesi için <b>5+1 Konut Mahallende</b> boş barınma yeri olmalıdır. Her ev en fazla 3 katlı olur ve her kat <b>+5 👥 Kişi</b> kapasite sağlar.
             </p>
           </div>
+
+          {bosYer <= 0 && (
+            <div className="rounded-2xl bg-red-950/80 p-3.5 text-xs text-red-100 ring-1 ring-red-400/50">
+              <b className="block text-red-200">🏠 Evlerde Boş Yatak Kalmadı ({mevcutInsan}/{kapasite})!</b>
+              Yeni yolcuları köyüne davet edebilmek için önce haritadaki boş konut arsalarından birine <b>Ev inşa etmeli</b> veya mevcut evlerini <b>2. / 3. kata</b> yükseltmelisin.
+            </div>
+          )}
 
           {gocmen.hazir ? (
             <div className="rounded-2xl bg-stone-950/80 p-4 ring-1 ring-emerald-500/40">
@@ -987,11 +1000,13 @@ export function KiraathaneKutusu({ oyun, varsayilanSekme = "ozan" }) {
               </p>
               <button
                 type="button"
-                disabled={oyun.bekliyor}
+                disabled={oyun.bekliyor || bosYer <= 0}
                 onClick={() => oyun.gocmenTeklifEt()}
-                className="mt-3 w-full rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 text-sm font-black text-stone-900 shadow-lg"
+                className="mt-3 w-full rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 text-sm font-black text-stone-900 shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
               >
-                🏡 Köyümüze Ev Kurmayı Teklif Et (+{gocmen.aday.kisiSayisi} 👥 İnsan · %{olasilik} Şans)
+                {bosYer <= 0
+                  ? "🔒 Önce Köyde Yeni Ev İnşa Et veya Kat Çık"
+                  : `🏡 Köyümüze Ev Kurmayı Teklif Et (+${Math.min(gocmen.aday.kisiSayisi, bosYer)} 👥 İnsan · %${olasilik} Şans)`}
               </button>
             </div>
           ) : (

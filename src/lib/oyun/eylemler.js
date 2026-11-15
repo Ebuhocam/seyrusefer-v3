@@ -3,7 +3,7 @@
 // Bir oyun durumunu alıp yeni durumu döner. Sunucu (API) bunları kullanır;
 // istemci sadece sonucu gösterir. Geçersiz eylemde { hata } döner.
 // =============================================================
-import { KAYNAKLAR, BINALAR, LEVELLAR } from "./sabitler";
+import { KAYNAKLAR, BINALAR, LEVELLAR, toplamKonutKapasitesi } from "./sabitler";
 import { biriken, binaDurumu, kaynakAcikMi, levelDurumu } from "./kurallar";
 import {
   NAMAZ_VAKITLERI,
@@ -18,11 +18,16 @@ import { koyDavalariListesi, gocmenDurumu } from "./hikayeler";
 const SAAT_MS = 60 * 60 * 1000;
 const BOS_NAMAZ = { sabah: 0, ogle: 0, ikindi: 0, aksam: 0, yatsi: 0 };
 
-/** Yeni oyuncunun başlangıç durumu */
+/** Yeni oyuncunun başlangıç durumu (Mektep Lv.1'i hemen kurabilecek başlangıç kaynağı ve 1 katlı Kendi Evim ile başlar) */
 export function baslangicDurumu(simdi) {
   const binalar = {};
   for (const [id, t] of Object.entries(BINALAR)) if (t.baslangicSeviye) binalar[id] = t.baslangicSeviye;
-  const envanter = Object.fromEntries(Object.keys(KAYNAKLAR).map((k) => [k, k === "insan" ? 5 : 0]));
+  const envanter = {
+    erzak: 150,
+    kereste: 150,
+    tas: 0,
+    insan: 5,
+  };
   const d = {
     level: 1,
     binalar,
@@ -102,6 +107,9 @@ export function levelAtla(d, simdi, ayarlar = null) {
  * Bir görevi 1 adım ilerletir (kod veya tür ile eşleşir).
  */
 export function gorevIlerlet(d, gorevKodu, simdi, ayarlar = null) {
+  if ((d.binalar?.mektep ?? 0) < 1) {
+    return { hata: "Görevlere başlamadan önce köyüne Mektep (Seviye 1) inşa etmelisin!" };
+  }
   const tanimlar = levelGorevTanimlari(d.level, ayarlar);
   let tanim = tanimlar.find((g) => g.kod === gorevKodu);
   if (!tanim) {
@@ -221,6 +229,16 @@ export function davaCoz(d, davaId, secenekIndeks, simdi, ayarlar = null) {
  * Kabul edilme ihtimali köyün mutluluk (huzur) oranına bağlıdır.
  */
 export function gocmenTeklifEt(d, simdi) {
+  const kapasite = toplamKonutKapasitesi(d.binalar);
+  const mevcutInsan = d.envanter?.insan ?? 5;
+  const bosYer = Math.max(0, kapasite - mevcutInsan);
+
+  if (bosYer <= 0) {
+    return {
+      hata: `Köydeki evlerde boş barınma yeri yok (${mevcutInsan}/${kapasite} 👥)! Yeni insanları kabul edebilmek için önce yeni bir Ev inşa etmeli veya mevcut evlerini 2. / 3. kata yükseltmelisin.`,
+    };
+  }
+
   const { hazir, kalanDakika, aday } = gocmenDurumu(simdi, d.sonGocmenKontrol);
   if (!hazir) {
     return {
@@ -233,7 +251,8 @@ export function gocmenTeklifEt(d, simdi) {
   const zar = Math.random() * 100;
   const kabul = zar < olasilik;
 
-  const yeniInsan = (d.envanter?.insan ?? 5) + (kabul ? aday.kisiSayisi : 0);
+  const kazanilanInsan = kabul ? Math.min(aday.kisiSayisi, bosYer) : 0;
+  const yeniInsan = mevcutInsan + kazanilanInsan;
   const yeniDurum = {
     ...d,
     sonGocmenKontrol: simdi,
@@ -248,11 +267,11 @@ export function gocmenTeklifEt(d, simdi) {
     sonuc: {
       kabul,
       aday: aday.ad,
-      kazanilanInsan: kabul ? aday.kisiSayisi : 0,
+      kazanilanInsan,
       olasilik,
       mesaj: kabul
-        ? `${aday.ad} köyündeki huzur ve adaletten çok etkilendi! Köyüne yerleşmeyi kabul ettiler (+${aday.kisiSayisi} 👥 İnsan).`
-        : `${aday.ad} şimdilik yola devam etmeye karar verdi. Oba'da halkın sorunlarını hikmetle çözüp köy mutluluğunu (%${mutluluk}) artırarak şansını yükseltebilirsin!`,
+        ? `${aday.ad} köyündeki huzur ve adaletten çok etkilendi! Ev teklifini kabul edip köye yerleştiler (+${kazanilanInsan} 👥 İnsan · Kapasite: ${yeniInsan}/${kapasite}).`
+        : `${aday.ad} şimdilik yola devam etmeye karar verdi. Köy mutluluğunu (%${mutluluk}) artırarak bir sonraki yolcuları ikna şansını yükseltebilirsin!`,
     },
   };
 }

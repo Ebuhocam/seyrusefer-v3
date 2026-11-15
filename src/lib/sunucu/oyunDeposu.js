@@ -36,8 +36,15 @@ export async function durumOku(kullaniciId) {
   ]);
 
   const n = namaz.results[0];
+  const binaHaritasi = Object.fromEntries(binalar.results.map((b) => [b.bina_id, b.seviye]));
+  if (binaHaritasi.kendi_evim == null) binaHaritasi.kendi_evim = 1;
+
   const envanter = Object.fromEntries(kaynaklar.results.map((k) => [k.kaynak, k.envanter]));
   if (envanter.insan == null) envanter.insan = o.insan ?? 5;
+  if (o.level === 1 && !binaHaritasi.mektep && (envanter.erzak ?? 0) === 0 && (envanter.kereste ?? 0) === 0) {
+    envanter.erzak = 150;
+    envanter.kereste = 150;
+  }
 
   let cozulenDavalar = [];
   try {
@@ -53,7 +60,7 @@ export async function durumOku(kullaniciId) {
     mutluluk: o.mutluluk ?? 60,
     cozulenDavalar: Array.isArray(cozulenDavalar) ? cozulenDavalar : [],
     sonGocmenKontrol: o.son_gocmen_kontrol ?? 0,
-    binalar: Object.fromEntries(binalar.results.map((b) => [b.bina_id, b.seviye])),
+    binalar: binaHaritasi,
     envanter,
     sonToplama: Object.fromEntries(kaynaklar.results.map((k) => [k.kaynak, k.son_toplama])),
     gorevIlerlemesi: Object.fromEntries(

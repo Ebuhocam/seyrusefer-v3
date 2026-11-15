@@ -18,12 +18,45 @@ export const KAYNAKLAR = {
 // Depo kapasitesi: Oba seviyesine göre kaç saatlik üretim birikebilir
 export const DEPO_SAAT = { 1: 24, 2: 36, 3: 48, 4: 48 };
 
+// ---------- 5+1 EV (KONUT) OLUŞTURUCU ----------
+// Seçenek A: Her kat +5 kişi barınma kapasitesi sağlar (1. Kat: 5, 2. Kat: 10, 3. Kat: 15 kişi).
+function evTanimi(ad, acilis1, baslangicSeviye = 0) {
+  return {
+    ad,
+    konut: true,
+    gorevSartsiz: true,
+    katBasiKapasite: 5,
+    aciklama: "Köylülerin barındığı konut. Her kat çıkıldığında +5 👥 İnsan kapasitesi sağlar (Maks. 3 Kat = 15 Kişi).",
+    gorsel: (s) => `/assets/binalar/ev${Math.min(3, Math.max(1, s || 1))}.webp`,
+    maksSeviye: 3,
+    ...(baslangicSeviye ? { baslangicSeviye } : {}),
+    acilis: { 1: acilis1, 2: Math.min(10, acilis1 + 2), 3: Math.min(10, acilis1 + 4) },
+    bedel: {
+      1: { erzak: 120, kereste: 140 },
+      2: { erzak: 220, kereste: 240, tas: 120 },
+      3: { erzak: 380, kereste: 400, tas: 250 },
+    },
+  };
+}
+
+export const EV_IDLERI = ["kendi_evim", "ev1", "ev2", "ev3", "ev4", "ev5"];
+
+/** Köydeki mevcut evlerin toplam insan (barınma) kapasitesini hesaplar */
+export function toplamKonutKapasitesi(binalar = {}) {
+  const kendiKat = binalar.kendi_evim ?? 1;
+  let toplam = kendiKat * 5;
+  for (const id of ["ev1", "ev2", "ev3", "ev4", "ev5"]) {
+    toplam += (binalar[id] ?? 0) * 5;
+  }
+  return toplam;
+}
+
 // ---------- 1. KATMAN: KÖY BİNALARI ----------
 // Not: Veritabanı uyumluluğu için Oba'nın teknik anahtarı "otag" olarak korunur, ekranda "Oba" görünür.
 export const BINALAR = {
   otag: {
     ad: "Oba",
-    aciklama: "Köy yöneticisinin merkezi. Halkın sorunlarını burada dinler ve çözersin.",
+    aciklama: "Köy yöneticisinin divanı ve merkezi. Köyün genel idaresi ve depo bereketi buradan yönetilir.",
     gorsel: (s) => `/assets/binalar/otag${s}.webp`,
     maksSeviye: 4,
     baslangicSeviye: 1,
@@ -39,9 +72,10 @@ export const BINALAR = {
     aciklama: "Köyün ilim yuvası. İlk okuma, hadis, video ve sınav görevleri burada yapılır.",
     gorsel: () => `/assets/binalar/mektep.webp`,
     maksSeviye: 4,
+    ilkKurulumGorevsiz: true,
     acilis: { 1: 1, 2: 4, 3: 6, 4: 8 },
     bedel: {
-      1: { erzak: 300, kereste: 250, insan: 4 },
+      1: { erzak: 100, kereste: 100 },
       2: { erzak: 450, kereste: 350, tas: 250, insan: 7 },
       3: { erzak: 650, kereste: 500, tas: 350, insan: 11 },
       4: { erzak: 900, kereste: 700, tas: 500, insan: 15 },
@@ -62,7 +96,7 @@ export const BINALAR = {
   },
   sosyalmeydan: {
     ad: "Köy Meydanı",
-    aciklama: "Ahali ile hasbihal ve gündem paylaşımlarının yapıldığı meydan.",
+    aciklama: "Ahali ile hasbihal, gündem paylaşımları ve halkın davalarının dinlendiği meydan.",
     gorsel: (s) => `/assets/binalar/sosyalmeydan${s}.webp`,
     maksSeviye: 4,
     acilis: { 1: 2, 2: 5, 3: 7, 4: 9 },
@@ -73,23 +107,35 @@ export const BINALAR = {
       4: { erzak: 600, kereste: 450, tas: 350, insan: 16 },
     },
   },
+  kendi_evim: evTanimi("Kendi Evim", 1, 1),
+  ev1: evTanimi("Köy Evi 1", 1, 0),
+  ev2: evTanimi("Köy Evi 2", 2, 0),
+  ev3: evTanimi("Köy Evi 3", 3, 0),
+  ev4: evTanimi("Köy Evi 4", 5, 0),
+  ev5: evTanimi("Köy Evi 5", 7, 0),
 };
 
 // ---------- 1. KATMAN: KÖY HARİTASI YERLEŞİMİ ----------
 export const ARSALAR = {
-  otag: { x: 56.1, y: 77.5, genislik: 15 },
-  mektep: { x: 41.2, y: 64, genislik: 12 },
-  kiraathane: { x: 67.8, y: 35, genislik: 12 },
-  sosyalmeydan: { x: 55.6, y: 49, genislik: 10 },
+  otag: { x: 55.2, y: 27.5, genislik: 15.5 },
+  mektep: { x: 36.8, y: 46.5, genislik: 12.5 },
+  kiraathane: { x: 74.2, y: 47.0, genislik: 12.5 },
+  sosyalmeydan: { x: 55.2, y: 54.0, genislik: 10.5 },
+  kendi_evim: { x: 38.6, y: 63.2, genislik: 9.2 },
+  ev1: { x: 67.5, y: 63.5, genislik: 9.2 },
+  ev2: { x: 48.2, y: 70.5, genislik: 9.2 },
+  ev3: { x: 29.2, y: 71.5, genislik: 9.2 },
+  ev4: { x: 40.5, y: 79.5, genislik: 9.2 },
+  ev5: { x: 63.8, y: 79.5, genislik: 9.2 },
 };
 
 // Köyde sabit duran etkileşim noktaları
 export const NOKTALAR = {
-  pano: { ad: "Görev Panosu", ikon: "📜", x: 54.3, y: 23 },
-  tarla: { ad: "Tarla", ikon: "🌾", x: 10.5, y: 54, kaynak: "erzak" },
-  orman: { ad: "Orman", ikon: "🌲", x: 8, y: 22, kaynak: "kereste" },
-  maden: { ad: "Maden", ikon: "⛏️", x: 93, y: 60, kaynak: "tas" },
-  haberci: { ad: "Haberci", ikon: "🏇", x: 49.7, y: 89, acilisLevel: 1 },
+  pano: { ad: "Görev Panosu", ikon: "📜", x: 55.2, y: 39.5 },
+  tarla: { ad: "Tarla", ikon: "🌾", x: 12.5, y: 56.5, kaynak: "erzak" },
+  orman: { ad: "Orman", ikon: "🌲", x: 21.0, y: 24.0, kaynak: "kereste" },
+  maden: { ad: "Taş Ocağı", ikon: "⛏️", x: 88.5, y: 81.0, kaynak: "tas" },
+  haberci: { ad: "Haberci", ikon: "🏇", x: 51.8, y: 88.5, acilisLevel: 1 },
 };
 
 // ---------- 2. KATMAN: BİRLİK ALANI BİNALARI (Level 4+) ----------

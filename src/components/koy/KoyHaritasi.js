@@ -136,7 +136,7 @@ export default function KoyHaritasi({ baslangic }) {
                       draggable={false}
                     />
                     <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-stone-900/90 px-2 py-0.5 text-[11px] font-bold text-amber-100 ring-1 ring-amber-500/60">
-                      {BINALAR[id].ad} · Lv.{seviye}
+                      {BINALAR[id].ad} · {BINALAR[id].konut ? `${seviye}. Kat` : `Lv.${seviye}`}
                       {bilgi.yapilabilir && <span className="ml-1 text-emerald-300">▲</span>}
                     </span>
                   </button>

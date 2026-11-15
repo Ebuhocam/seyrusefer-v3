@@ -1,6 +1,15 @@
 "use client";
 import { useState } from "react";
-import { BINALAR, BIRLIK_BINALARI, KAYNAKLAR, NOKTALAR, DEPO_SAAT, BIRLIK_ACILIS_LEVEL, LEVELLAR } from "@/lib/oyun/sabitler";
+import {
+  BINALAR,
+  BIRLIK_BINALARI,
+  KAYNAKLAR,
+  NOKTALAR,
+  DEPO_SAAT,
+  BIRLIK_ACILIS_LEVEL,
+  LEVELLAR,
+  toplamKonutKapasitesi,
+} from "@/lib/oyun/sabitler";
 import { depoKapasitesi, kaynakAcikMi } from "@/lib/oyun/kurallar";
 import { GOREV_TURLERI } from "@/lib/oyun/gorevler";
 import {
@@ -171,18 +180,46 @@ function BinaIcerik({ id, oyun }) {
   return (
     <>
       <h2 className="text-xl font-black">{tanim.ad}</h2>
-      <p className="text-sm text-amber-200/70">{b.seviye ? `Seviye ${b.seviye} / ${tanim.maksSeviye}` : "Henüz inşa edilmedi"}</p>
+      <p className="text-sm text-amber-200/70">
+        {tanim.konut
+          ? b.seviye
+            ? `${b.seviye}. Kat / Maks. ${tanim.maksSeviye} Kat · Kapasite: 👥 ${b.seviye * 5} Kişi`
+            : "Boş Konut Arsası (İnşa edilince +5 👥 Kişi kapasite sağlar)"
+          : b.seviye
+          ? `Seviye ${b.seviye} / ${tanim.maksSeviye}`
+          : "Henüz inşa edilmedi"}
+      </p>
 
       <div className="relative my-4 flex h-40 items-center justify-center rounded-2xl bg-stone-950/50">
         <img src={onizleme} alt="" className={`max-h-36 object-contain ${b.seviye === 0 ? "opacity-60 grayscale" : ""}`} />
         {!b.maks && (
           <span className="absolute right-2 top-2 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-black text-stone-900">
-            {b.seviye ? `Lv.${b.hedef} önizleme` : "İnşa önizleme"}
+            {tanim.konut
+              ? b.seviye
+                ? `${b.hedef}. Kat önizleme`
+                : "1. Kat önizleme"
+              : b.seviye
+              ? `Lv.${b.hedef} önizleme`
+              : "İnşa önizleme"}
           </span>
         )}
       </div>
 
-      {b.seviye > 0 && (
+      {tanim.konut && (
+        <div className="mb-4 rounded-2xl bg-stone-950/75 p-3.5 text-xs ring-1 ring-amber-500/30">
+          <div className="flex items-center justify-between font-bold text-amber-200">
+            <span>🏠 Köy Toplam Barınma Kapasitesi:</span>
+            <span>
+              👥 {env.insan ?? 5} / {toplamKonutKapasitesi(oyun.durum.binalar)} Kişi
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-amber-200/75">
+            Her ev en fazla 3 katlı olabilir ve her kat <b>+5 👥 İnsan</b> barındırır. Boş yatak kapasitesi olmadan Kıraathane&apos;den yeni insan toplayamazsın!
+          </p>
+        </div>
+      )}
+
+      {b.seviye > 0 && !tanim.konut && (
         <button
           type="button"
           onClick={() => setIcerde(true)}
@@ -193,16 +230,28 @@ function BinaIcerik({ id, oyun }) {
       )}
 
       {b.maks ? (
-        <p className="rounded-xl bg-amber-500/20 p-3 text-center font-bold">🏆 Maksimum seviyeye ulaşıldı</p>
+        <p className="rounded-xl bg-amber-500/20 p-3 text-center font-bold">
+          🏆 {tanim.konut ? "3 Kat tamamlandı (15 Kişi Maksimum Kapasite)" : "Maksimum seviyeye ulaşıldı"}
+        </p>
       ) : (
         <>
           <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-amber-300/80">
-            {b.seviye ? `Seviye ${b.hedef}'e yükseltme şartları` : "İnşa şartları"}
+            {tanim.konut
+              ? b.seviye
+                ? `${b.hedef}. Kata çıkma şartları (+5 👥 Kapasite)`
+                : "1. Kat inşa şartları (+5 👥 Kapasite)"
+              : b.seviye
+              ? `Seviye ${b.hedef}'e yükseltme şartları`
+              : "İnşa şartları"}
           </h3>
           <ul className="space-y-1.5">
             <Sart tamam={b.levelYeterli}>Oyuncu Level {b.gerekenLevel}</Sart>
 
-            {b.levelYeterli ? (
+            {b.gorevGerekmez ? (
+              <Sart tamam={true}>
+                🔑 Görev şartı aranmaz (Kaynaklarla doğrudan {b.seviye ? "yükseltilebilir" : "inşa edilebilir"})
+              </Sart>
+            ) : b.levelYeterli ? (
               gosterilenGorevler.map((g) => (
                 <Sart
                   key={g.kod}
@@ -233,8 +282,8 @@ function BinaIcerik({ id, oyun }) {
               const tutar = Number(m) || 0;
               if (tutar <= 0) return null;
               return (
-                <Sart key={k} tamam={env[k] >= tutar}>
-                  🔑 {KAYNAKLAR[k].ikon} {KAYNAKLAR[k].ad}: <b className="tabular-nums">{env[k]}</b> / {tutar}
+                <Sart key={k} tamam={(env[k] ?? 0) >= tutar}>
+                  🔑 {KAYNAKLAR[k].ikon} {KAYNAKLAR[k].ad}: <b className="tabular-nums">{env[k] ?? 0}</b> / {tutar}
                 </Sart>
               );
             })}
@@ -244,7 +293,13 @@ function BinaIcerik({ id, oyun }) {
             onClick={() => oyun.yukselt(id)}
             className="mt-4 w-full rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 py-3 font-black shadow-lg disabled:from-stone-600 disabled:to-stone-700 disabled:text-stone-400"
           >
-            {b.seviye ? `⬆️ Seviye ${b.hedef}'e Yükselt` : "🔨 İnşa Et"}
+            {tanim.konut
+              ? b.seviye
+                ? `⬆️ ${b.hedef}. Katı Çık (+5 👥 Kapasite)`
+                : "🔨 1. Katı İnşa Et (+5 👥 Kapasite)"
+              : b.seviye
+              ? `⬆️ Seviye ${b.hedef}'e Yükselt`
+              : "🔨 İnşa Et"}
           </button>
         </>
       )}
@@ -255,6 +310,7 @@ function BinaIcerik({ id, oyun }) {
 function PanoIcerik({ oyun, kapat }) {
   const { level, durum, gorevler } = oyun;
   const sonLevel = durum.level >= LEVELLAR.length;
+  const mektepKurulu = (durum.binalar.mektep ?? 0) >= 1;
   const [acikGorev, setAcikGorev] = useState(null);
 
   if (acikGorev) {
@@ -274,6 +330,14 @@ function PanoIcerik({ oyun, kapat }) {
       <p className="mb-4 text-sm text-amber-200/70">
         Evre: {{ bireysel: "🌱 Bireysel İnşa", birlik: "🤝 Kardeşlik ve Birlik", meydan: "🚩 Meydan ve Alan Mücadelesi" }[level.evre]} · Hedef süre ≈ {level.hedefGun} gün
       </p>
+
+      {!mektepKurulu && (
+        <div className="mb-4 rounded-2xl bg-amber-500/20 p-3.5 text-xs text-amber-100 ring-2 ring-amber-400">
+          <b className="block text-sm text-amber-300">🏛️ Önce Mektep&apos;i İnşa Etmelisin!</b>
+          Köyünde henüz <b>Mektep</b> kurulmadığı için görevler kilitlidir. Haritada meydanın solundaki{" "}
+          <b>Mektep</b> arsasına tıklayıp başlangıç kaynaklarınla 1. Seviyesini hemen kurabilirsin!
+        </div>
+      )}
 
       <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-amber-300/80">
         1. Gündem Görevleri (Bina Anahtarları)

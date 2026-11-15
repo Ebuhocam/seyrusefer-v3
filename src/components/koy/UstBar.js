@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { KAYNAKLAR, BIRLIK_ACILIS_LEVEL, ALAN_MUCADELESI_LEVEL } from "@/lib/oyun/sabitler";
+import { KAYNAKLAR, BIRLIK_ACILIS_LEVEL, ALAN_MUCADELESI_LEVEL, toplamKonutKapasitesi } from "@/lib/oyun/sabitler";
 import { kaynakAcikMi } from "@/lib/oyun/kurallar";
 
 export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla }) {
@@ -9,6 +9,7 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
   const genelHaritaAcik = durum.level >= ALAN_MUCADELESI_LEVEL;
   const yoneticiMi = !!oyun.gelistirici || kullanici?.rol === "admin";
   const mutluluk = durum.mutluluk ?? 60;
+  const konutKapasite = toplamKonutKapasitesi(durum.binalar);
   const mutlulukRenk =
     mutluluk >= 70
       ? "text-emerald-300 ring-emerald-500/40"
@@ -103,17 +104,23 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
 
         {Object.entries(KAYNAKLAR).map(([k, t]) => {
           const acik = kaynakAcikMi(k, durum.level);
+          const deger =
+            k === "insan" ? `${durum.envanter.insan ?? 5}/${konutKapasite}` : durum.envanter[k] ?? 0;
           return (
             <div
               key={k}
               className={`flex items-center gap-0.5 rounded-xl bg-stone-800 px-1.5 py-1 text-sm sm:gap-1 sm:px-2 ${
                 acik ? "" : "opacity-40"
               }`}
-              title={t.ad}
+              title={
+                k === "insan"
+                  ? `İnsan (Ahali): ${durum.envanter.insan ?? 5} / ${konutKapasite} Ev Kapasitesi`
+                  : t.ad
+              }
             >
               <span>{t.ikon}</span>
               <span className="text-xs font-black tabular-nums text-amber-50 sm:text-sm">
-                {acik ? durum.envanter[k] ?? 0 : "🔒"}
+                {acik ? deger : "🔒"}
               </span>
             </div>
           );
