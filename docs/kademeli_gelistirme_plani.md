@@ -1,88 +1,74 @@
-# Seyrüsefer v3 — Sisli Harita, 24 Saatlik Dolum & Tarla Görselleri, Cinsiyet/Karakter Seçimi, Meydan Diyalog Sistemi ve Çınar Altı Sosyal Medya Planı
+# Seyrüsefer v3 — 4 Fazlı Yeni Geliştirme Planı (Canlı Harita, 3D Üretim Oyunları ve 10 Özgün Ortaokul Karakteri)
 
-Son güncelleme: 15 Kasım 2026 (TAMAMLANDI ✅)
+Son güncelleme: 15 Kasım 2026
 
-Bu doküman; kullanıcının istediği tüm yeni mekanikleri 6 sıralı adıma böler ve tamamlanan durumu özetler:
-
----
-
-## 🚀 Sıralı Uygulama Planı (Tamamlandı)
-
-### Adım 1 — Harita Etrafına Sisli Alan (Overscroll) & Bilge Rehber Tanıtım Turu Düzenlemesi
-- [x] **1.1. Harita Etrafında Sisli Keşif Alanı (`KoyHaritasi.js`):**
-  - Harita tuvalinin dört bir yanına (`px-[18vw] py-[28dvh]`) sisli orman ve bulut dokusu eklendi; oyuncu haritayı kenarlara doğru biraz daha kaydırabiliyor.
-  - Bu sayede altta **Bilge Rehber** penceresi açıkken bile en alttaki **Haberci (`y: 88.5%`)** rahatça yukarı kaydırılıp tam görünüyor.
-- [x] **1.2. Bilge Rehber Tanıtım Kısmı Sadeleştirmesi (`RehberKarakter.js`, `KoyHaritasi.js`):**
-  - Rehberin **1. Bölüm: Köy Tanıtım Turu (`bolum === "tanitim"`)** adımlarında haritada **"👇 Buraya Tıkla!"** oku gösterilmez ve rehber kutusunda **"🚪 Binaya Git / Görevi Aç"** butonu çıkmaz.
-  - Tanıtım turunda sadece kamera ilgili alana yumuşakça odaklanır (`scrollTo` ile hem yatay hem dikey ortalar) ve oyuncu yalnızca **"İlerle →"** (veya **Geri / Atla**) butonuyla köyü tanır.
-  - **"👇 Buraya Tıkla!"** oku ve **"Mekana Git"** butonu yalnızca **2. Bölüm: Yapılacak İşler (`bolum === "gorev"`)** kısmında devreye girer.
+Bu doküman; kullanıcının istediği tüm yeni mekanikleri 4 sıralı faza böler. **Faz 1 tamamlanmıştır**, sıradaki adım **Faz 2**'dir.
 
 ---
 
-### Adım 2 — Ev İçi Aile Çağırma Hassasiyeti (Yetim/Öksüz Çocuk Hassasiyeti)
-- [x] **2.1. Ev İçinde Karakter Gelmemesi ve "Çağırdım" Butonu (`MekanSahnesi.js`):**
-  - Anne veya babası olmayan çocukların üzülmemesi için Ev İçi sahnesinde kapıdan Baba/Anne/Kardeş karakterleri **yürümez ve görünmez**.
-  - Mektup Haberci'den alındıktan sonra Ev İçi sahnesinde önce **"📣 Yanıma Çağır"** butonu yer alır; buna tıklanınca **"✅ Çağırdım"** butonu açılır ve tıklanınca doğrudan mektup okuma penceresine geçilir.
+## ✅ FAZ 1 — Web Tut-Sürükle, İnşa Sonrası Haritaya Dönüş, Meydan İlk Görev Dava, Sabit İşçi ve Canlı Köy Haritası (TAMAMLANDI)
+
+- [x] **1.1. Web'de Mouse ile Tutarak Sürükleme (Drag-to-Pan) (`KoyHaritasi.js`):**
+  - Mobil dokunmatik sürüklemeye ek olarak, bilgisayarda (webde) sol tık basılı tutarak haritayı her yöne akıcı kaydırma (`onMouseDown`, `onMouseMove`, `onMouseUp`, `cursor-grab / cursor-grabbing`) eklendi.
+  - Sürükleme sırasında (`> 6px`) yanlışlıkla bina açılmasını önleyen akıllı tıklama kilidi (`onClickCapture`) eklendi.
+- [x] **1.2. Mektep İnşası ve Bina Yükseltmelerinde Otomatik Köy Haritasına Dönüş (`Panel.js`, `KoyHaritasi.js`, `RehberKarakter.js`):**
+  - Mektep inşa edildiğinde veya herhangi bir bina/konut yükseltildiğinde (`oyun.yukselt(id)`), sayfa içinde kalmak yerine otomatik olarak **Köy Haritasına döner** (`kapat()`).
+  - Haritaya dönüldüğünde **Bilge Rehber** otomatik olarak bir sonraki adıma geçer (ör. Mektep kurulunca hemen *"Şimdi Mektep'e girip Günün Hadisini oku!"* der).
+- [x] **1.3. Köy Meydanında İlk Görevin Kesinlikle Dava Çözmek Olması (`MekanSahnesi.js`):**
+  - Köy Meydanı'nda ilk görev (`cozulenler.length === 0` veya dava görevi tamamlanmamışken) zorunlu olarak **⚖️ Dava Çözmek** olarak sabitlendi.
+  - İlk dava çözüldükten sonraki günlerde köye yerleşmek isteyen yeni insanlar (2+ kişi) gelir.
+- [x] **1.4. Görevlendirilen İşçinin Oradan Çıkarılamaması (`eylemler.js`, `MekanSahnesi.js`):**
+  - Bir köylü Tarla, Orman veya Taş Ocağı'na görevlendirildiğinde oradan geri çekilemez (`-` butonu kaldırıldı, sunucuda da engellendi).
+  - Böylece aynı işçiyi önce tarlada kullanıp sonra ormana taşıma suistimali kapatıldı; yeni işçi atamak için köye yeni insan kazandırmak gerekir.
+- [x] **1.5. Düz Görsel Yerine Canlı & Hareketli Köy Haritası (`CanliKoyAtmosferi` - `KoyHaritasi.js`):**
+  - **En Üst Kısımda Akan Nehir:** Haritanın en üst şeridinde kıvrılarak akan Göksu Nehri, hareketli su akıntıları ve dönen su değirmeni çarkı.
+  - **Sallanan Ağaçlar:** Köyün etrafında rüzgârla sağa-sola salınan ağaç kümeleri.
+  - **Hafif Rüzgâr & Uçuşan Yapraklar:** Harita üzerinde esen hafif rüzgâr çizgileri ve süzülen yapraklar.
+  - **Yürüyen İnsanlar:** Köy nüfusuna göre bina ve patikalar arasında yürüyen köylüler.
 
 ---
 
-### Adım 3 — Kayıtta Cinsiyet & Karakter Seçimi ve Oyun İçi Karakter Değiştirme
-- [x] **3.1. Kız ve Erkek Öğrenci Karakterleri (`sabitler.js`, `public/assets/karakterler/`):**
-  - **Kız Öğrenci Karakterleri:**
-    1. `bala` — **Bala Hatun** (`/assets/karakterler/kiz_bala.webp`)
-    2. `elif` — **Elif Bacı (İlim Talebesi)** (`/assets/karakterler/kiz_elif.webp`)
-  - **Erkek Öğrenci Karakterleri:**
-    1. `alp` — **Genç Alp** (`/assets/karakterler/erkek_alp.webp`)
-    2. `celebi` — **Genç Çelebi (İlim Talebesi)** (`/assets/karakterler/erkek_celebi.webp`)
-- [x] **3.2. Kayıt Ekranında Cinsiyet ve Karakter Seçimi (`GirisFormu.js`, `/api/auth/kayit`):**
-  - Yeni köy kurarken öğrenciye **Cinsiyet (`Erkek Öğrenci` / `Kız Öğrenci`)** sorulur ve seçtiği cinsiyete uygun karakter kartlarından istediğini seçer.
-- [x] **3.3. Oyun İçinde Karakter Değiştirme (`UstBar.js`, `MekanSahnesi.js`):**
-  - Üst bardaki oyuncu karakter rozetine tıklandığında açılan **Karakter Seçim Penceresi** ile öğrenci dilediği zaman karakterini değiştirebilir.
-  - Tüm 2D sahnelerde (Ev İçi, Köy Meydanı, Tarla, Orman, Taş Ocağı) ve Çınar Altı sosyal medyada öğrencinin seçtiği karakter görseli yer alır.
+## ⏳ FAZ 2 — Taş Ocağı 3D Kaya Parçalama & Orman Keşif Haritası (İşçi Başına 2 Sefer Hakkı)
+
+- [ ] **2.1. Bir Noktaya Vurunca Diğerlerinin Kilitlenmesi Sorununun Çözümü (`eylemler.js`, `MekanSahnesi.js`):**
+  - Sahadaki 5-6 noktadan birine tıklayınca tüm noktaların birden kilitlenmesi kaldırılacak; her kaya damarı / her sebze parseli / her orman seferi bağımsız çalışacak.
+- [ ] **2.2. Taş Ocağı 3D Kaya Kırma & Parçalanma Oyunu (`MekanSahnesi.js`):**
+  - Taş ocağında 6 ayrı 3D kaya/cevher damarı yer alacak.
+  - Oyuncu kayaya kazma/balyoz vurdukça kaya sarsılacak, üzerinde çatlaklar oluşacak ve 3. vuruşta kaya **parçalanarak taş bloklarına ayrılacak** (3D parçacık dağılma animasyonu).
+- [ ] **2.3. Orman Keşif Haritası & İşçi Başına 2 Sefer Hakkı (`eylemler.js`, `MekanSahnesi.js`):**
+  - Ormana girildiğinde bölgelere ayrılmış bir **Orman Keşif Haritası** açılacak.
+  - Ormanda görevli **her işçi için günlük 2 sefer (arama) hakkı** olacak (`buradakiIsci * 2` hak).
+  - Oyuncu haritada rastgele bir bölgeye tıklayıp şansını deneyecek:
+    - Şansına **🍂 Kurumuş Ağaç** çıkarsa 3D ağaç kesme sahnesi açılacak; baltayla vurdukça gövde yarılacak, devrilecek ve tahta kazanılacak!
+    - Şansına **🌲 Yaş Ağaç / Boş Çalılık** çıkarsa *"Buradaki ağaçlar yemyeşil, yaş ağaca balta vurulmaz!"* uyarısı çıkacak ve kalan sefer hakkıyla başka nokta arayacak.
 
 ---
 
-### Adım 4 — 24 Saatlik Kaynak Dolumu (15 Birim / 24 Saat), Doluluk Oranı ve 3 Aşamalı Tarla Görseli
-- [x] **4.1. 24 Saatte 15 Birim Dolum Kurgusu (`kurallar.js`, `eylemler.js`, `MekanSahnesi.js`):**
-  - Saha üretimi (Tarla, Orman, Taş Ocağı) 10 dakika yerine **24 saatte 15 birim (`15/15`, yani 1 işçiyle her 96 dakikada `1` birim)** dolacak şekilde çalışır (işçi çarpanıyla hızlanır).
-  - Eğer henüz hiç kaynak birikmemişse (`0 / 15`, `%0`), oyuncu hiçbir şey toplayamaz / sulayamaz; ekranda **anlık dolum yüzdesi (`%0..%100`)** ve bir sonraki birime kalan dakika görünür.
-  - Eğer örneğin `1/15` veya `5/15` birikmişse, oyuncu sahada tam o kadar birimi sulayıp/kesip toplayabilir!
-- [x] **4.2. Köy Haritasında Dolum Oranı, 3 Aşamalı Tarla Görseli ve Orman/Tarla Hover Efekti (`KoyHaritasi.js`, `public/assets/binalar/`):**
-  - Köy haritasında Tarla, Orman ve Taş Ocağı üzerinde **dolum oranı çubuğu (`%Doluluk` ve `X/15`)** sürekli görünür.
-  - **Tarla Görselleri:**
-    - Tamamen boşken (`0/15`): `tarla_bos.webp` (Sürülmüş boş toprak)
-    - Birazı doluyken (`1..14/15`): `tarla_yari.webp` (Yeşil filizli yarı dolu tarla)
-    - Tamamı doluyken (`15/15`): `tarla_dolu.webp` (Altın başaklı tam dolu tarla)
-  - Tarla, Orman ve Taş Ocağı da diğer binalar gibi üzerine fare (mouse) getirildiğinde **hafif öne gelme / büyüme (`hover:-translate-y-1.5 hover:scale-110`)** efektine sahiptir.
+## ⏳ FAZ 3 — Tarla 3D/FPS Sebze Alanı: Kol & İbrikle Sulama ve Meyve/Sebze Toplama Animasyonu
+
+- [ ] **3.1. 6 Ayrı Sebze/Meyve Alanı (`MekanSahnesi.js`):**
+  - Tarlada 6 ayrı sebze/meyve parseli olacak (🍅 Domates, 🌾 Buğday, 🥒 Salatalık, 🌶️ Biber, 🍉 Karpuz, 🌽 Mısır).
+  - Bir sebze alanına tıklayınca o parselin **yakın çekim 3D/Birinci Şahıs (FPS) görünümü** açılacak ve sadece o parsel işlenecek (diğer 5 parsel kilitlenmeyecek).
+- [ ] **3.2. Kol & İbrik Animasyonu (İbrik Aşağıda → İbrik Yukarıda Sulama) + Sebze Toplama Animasyonu:**
+  - Yakın çekim sahnede sağ altta oyuncunun **kolu ve elindeki bakır su ibriği** görünecek:
+    1. **"💧 Sula"** butonuna (veya fidelerin üzerine) basınca kol yükselir (**İbrik Aşağıda → İbrik Yukarıda eğilerek su dökme animasyonu**), su damlaları toprağa düşer.
+    2. Toprak ıslanır ve fideler büyüyerek olgun meyve/sebzelere dönüşür.
+    3. **"🧺 Sebzeyi/Meyveyi Topla"** aşamasında oyuncunun eli uzanıp olgunlaşan sebzeleri tek tek sepete toplar (sepete uçma animasyonu) ve mahsul envantere eklenir!
 
 ---
 
-### Adım 5 — Köy Meydanı: Sabit Bekleyen Karakterler, Diyalog Kutusu, Tam Ekran Karar Sonucu ve Günlük Olay (Dava veya Yeni İnsan Daveti)
-- [x] **5.1. Sabit Bekleme ve Yanlarına Gidince Konuşma (`KoyMeydaniSahnesi`):**
-  - Meydandaki karakterler sağa sola yürümez; sabit noktalarında beklerler.
-  - Oyuncu karakterini onların yanına götürdüğünde (veya onlara tıkladığında), karakter yanlarına yürür ve **başlarının üstünde konuşma balonu + altta Rehber gibi daktilo diyalog kutusu** açılır!
-  - Konuşma tamamlandığında **"⚖️ Karar Ekranına Geç"** veya **"🏡 Ev Teklifi Ekranına Geç"** butonuyla seçim ekranı açılır.
-- [x] **5.2. Tam Ekran Karar Sonucu Ekranı:**
-  - Karar verildiğinde üstteki küçük bildirim yerine **karar ekranı büyüklüğünde geniş, detaylı bir Sonuç Ekranı** açılır (Huzur değişimi, köylülerin tepkisi, hikmetli ders) ve **"✅ Tamam"** butonuna basınca kapanır.
-- [x] **5.3. Günde 1 Meydan Olayı (Bitince Kaybolma + Bazen Dava, Bazen Yeni İnsan Daveti):**
-  - Meydandaki olay (dava veya göçmen daveti) çözüldüğünde karakterler meydandan ayrılır/kaybolur! Hemen peşinden yenisi gelmez; **bir sonraki oyun günü (24 saat sonra)** yeni olay gelir (`sonMeydanOlayZamani`).
-  - Meydana her gün sadece dava gelmez; sırayla bir gün anlaşmazlığı olan köylüler (**⚖️ Köylü Davası**), bir sonraki gün ise köye yerleşmek isteyen yeni aileler (**🏡 Köye Yeni İnsan Daveti**) meydanda bekler!
+## ⏳ FAZ 4 — Ortaokul Seviyesinde 10 Özgün Karakter Görseli (5 Erkek + 5 Kız)
 
----
-
-### Adım 6 — Çınar Altı Sohbeti: Tam Sayfa Sosyal Medya Düzeni ve Dinamik Köy Huzuru Mekaniği
-- [x] **6.1. Pop-up Yerine Tam Sayfa Sosyal Medya (`GorevlerEkrani.js`, `MekanSahnesi.js`):**
-  - Köy Meydanı'nda **Çınar Altı Sohbeti**'ne tıklandığında küçük modal yerine **tam ekran sosyal medya sayfası** açılır (`← Köy Meydanı'na Dön`).
-- [x] **6.2. Gündem İçi ve Gündem Harici Paylaşım + Söz/Hikâye/YouTube/Instagram Video:**
-  - İlk levelın gündem konusu küçük çocukların da kolayca katılabileceği şekilde (*"Beğendiğin güzel bir sözü, kısa bir hikâyeyi, bir duayı veya bir iyilik fikrini kardeşlerinle paylaş"*) olarak güncellendi ve tek tıkla ilham şablonları eklendi.
-  - Öğrenciler paylaşım yaparken tür ve kategori seçebilir:
-    - **📌 Gündem İçi Paylaşım** → Paylaşıldığında **Köy Huzuru `+3 😊`** artar!
-    - **💬 Gündem Harici (Serbest Paylaşım)** → Paylaşıldığında **Köy Huzuru `+1 😊`** artar (`✨ Güzel Söz`, `📖 Kısa Hikâye / Kıssa`, `🤲 Dua & Dilek`, `💭 Hatıra`, `🎬 Video Paylaşımı`).
-    - **🎬 Video Paylaşımı (YouTube veya Instagram Linki)** → Paylaşılan YouTube ve Instagram videoları akış içinde gömülü (`iframe`) olarak izlenebilir.
-- [x] **6.3. Beğeni (+Huzur), Yorum, Yöneticiye Şikayet ve Öğrenci Profili (`/api/meydan`):**
-  - **❤️ Beğen:** Her beğeni paylaşımı yapan öğrencinin **Köy Huzurunu `+1 😊`** artırır!
-  - **💬 Yorum Yap:** Paylaşımların altına yorum yazma.
-  - **🚩 Yöneticiye Şikayet Et:** Uygunsuz paylaşımları sebep seçerek yöneticiye bildirme (`meydan_sikayetler`).
-  - **👤 Profile Git:** Paylaşım yapan öğrencinin adına/karakterine tıklanınca o öğrencinin **Köy Seviyesi, Seçtiği Karakter, Toplam Beğenisi ve Tüm Paylaşımlarını** gösteren profil sayfası açılır.
-- [x] **6.4. Dinamik Köy Huzuru (Mutluluk) Mekaniği:**
-  - Köy Huzuru zamanla (her 12 saatte `-2`, en az `25`'e kadar) kendiliğinden hafifçe azalır; yüksek tutmak için meydanda dava çözmek (`+4`), gündem paylaşımı yapmak (`+3`), beğeni almak (`+1`) ve günlük görev yapmak (`+2`) gerekir.
+- [ ] **4.1. 5 Özgün Erkek Öğrenci Karakteri (Ortaokul Seviyesi, 11–14 Yaş, Birbirine Benzemeyen):**
+  1. `ahmet` — **Ahmet (Takkeli İlim Talebesi):** Beyaz işlemeli takkeli, tebessümlü, mavi cepkenli ortaokul öğrencisi.
+  2. `alp` — **Alp (Genç Okçu):** Kayı börklü, deri bileklikli, cesur bakışlı genç çocuk.
+  3. `omer` — **Ömer (Genç Çelebi):** Keten gömlekli, kahverengi yelekli, elinde defter/kalem tutan zeki ortaokul öğrencisi.
+  4. `yusuf` — **Yusuf (Takkeli Hafız Adayı):** Yeşil takkeli, nur yüzlü, krem cübbeli/yelekli ortaokul öğrencisi.
+  5. `kerem` — **Kerem (Genç Zanaatkâr & Seyyah):** Keçe külahlı, kıvırcık saçlı, güler yüzlü, turuncu kuşaklı ortaokul öğrencisi.
+- [ ] **4.2. 5 Özgün Kız Öğrenci Karakteri (Ortaokul Seviyesi, 3'ü Başörtülü + 2'si Başörtüsüz, Birbirine Benzemeyen):**
+  1. `elif` — **Elif (Başörtülü - 1):** Krem ve turkuaz çiçek motifli başörtülü, tebessümlü ortaokul öğrencisi.
+  2. `zeynep` — **Zeynep (Başörtülü - 2):** Bordo/altın nakışlı başörtülü, elinde kitap tutan ortaokul öğrencisi.
+  3. `meryem` — **Meryem (Başörtülü - 3):** Zümrüt yeşili şallı, yuvarlak yüzlü, sevecen ortaokul öğrencisi.
+  4. `bala` — **Bala (Başörtüsüz - 1):** İki yandan örgülü kahverengi saçlı, çiçek tokalı, geleneksel Anadolu yelekli ortaokul öğrencisi.
+  5. `defne` — **Defne (Başörtüsüz - 2):** Dalgalı kestane saçlı, nakışlı mint/kehribar elbiseli, neşeli ortaokul öğrencisi.
+- [ ] **4.3. Kayıt Ekranı ve Oyun İçi Karakter Seçicinin 5 Erkek + 5 Kız Karakterle Güncellenmesi (`sabitler.js`, `GirisFormu.js`, `UstBar.js`).**

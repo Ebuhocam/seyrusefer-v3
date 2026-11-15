@@ -22,6 +22,15 @@ const HARITA_ORAN = 1710 / 920;
 export default function KoyHaritasi({ baslangic }) {
   const oyun = useOyun(baslangic);
   const kaydirRef = useRef(null);
+  const suruklemeRef = useRef({
+    aktif: false,
+    hareketEtti: false,
+    basX: 0,
+    basY: 0,
+    sol: 0,
+    ust: 0,
+  });
+  const [surukleniyor, setSurukleniyor] = useState(false);
   const [katman, setKatman] = useState("koy"); // 'koy' | 'birlik' | 'harita'
   const [secim, setSecim] = useState(null); // { tur: 'bina'|'nokta'|'birlikBina'|'bolge'|'birlik', id }
   const [birlikOzeti, setBirlikOzeti] = useState(null);
@@ -39,6 +48,19 @@ export default function KoyHaritasi({ baslangic }) {
   );
 
   const aktifRehberAdimi = REHBER_ADIMLARI[rehberAdimIndeks] ?? REHBER_ADIMLARI[0];
+
+  // Bina inşa edildiğinde (ör. Mektep kurulduğunda) veya görev/level ilerlediğinde rehber açıksa ve görev bölümündeyse sıradaki adıma otomatik geçsin
+  useEffect(() => {
+    if (!oyun.hazir || !rehberAcik) return;
+    const adim = REHBER_ADIMLARI[rehberAdimIndeks];
+    if (adim?.bolum === "gorev" && adim.tamamMi?.(oyun.durum, oyun.gorevler)) {
+      const yeniIndeks = ilkEksikRehberAdimi(oyun.durum, oyun.gorevler, false);
+      if (yeniIndeks !== rehberAdimIndeks) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setRehberAdimIndeks(yeniIndeks);
+      }
+    }
+  }, [oyun.hazir, oyun.durum, oyun.gorevler, rehberAcik, rehberAdimIndeks]);
   const rehberKameraHedefleri = rehberAcik && katman === "koy" ? aktifRehberAdimi?.hedefler ?? [] : [];
   // Tanıtım turunda "Buraya Tıkla" oku çıkmaz; sadece 2. Bölüm (Yapılacak İşler) adımında çıkar
   const rehberHedefleri =
@@ -117,8 +139,55 @@ export default function KoyHaritasi({ baslangic }) {
     setKatman(yeniKatman);
   };
 
+  // Web'de fareyle basılı tutarak haritayı sürükleme (Mouse Drag-to-Pan)
+  const fareBas = (e) => {
+    if (e.button !== 0) return;
+    const el = kaydirRef.current;
+    if (!el) return;
+    suruklemeRef.current = {
+      aktif: true,
+      hareketEtti: false,
+      basX: e.clientX,
+      basY: e.clientY,
+      sol: el.scrollLeft,
+      ust: el.scrollTop,
+    };
+  };
+
+  const fareHareket = (e) => {
+    const s = suruklemeRef.current;
+    const el = kaydirRef.current;
+    if (!s.aktif || !el) return;
+    const dx = e.clientX - s.basX;
+    const dy = e.clientY - s.basY;
+    if (!s.hareketEtti && Math.hypot(dx, dy) > 6) {
+      s.hareketEtti = true;
+      setSurukleniyor(true);
+    }
+    if (s.hareketEtti) {
+      e.preventDefault();
+      el.scrollLeft = s.sol - dx;
+      el.scrollTop = s.ust - dy;
+    }
+  };
+
+  const fareBirak = () => {
+    if (!suruklemeRef.current.aktif) return;
+    suruklemeRef.current.aktif = false;
+    setSurukleniyor(false);
+  };
+
+  const suruklemeTikEngelle = (e) => {
+    if (suruklemeRef.current.hareketEtti) {
+      e.stopPropagation();
+      e.preventDefault();
+      suruklemeRef.current.hareketEtti = false;
+    }
+  };
+
   // Düzenleme modu: haritaya tıklanan noktanın % koordinatını göster
   const haritaTikla = (e) => {
+    if (suruklemeRef.current.hareketEtti) return;
     if (!duzenle) return;
     const r = e.currentTarget.getBoundingClientRect();
     const x = (((e.clientX - r.left) / r.width) * 100).toFixed(1);
@@ -138,7 +207,17 @@ export default function KoyHaritasi({ baslangic }) {
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-[#162413] select-none">
-      <div ref={kaydirRef} className="absolute inset-0 overflow-auto overscroll-none">
+      <div
+        ref={kaydirRef}
+        onMouseDown={fareBas}
+        onMouseMove={fareHareket}
+        onMouseUp={fareBirak}
+        onMouseLeave={fareBirak}
+        onClickCapture={suruklemeTikEngelle}
+        className={`absolute inset-0 overflow-auto overscroll-none ${
+          surukleniyor ? "cursor-grabbing" : "cursor-grab"
+        }`}
+      >
         {/* Sisli Çerçeve Alanı: Haritanın etrafında sisli keşif boşluğu bırakır, en alttaki Haberci rahatça yukarı kaydırılır */}
         <div
           className="relative flex items-center justify-center px-[18vw] py-[28dvh]"
@@ -176,6 +255,9 @@ export default function KoyHaritasi({ baslangic }) {
           {/* ================= 1. KATMAN: KENDİ KÖYÜM ================= */}
           {katman === "koy" && (
             <>
+              {/* Canlı Köy Atmosferi: Üstte Akan Nehir, Sallanan Ağaçlar, Rüzgar & Yapraklar ve Yürüyen Köylüler */}
+              <CanliKoyAtmosferi insanSayisi={durum.envanter?.insan ?? 5} />
+
               {/* Köy Binaları / Boş Arsalar */}
               {Object.entries(ARSALAR).map(([id, a]) => {
                 const seviye = durum.binalar[id] ?? 0;
@@ -531,5 +613,206 @@ function BosArsa({ id, a, bilgi, rehberVurgulu = false, kameraOdakli = false, on
         {!insaEdilebilir && ` · Lv.${bilgi.gerekenLevel}`}
       </span>
     </button>
+  );
+}
+
+// =============================================================
+// CANLI KÖY ATMOSFER MOTORU
+// 1. Haritanın en üst kısmında kıvrılarak akan canlı nehir & su değirmeni
+// 2. Rüzgârla hafifçe sallanan ağaçlar
+// 3. Hafif rüzgâr çizgileri ve uçuşan yapraklar
+// 4. Köy patikalarında yürüyen köylüler
+// =============================================================
+const SALLANAN_AGACLAR = [
+  { id: 1, x: 10, y: 18, boyut: "text-3xl", sure: "3.6s", gecikme: "0s", ikon: "🌲" },
+  { id: 2, x: 15, y: 24, boyut: "text-2xl", sure: "4.2s", gecikme: "0.5s", ikon: "🌳" },
+  { id: 3, x: 24, y: 14, boyut: "text-3xl", sure: "3.9s", gecikme: "1.1s", ikon: "🌲" },
+  { id: 4, x: 37, y: 12, boyut: "text-2xl", sure: "4.4s", gecikme: "0.3s", ikon: "🌳" },
+  { id: 5, x: 70, y: 13, boyut: "text-3xl", sure: "3.8s", gecikme: "0.8s", ikon: "🌲" },
+  { id: 6, x: 83, y: 17, boyut: "text-3xl", sure: "4.1s", gecikme: "1.4s", ikon: "🌳" },
+  { id: 7, x: 91, y: 25, boyut: "text-2xl", sure: "3.5s", gecikme: "0.2s", ikon: "🌲" },
+  { id: 8, x: 88, y: 42, boyut: "text-3xl", sure: "4.3s", gecikme: "0.9s", ikon: "🌲" },
+  { id: 9, x: 92, y: 54, boyut: "text-2xl", sure: "3.7s", gecikme: "1.6s", ikon: "🌳" },
+  { id: 10, x: 11, y: 56, boyut: "text-2xl", sure: "4.0s", gecikme: "0.7s", ikon: "🌳" },
+  { id: 11, x: 16, y: 78, boyut: "text-3xl", sure: "4.5s", gecikme: "1.2s", ikon: "🌲" },
+  { id: 12, x: 85, y: 80, boyut: "text-3xl", sure: "3.9s", gecikme: "0.4s", ikon: "🌳" },
+];
+
+const YURUYEN_KOYLULER = [
+  { id: 1, basX: 36, basY: 46, bitX: 50, bitY: 46, sure: "14s", gecikme: "0s", ikon: "🚶‍♂️", unvan: "Köylü" },
+  { id: 2, basX: 66, basY: 45, bitX: 52, bitY: 47, sure: "16s", gecikme: "2s", ikon: "🚶‍♀️", unvan: "Köylü" },
+  { id: 3, basX: 43, basY: 64, bitX: 57, bitY: 50, sure: "18s", gecikme: "1s", ikon: "👨‍🌾", unvan: "Çiftçi" },
+  { id: 4, basX: 30, basY: 66, bitX: 22, bitY: 50, sure: "15s", gecikme: "3s", ikon: "🧕", unvan: "Ev Halkı" },
+  { id: 5, basX: 70, basY: 62, bitX: 82, bitY: 48, sure: "17s", gecikme: "1.5s", ikon: "👷", unvan: "Oduncu" },
+  { id: 6, basX: 48, basY: 74, bitX: 53, bitY: 52, sure: "19s", gecikme: "4s", ikon: "🧒", unvan: "Talebe" },
+];
+
+function CanliKoyAtmosferi({ insanSayisi = 5 }) {
+  const gorunenKoyluSayisi = Math.min(YURUYEN_KOYLULER.length, Math.max(2, Math.ceil(insanSayisi / 2)));
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[12] overflow-hidden">
+      <style>{`
+        @keyframes nehirAkis {
+          0% { stroke-dashoffset: 240; }
+          100% { stroke-dashoffset: 0; }
+        }
+        @keyframes agacSalinim {
+          0%, 100% { transform: translate(-50%, -85%) rotate(-4deg) scale(1); }
+          50% { transform: translate(-50%, -85%) rotate(5deg) scale(1.04); }
+        }
+        @keyframes ruzgarCizgisi {
+          0% { transform: translateX(-25vw) translateY(0px); opacity: 0; }
+          25% { opacity: 0.55; }
+          75% { opacity: 0.45; }
+          100% { transform: translateX(115vw) translateY(18px); opacity: 0; }
+        }
+        @keyframes yaprakUcus {
+          0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+          20% { opacity: 0.85; }
+          80% { opacity: 0.75; }
+          100% { transform: translate(260px, 95px) rotate(320deg); opacity: 0; }
+        }
+        @keyframes degirmenDonus {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+
+      {/* 1. HARİTANIN EN ÜST KISMINDA AKAN CANLI NEHİR */}
+      <div className="absolute inset-x-0 top-0 h-[11%]">
+        <svg viewBox="0 0 1710 120" preserveAspectRatio="none" className="h-full w-full drop-shadow-[0_6px_12px_rgba(2,132,199,0.45)]">
+          <defs>
+            <linearGradient id="nehirSuGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#0369a1" stopOpacity="0.88" />
+              <stop offset="50%" stopColor="#0ea5e9" stopOpacity="0.92" />
+              <stop offset="100%" stopColor="#0284c7" stopOpacity="0.88" />
+            </linearGradient>
+          </defs>
+          {/* Nehir Kıyı Taş/Toprak Yatağı */}
+          <path
+            d="M0,0 L1710,0 L1710,72 Q1420,108 1140,68 T570,76 T0,64 Z"
+            fill="rgba(28, 25, 23, 0.55)"
+          />
+          {/* Ana Nehir Suyu */}
+          <path
+            d="M0,0 L1710,0 L1710,58 Q1420,94 1140,54 T570,62 T0,50 Z"
+            fill="url(#nehirSuGrad)"
+          />
+          {/* Akan Su Akıntı Çizgileri (Hareketli) */}
+          <path
+            d="M-40,26 Q260,52 570,28 T1140,34 T1750,24"
+            fill="none"
+            stroke="rgba(224, 242, 254, 0.75)"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray="28 32"
+            style={{ animation: "nehirAkis 4.5s linear infinite" }}
+          />
+          <path
+            d="M-40,44 Q290,18 610,44 T1190,38 T1750,46"
+            fill="none"
+            stroke="rgba(186, 230, 253, 0.6)"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray="18 28"
+            style={{ animation: "nehirAkis 3.2s linear infinite" }}
+          />
+        </svg>
+
+        {/* Nehir Üzerinde Taş Köprü & Dönen Su Değirmeni Çarkı */}
+        <div style={{ left: "31%", top: "42%" }} className="absolute flex items-center gap-1 -translate-x-1/2 -translate-y-1/2">
+          <span
+            className="inline-block text-xl drop-shadow"
+            style={{ animation: "degirmenDonus 7s linear infinite" }}
+          >
+            ⚙️
+          </span>
+          <span className="rounded-full bg-sky-950/80 px-2 py-0.5 text-[9px] font-black text-sky-200 ring-1 ring-sky-400/40">
+            🌊 Göksu Nehri
+          </span>
+        </div>
+      </div>
+
+      {/* 2. RÜZGÂRDA SALLANAN AĞAÇLAR */}
+      {SALLANAN_AGACLAR.map((agac) => (
+        <div
+          key={agac.id}
+          style={{
+            left: `${agac.x}%`,
+            top: `${agac.y}%`,
+            transformOrigin: "bottom center",
+            animation: `agacSalinim ${agac.sure} ease-in-out ${agac.gecikme} infinite`,
+          }}
+          className={`absolute select-none drop-shadow-[0_6px_6px_rgba(0,0,0,0.45)] ${agac.boyut}`}
+        >
+          {agac.ikon}
+        </div>
+      ))}
+
+      {/* 3. HAFİF RÜZGÂR ÇİZGİLERİ VE UÇUŞAN YAPRAKLAR */}
+      {[
+        { top: "24%", gecikme: "0s", sure: "9s" },
+        { top: "48%", gecikme: "3s", sure: "11s" },
+        { top: "70%", gecikme: "5.5s", sure: "10s" },
+      ].map((r, i) => (
+        <div
+          key={i}
+          style={{
+            top: r.top,
+            left: 0,
+            animation: `ruzgarCizgisi ${r.sure} linear ${r.gecikme} infinite`,
+          }}
+          className="absolute h-[2px] w-44 rounded-full bg-gradient-to-r from-transparent via-amber-100/40 to-transparent blur-[0.5px]"
+        />
+      ))}
+
+      {[
+        { left: "18%", top: "22%", gecikme: "0.5s", sure: "8s", ikon: "🍃" },
+        { left: "58%", top: "30%", gecikme: "2.5s", sure: "9.5s", ikon: "🍃" },
+        { left: "34%", top: "55%", gecikme: "4s", sure: "8.5s", ikon: "🍂" },
+        { left: "72%", top: "44%", gecikme: "1.2s", sure: "10s", ikon: "🍃" },
+      ].map((y, i) => (
+        <div
+          key={i}
+          style={{
+            left: y.left,
+            top: y.top,
+            animation: `yaprakUcus ${y.sure} ease-in-out ${y.gecikme} infinite`,
+          }}
+          className="absolute text-xs opacity-80"
+        >
+          {y.ikon}
+        </div>
+      ))}
+
+      {/* 4. KÖY YOLLARINDA YÜRÜYEN İNSANLAR */}
+      {YURUYEN_KOYLULER.slice(0, gorunenKoyluSayisi).map((k) => {
+        const animAd = `koyluYuru_${k.id}`;
+        return (
+          <div key={k.id}>
+            <style>{`
+              @keyframes ${animAd} {
+                0% { left: ${k.basX}%; top: ${k.basY}%; transform: translate(-50%, -50%) scaleX(1); }
+                48% { left: ${k.bitX}%; top: ${k.bitY}%; transform: translate(-50%, -50%) scaleX(1); }
+                50% { left: ${k.bitX}%; top: ${k.bitY}%; transform: translate(-50%, -50%) scaleX(-1); }
+                98% { left: ${k.basX}%; top: ${k.basY}%; transform: translate(-50%, -50%) scaleX(-1); }
+                100% { left: ${k.basX}%; top: ${k.basY}%; transform: translate(-50%, -50%) scaleX(1); }
+              }
+            `}</style>
+            <div
+              style={{
+                animation: `${animAd} ${k.sure} ease-in-out ${k.gecikme} infinite`,
+              }}
+              className="absolute flex flex-col items-center"
+            >
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-stone-950/75 text-sm shadow-md ring-1 ring-amber-400/50">
+                {k.ikon}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }

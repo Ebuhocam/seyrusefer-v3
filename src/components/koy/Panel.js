@@ -140,7 +140,7 @@ export default function Panel({ secim, oyun, kapat, onSecimDegistir }) {
       <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6">
         <div className="mx-auto max-w-5xl">
           {secim.tur === "bina" && (
-            <BinaIcerik key={secim.id} id={secim.id} oyun={oyun} onSecimDegistir={onSecimDegistir} />
+            <BinaIcerik key={secim.id} id={secim.id} oyun={oyun} onSecimDegistir={onSecimDegistir} kapat={kapat} />
           )}
           {secim.tur === "nokta" && secim.id === "pano" && <PanoIcerik oyun={oyun} kapat={kapat} />}
           {secim.tur === "nokta" && NOKTALAR[secim.id]?.kaynak && (
@@ -241,7 +241,7 @@ function GorevEkrani({ gorevKodu, oyun, geri }) {
   );
 }
 
-function BinaIcerik({ id, oyun, onSecimDegistir }) {
+function BinaIcerik({ id, oyun, onSecimDegistir, kapat }) {
   const tanim = BINALAR[id];
   const b = oyun.binaBilgisi(id);
   const env = oyun.durum.envanter;
@@ -474,8 +474,8 @@ function BinaIcerik({ id, oyun, onSecimDegistir }) {
                   disabled={!b.yapilabilir || oyun.bekliyor}
                   onClick={async () => {
                     const r = await oyun.yukselt(id);
-                    if (r && !tanim.konut) {
-                      setGorunum("icerde");
+                    if (r) {
+                      kapat?.();
                     }
                   }}
                   className="w-full rounded-2xl bg-gradient-to-b from-emerald-500 to-emerald-700 py-3.5 text-sm font-black text-white shadow-lg transition hover:brightness-110 disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"

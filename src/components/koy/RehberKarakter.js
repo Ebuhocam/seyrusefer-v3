@@ -85,11 +85,20 @@ export const REHBER_ADIMLARI = [
     tamamMi: (durum) => (durum.binalar?.mektep ?? 0) >= 1,
   },
   {
+    kod: "gorev_mektep_oku",
+    bolum: "gorev",
+    baslik: "2. Yapılacak İş: Mektep'te Günün Hadisini Oku!",
+    metin:
+      "Harika, Mektep binamızı kurduk! Şimdi kurduğun Mektep binasına tıklayıp içeri gir. Günün Hadis-i Şerifini oku ve Niyet videosunu izleyerek ilim görevlerini tamamla!",
+    hedefler: [{ tur: "bina", id: "mektep", etiket: "📖 Mektep İçine Gir" }],
+    tamamMi: (_durum, gorevler) => gorevler.some((g) => g.tur === "hadis" && g.yapilan > 0),
+  },
+  {
     kod: "gorev_tarla_orman",
     bolum: "gorev",
-    baslik: "2. Yapılacak İş: Tarlada Sula & Ormanda Ağaç Kes!",
+    baslik: "3. Yapılacak İş: Tarlada Sula & Ormanda Ağaç Kes!",
     metin:
-      "Şimdi haritada parlayan Tarla ve Orman'a tıkla! İçeride işçilerini görevlendir, Tarlada kuruyan parselleri sula (+15 🌾 Mahsul) ve Ormanda yaş ağaçlara dokunmadan kurumuş ağaçları kes (+15 🌲 Tahta)!",
+      "Şimdi haritada parlayan Tarla ve Orman'a tıkla! İçeride işçilerini görevlendir, Tarlada kuruyan parselleri sula ve Ormanda yaş ağaçlara dokunmadan kurumuş ağaçları kes!",
     hedefler: [
       { tur: "nokta", id: "tarla", etiket: "🌾 Tarlaya Git (Sula)" },
       { tur: "nokta", id: "orman", etiket: "🌲 Ormana Git (Ağaç Kes)" },
@@ -100,9 +109,9 @@ export const REHBER_ADIMLARI = [
   {
     kod: "gorev_haberci_ev",
     bolum: "gorev",
-    baslik: "3. Yapılacak İş: Haberci'den Mektubu Al ve Evine Gir!",
+    baslik: "4. Yapılacak İş: Haberci'den Mektubu Al ve Evine Gir!",
     metin:
-      "Köy kapısındaki Haberci'ye tıklayıp gelen Aile Mektubunu teslim al! Ardından Kendi Evim binasına tıklayarak 2D Ev İçi odasına gir, aile bireylerini odaya çağır ve mektubu birlikte okuyun!",
+      "Köy kapısındaki Haberci'ye tıklayıp gelen Okuma Mektubunu teslim al! Ardından Kendi Evim binasına tıklayarak 2D Ev İçi odasına gir, büyüklerini yanına çağır ve mektubu birlikte okuyun!",
     hedefler: [
       { tur: "nokta", id: "haberci", etiket: "🏇 1. Haberci'den Mektubu Al" },
       { tur: "bina", id: "kendi_evim", etiket: "🏡 2. Kendi Evime Gir" },
@@ -110,20 +119,11 @@ export const REHBER_ADIMLARI = [
     tamamMi: (_durum, gorevler) => gorevler.some((g) => g.tur === "aile" && g.tamam),
   },
   {
-    kod: "gorev_mektep_oku",
-    bolum: "gorev",
-    baslik: "4. Yapılacak İş: Mektep'te Günün Hadisini Oku!",
-    metin:
-      "Şimdi kurduğun Mektep binasına tıklayıp içeri gir. Günün Hadis-i Şerifini oku ve Niyet videosunu izleyerek ilim görevlerini tamamla!",
-    hedefler: [{ tur: "bina", id: "mektep", etiket: "📖 Mektep İçine Gir" }],
-    tamamMi: (_durum, gorevler) => gorevler.some((g) => g.tur === "hadis" && g.yapilan > 0),
-  },
-  {
     kod: "gorev_meydan_dava",
     bolum: "gorev",
-    baslik: "5. Yapılacak İş: Köy Meydanı'nda Davayı Çöz!",
+    baslik: "5. Yapılacak İş: Köy Meydanı'nda İlk Davayı Çöz!",
     metin:
-      "Köy Meydanı'na tıkla! Meydanda ileri geri yürüyen köylülerin yanına gidip davalarını dinle ve hikmetle çözerek köyün Mutluluğunu artır!",
+      "Köy Meydanı'na tıkla! Meydanda bekleyen köylülerin yanına yürüyüp davalarını dinle ve hikmetle çözerek köyün Huzurunu artır!",
     hedefler: [{ tur: "bina", id: "sosyalmeydan", etiket: "⚖️ Köy Meydanı'na Gir" }],
     tamamMi: (durum) => (durum.cozulenDavalar?.length ?? 0) >= 1,
   },

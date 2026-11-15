@@ -99,17 +99,22 @@ export function topla(d, kaynak, simdi) {
 }
 
 /**
- * Üretim alanlarına (Tarla, Orman, Taş Ocağı) köydeki 👥 İnsan nüfusundan işçi görevlendirir (+1 / -1).
+ * Üretim alanlarına (Tarla, Orman, Taş Ocağı) köydeki 👥 İnsan nüfusundan kalıcı işçi görevlendirir (+1).
+ * Bir kişi bir yerde görevlendirildiyse oradan çıkarılamaz (başka alana kaydırılıp suistimal edilmemesi için).
  */
 export function isciAta(d, kaynak, degisim, simdi) {
   if (!["erzak", "kereste", "tas"].includes(kaynak)) return { hata: "Geçersiz üretim alanı" };
   if (!kaynakAcikMi(kaynak, d.level)) return { hata: "Bu üretim alanı henüz açılmadı" };
 
+  if (Number(degisim) <= 0) {
+    return {
+      hata: "Bir üretim alanında görevlendirilen köylü oradan çıkarılamaz! Başka alanlara işçi görevlendirmek için köye yeni insanlar davet etmelisin.",
+    };
+  }
+
   const isciler = { erzak: 1, kereste: 1, tas: 0, ...(d.isciler ?? {}) };
   const mevcut = isciler[kaynak] ?? 0;
-  const yeniSayi = mevcut + (Number(degisim) >= 0 ? 1 : -1);
-
-  if (yeniSayi < 0) return { hata: "Bu alanda zaten hiç işçi çalışmıyor" };
+  const yeniSayi = mevcut + 1;
 
   const digerToplam = Object.entries(isciler)
     .filter(([k]) => k !== kaynak)
@@ -118,7 +123,7 @@ export function isciAta(d, kaynak, degisim, simdi) {
 
   if (digerToplam + yeniSayi > toplamInsan) {
     return {
-      hata: `Köydeki tüm insanlar (${toplamInsan} 👥) zaten görevde! Daha fazla işçi görevlendirmek için Kıraathane'den yeni insan toplayabilirsin.`,
+      hata: `Köydeki tüm insanlar (${toplamInsan} 👥) zaten görevde! Daha fazla işçi görevlendirmek için Kıraathane veya Köy Meydanı'ndan yeni insan davet edebilirsin.`,
     };
   }
 

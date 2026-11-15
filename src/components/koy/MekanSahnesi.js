@@ -303,19 +303,20 @@ export function KoyMeydaniSahnesi({ oyun }) {
   const gunlukOlayHazir = gecenMs >= YIRMI_DORT_SAAT_MS;
   const kalanSaat = gunlukOlayHazir ? 0 : Math.max(1, Math.ceil((YIRMI_DORT_SAAT_MS - gecenMs) / (60 * 60 * 1000)));
 
-  // Her zaman dava için gelmezler: Bazen Dava, bazen Köye Yerleşmek İsteyen Yeni İnsanlar!
+  // Köy meydanında ilk görev kesinlikle Dava çözmek olur; ilk dava çözüldükten sonra sırayla köye yerleşmek isteyen yeni insanlar (2+ kişi) gelir!
   const davaGoreviEksik = oyun.gorevler.some((g) => g.tur === "dava" && !g.tamam);
+  const ilkDavaZorunlu = (cozulenler.length === 0 || davaGoreviEksik) && Boolean(siradakiDava);
   const varsayilanOlayTuru =
-    !siradakiDava
-      ? "gocmen"
-      : davaGoreviEksik
+    ilkDavaZorunlu
       ? "dava"
-      : (cozulenler.length + (durum.envanter?.insan ?? 5)) % 2 === 1
+      : !siradakiDava
+      ? "gocmen"
+      : cozulenler.length % 2 === 1
       ? "gocmen"
       : "dava";
 
-  const [seciliOlayTuru, setSeciliOlayTuru] = useState( null );
-  const aktifOlayTuru = seciliOlayTuru ?? varsayilanOlayTuru;
+  const [seciliOlayTuru, setSeciliOlayTuru] = useState(null);
+  const aktifOlayTuru = ilkDavaZorunlu ? "dava" : seciliOlayTuru ?? varsayilanOlayTuru;
 
   // Oyuncunun meydandaki konumu
   const [oyuncu, setOyuncu] = useState({ x: 28, y: 78 });
@@ -501,7 +502,7 @@ export function KoyMeydaniSahnesi({ oyun }) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {gunlukOlayHazir && siradakiDava && (
+          {gunlukOlayHazir && siradakiDava && !ilkDavaZorunlu && (
             <button
               type="button"
               onClick={() => {
@@ -887,32 +888,26 @@ export function UretimSahnesi({ id, oyun }) {
           <p className="my-2 text-xs text-amber-200/75">
             {buradakiIsci === 0
               ? "⚠️ Burada hiç çalışan yok! Dolum durmuş durumda, hemen en az 1 köylü görevlendir."
-              : `1 işçi ile 24 saatte 15 birim (her 96 dakikada 1 birim) dolar. Ek işçiler dolumu hızlandırır.`}
+              : `🔒 Görevlendirilen kişi burada kalıcı çalışır (başka alana kaydırılamaz). 1 işçi ile 24 saatte 15 birim dolar.`}
           </p>
 
           <div className="flex items-center justify-between rounded-2xl bg-stone-900 p-2.5 ring-1 ring-stone-800">
             <div className="text-xs">
-              <div className="font-black text-amber-100">Görevli Çalışan: {buradakiIsci} 👥</div>
+              <div className="font-black text-amber-100">Kalıcı Görevli Çalışan: {buradakiIsci} 👥</div>
               <div className="text-[11px] text-amber-300/80">Köyde Boştaki İnsan: {bostakiInsan} 👥</div>
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={oyun.bekliyor || buradakiIsci <= 0}
-                onClick={() => oyun.isciAta(k, -1)}
-                className="grid h-9 w-9 place-items-center rounded-xl bg-stone-800 text-base font-black text-amber-200 ring-1 ring-stone-700 hover:bg-stone-700 disabled:opacity-40"
-              >
-                −
-              </button>
-              <span className="w-8 text-center text-sm font-black tabular-nums text-amber-100">{buradakiIsci}</span>
+              <span className="rounded-lg bg-stone-800 px-2.5 py-1.5 text-xs font-black tabular-nums text-amber-200 ring-1 ring-stone-700">
+                🔒 {buradakiIsci} İşçi
+              </span>
               <button
                 type="button"
                 disabled={oyun.bekliyor || bostakiInsan <= 0}
                 onClick={() => oyun.isciAta(k, 1)}
-                className="grid h-9 w-9 place-items-center rounded-xl bg-amber-500 text-base font-black text-stone-950 shadow hover:bg-amber-400 disabled:opacity-40"
+                className="rounded-xl bg-amber-500 px-3 py-2 text-xs font-black text-stone-950 shadow hover:bg-amber-400 disabled:opacity-40"
               >
-                +
+                + İşçi Görevlendir
               </button>
             </div>
           </div>
