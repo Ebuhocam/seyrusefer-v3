@@ -31,6 +31,23 @@ function binaBildirimSayisi(id, oyun) {
   const bilgi = oyun.binaBilgisi(id);
   const mektepKurulu = (durum.binalar?.mektep ?? 0) >= 1;
 
+  // Köy Meydanı Level 1'den itibaren açıktır; Mektep kurulduktan sonra günlük dava / paylaşım görevi varsa "1" rozeti göster
+  if (id === "sosyalmeydan" && mektepKurulu) {
+    let meydanSayi = 0;
+    const sonOlay = durum.sonMeydanOlayZamani ?? 0;
+    const gunlukDavaAcik = sonOlay <= 0 || oyun.simdi - sonOlay >= 24 * 60 * 60 * 1000;
+    for (const g of gorevler) {
+      if (g.tamam) continue;
+      if (g.tur === "dava" && gunlukDavaAcik) {
+        meydanSayi += 1;
+      } else if (g.tur === "meydan_paylasim" || g.tur === "meydan_yorum") {
+        meydanSayi += 1;
+      }
+    }
+    if (bilgi.yapilabilir) meydanSayi += 1;
+    return meydanSayi;
+  }
+
   // Henüz inşa edilmemiş arsa: Tüm inşa şartları ve kaynakları hazırsa kırmızı "1" göster!
   if (seviye === 0) {
     if (BINALAR[id]?.konut) {
@@ -68,17 +85,6 @@ function binaBildirimSayisi(id, oyun) {
     const aileEksik = gorevler.some((g) => g.tur === "aile" && !g.tamam);
     const mektupEvde = (durum.mektupAlindi ?? 0) >= durum.level;
     if (aileEksik && mektupEvde) sayi += 1;
-    return sayi;
-  }
-
-  if (id === "sosyalmeydan" && mektepKurulu) {
-    for (const g of gorevler) {
-      if (g.tamam) continue;
-      if (g.tur === "dava" || g.tur === "meydan_paylasim" || g.tur === "meydan_yorum") {
-        sayi += 1;
-      }
-    }
-    if (bilgi.yapilabilir) sayi += 1;
     return sayi;
   }
 
@@ -443,7 +449,7 @@ export default function KoyHaritasi({ baslangic }) {
                   const rehberVurgulu = rehberHedefleri.some((h) => h.tur === "nokta" && h.id === id);
                   const kameraOdakli = rehberKameraHedefleri.some((h) => h.tur === "nokta" && h.id === id);
 
-                  // Haberci: projedeki kendi atlı haberci görseli (seyyaherkek.webp)
+                  // Haberci: taş kaideden arındırılmış kendi atlı haberci görseli (seyyaherkek.webp)
                   if (id === "haberci") {
                     return (
                       <button
@@ -455,9 +461,9 @@ export default function KoyHaritasi({ baslangic }) {
                         style={{
                           left: `${n.x}%`,
                           top: `${n.y}%`,
-                          width: "6.4%",
-                          minWidth: "74px",
-                          transform: "translate(-50%, -72%)",
+                          width: "5.2%",
+                          minWidth: "62px",
+                          transform: "translate(-50%, -84%)",
                           zIndex: rehberVurgulu || kameraOdakli ? 245 : Math.round(n.y * 2),
                         }}
                       >
@@ -481,15 +487,21 @@ export default function KoyHaritasi({ baslangic }) {
                               {noktaSayi}
                             </span>
                           )}
+                          {/* Toynak altı doğal toprak gölgesi */}
+                          <span className="pointer-events-none absolute bottom-1 left-1/2 h-3.5 w-4/5 -translate-x-1/2 rounded-full bg-stone-950/45 blur-[2px]" />
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={n.gorsel || "/assets/binalar/seyyaherkek.webp"}
                             alt="Köy Habercisi"
                             draggable={false}
-                            className="block h-auto w-full drop-shadow-[0_10px_10px_rgba(0,0,0,0.55)] select-none"
+                            style={{
+                              animation: "haberciNefes 3.4s ease-in-out infinite",
+                              transformOrigin: "50% 92%",
+                            }}
+                            className="relative z-10 block h-auto w-full drop-shadow-[0_6px_8px_rgba(0,0,0,0.45)] select-none"
                           />
                         </div>
-                        <span className="-mt-1 whitespace-nowrap rounded-full bg-stone-900/95 px-2.5 py-0.5 text-[11px] font-black text-amber-100 shadow ring-1 ring-amber-500/60">
+                        <span className="-mt-0.5 whitespace-nowrap rounded-full bg-stone-900/95 px-2.5 py-0.5 text-[11px] font-black text-amber-100 shadow ring-1 ring-amber-500/60">
                           {n.ad}
                         </span>
                       </button>
@@ -798,7 +810,8 @@ export default function KoyHaritasi({ baslangic }) {
 }
 
 function BosArsa({ id, a, bilgi, bildirimSayisi = 0, rehberVurgulu = false, kameraOdakli = false, onClick }) {
-  const insaEdilebilir = bilgi.levelYeterli;
+  const meydanMi = id === "sosyalmeydan";
+  const insaEdilebilir = bilgi.levelYeterli || meydanMi;
   return (
     <button
       type="button"
@@ -819,7 +832,7 @@ function BosArsa({ id, a, bilgi, bildirimSayisi = 0, rehberVurgulu = false, kame
       <div className="relative">
         {bildirimSayisi > 0 && (
           <span
-            title="İnşa edilmeye hazır!"
+            title={meydanMi ? `${bildirimSayisi} yapılacak görev` : "İnşa edilmeye hazır!"}
             className="pointer-events-none absolute -top-2 -right-2 z-30 grid h-6 min-w-6 place-items-center rounded-full bg-red-600 px-1.5 text-xs font-black text-white shadow-[0_4px_12px_rgba(220,38,38,0.85)] ring-2 ring-white"
           >
             {bildirimSayisi}
@@ -831,15 +844,17 @@ function BosArsa({ id, a, bilgi, bildirimSayisi = 0, rehberVurgulu = false, kame
               ? "scale-125 bg-emerald-500 ring-4 ring-amber-300"
               : bilgi.yapilabilir
               ? "animate-pulse bg-emerald-600 ring-emerald-200"
+              : meydanMi
+              ? "bg-stone-900/90 ring-amber-400 group-hover:bg-stone-800"
               : insaEdilebilir
               ? "bg-amber-600/90 ring-amber-200"
               : "bg-stone-800/70 ring-stone-400"
           }`}
         >
-          {insaEdilebilir ? "🔨" : "🔒"}
+          {meydanMi ? "⚖️" : insaEdilebilir ? "🔨" : "🔒"}
         </span>
       </div>
-      <span className="mt-0.5 whitespace-nowrap rounded bg-stone-900/80 px-1.5 text-[10px] font-bold text-amber-100">
+      <span className="mt-0.5 whitespace-nowrap rounded bg-stone-900/90 px-2 py-0.5 text-[10px] font-bold text-amber-100 ring-1 ring-amber-500/40">
         {BINALAR[id].ad}
         {!insaEdilebilir && ` · Lv.${bilgi.gerekenLevel}`}
       </span>

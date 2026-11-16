@@ -228,6 +228,7 @@ function Sart({ tamam, children, eylem }) {
 function GorevEkrani({ gorevKodu, oyun, geri, onSecimDegistir }) {
   const gorev = oyun.gorevler.find((g) => g.kod === gorevKodu);
   const tur = gorev?.tur ?? gorevKodu;
+  const mektupAlindiMi = (oyun.durum.mektupAlindi ?? 0) >= oyun.durum.level || Boolean(gorev?.tamam);
 
   return (
     <div className="space-y-3">
@@ -240,7 +241,45 @@ function GorevEkrani({ gorevKodu, oyun, geri, onSecimDegistir }) {
       </button>
       {tur === "hadis" && <HadisKutusu oyun={oyun} gorevKodu={gorevKodu} />}
       {tur === "video" && <VideoKutusu oyun={oyun} gorevKodu={gorevKodu} />}
-      {tur === "aile" && <AileOkumasiKutusu oyun={oyun} gorevKodu={gorevKodu} />}
+      {tur === "aile" && (
+        <div className="space-y-4 rounded-3xl bg-stone-950/90 p-6 text-center shadow-xl ring-2 ring-amber-400/50">
+          <div className="mx-auto grid h-20 w-20 place-items-center rounded-2xl bg-stone-900 text-4xl ring-1 ring-amber-500/40">
+            {mektupAlindiMi ? "🏡" : "📜"}
+          </div>
+          <div className="space-y-2">
+            <span className="inline-block rounded-full bg-amber-500/20 px-3 py-0.5 text-xs font-black text-amber-300 ring-1 ring-amber-400/40">
+              {mektupAlindiMi ? "🏡 Kendi Evinde Ailenle Oku" : "📜 Önce Haberci'den Mektubu Al"}
+            </span>
+            <h3 className="text-lg font-black text-amber-100 sm:text-xl">
+              {mektupAlindiMi
+                ? "Mektubu Evinde Aileni Çağırarak Açabilirsin!"
+                : "Önce Haberci'den Mühürlü Mektubu Teslim Almalısın!"}
+            </h3>
+            <p className="mx-auto max-w-lg text-xs leading-relaxed text-amber-100/85 sm:text-sm">
+              {mektupAlindiMi
+                ? "Haberci'nin mektubu sadece Kendi Evim odasında, aileni/büyüklerini yanına çağırdıktan (“📣 Yanıma Çağır” → “✅ Çağırdım”) sonra açılıp okunabilir."
+                : "Güney yolunda bekleyen Köy Habercisi'ne gidip mühürlü aile mektubunu teslim al, ardından Kendi Evine geçerek ailenle birlikte oku!"}
+            </p>
+          </div>
+          {onSecimDegistir && (
+            <button
+              type="button"
+              onClick={() =>
+                onSecimDegistir(
+                  mektupAlindiMi
+                    ? { tur: "bina", id: "kendi_evim" }
+                    : { tur: "nokta", id: "haberci" }
+                )
+              }
+              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 px-6 py-3 text-sm font-black text-stone-950 shadow-xl ring-2 ring-amber-200 transition hover:brightness-110"
+            >
+              {mektupAlindiMi
+                ? "🏡 Kendi Evime Git ve Ailemle Oku →"
+                : "📜 Haberci'ye Git ve Mektubu Al →"}
+            </button>
+          )}
+        </div>
+      )}
       {tur === "namaz" && <NamazCetelesiKutusu oyun={oyun} />}
       {tur === "sinav" && <SinavKutusu oyun={oyun} />}
       {tur === "turku" && (

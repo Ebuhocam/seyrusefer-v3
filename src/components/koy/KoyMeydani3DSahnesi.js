@@ -577,6 +577,7 @@ export default function KoyMeydani3DSahnesi({
   onMisafirEtkilesim,
   onCinarSohbetAc,
   onBilgiMesaji,
+  children,
 }) {
   const tuvalKapsayiciRef = useRef(null);
   const misafirEtiketRef = useRef(null);
@@ -1350,7 +1351,7 @@ export default function KoyMeydani3DSahnesi({
   };
 
   return (
-    <div className="relative h-[56vh] min-h-[380px] max-h-[620px] w-full overflow-hidden rounded-3xl bg-stone-950 shadow-2xl ring-2 ring-amber-500/40 select-none">
+    <div className="relative h-[64vh] min-h-[420px] max-h-[680px] w-full overflow-hidden rounded-3xl bg-stone-950 shadow-2xl ring-2 ring-amber-500/40 select-none">
       {/* Three.js WebGL 3D Birinci Şahıs Sahnesi */}
       <div ref={tuvalKapsayiciRef} className="absolute inset-0 h-full w-full cursor-grab active:cursor-grabbing" />
 
@@ -1388,7 +1389,7 @@ export default function KoyMeydani3DSahnesi({
             </>
           ) : (
             <span className="max-w-[220px] rounded-2xl bg-stone-950/88 px-3 py-1.5 text-[11px] font-semibold text-emerald-200 ring-1 ring-emerald-400/40">
-              🌿 Bugünkü meydan meselesi çözüldü ({kalanSaat} sa sonra yeni misafirler gelir)
+              🔒 Bugünkü meydan görevi tamamlandı ({kalanSaat} sa sonra yeni görev açılır)
             </span>
           )}
         </button>
@@ -1430,16 +1431,13 @@ export default function KoyMeydani3DSahnesi({
           style={{ touchAction: "none" }}
           className="relative grid h-28 w-28 cursor-pointer place-items-center rounded-full bg-stone-950/80 shadow-2xl ring-2 ring-amber-400/60"
         >
-          {/* Yön İşaretleri */}
           <span className="pointer-events-none absolute top-1.5 text-[10px] font-black text-amber-300/75">▲</span>
           <span className="pointer-events-none absolute bottom-1.5 text-[10px] font-black text-amber-300/75">▼</span>
           <span className="pointer-events-none absolute left-2 text-[10px] font-black text-amber-300/75">◀</span>
           <span className="pointer-events-none absolute right-2 text-[10px] font-black text-amber-300/75">▶</span>
 
-          {/* İç Halka */}
           <div className="pointer-events-none absolute h-14 w-14 rounded-full border border-amber-400/25 bg-stone-900/60" />
 
-          {/* Hareketli Topuz */}
           <div
             style={{
               transform: `translate3d(${joyTopuz.x.toFixed(1)}px, ${joyTopuz.y.toFixed(1)}px, 0)`,
@@ -1496,6 +1494,9 @@ export default function KoyMeydani3DSahnesi({
           </button>
         </div>
       </div>
+
+      {/* 3D OYUN EKRANI İÇİ POP-UP / DİYALOG KATMANI (Yukarıda veya aşağıda kalmaz, doğrudan ekran içinde açılır!) */}
+      {children}
     </div>
   );
 }

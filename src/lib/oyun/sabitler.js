@@ -281,8 +281,8 @@ export const NOKTALAR = {
     ad: "Haberci",
     ikon: "📜",
     gorsel: "/assets/binalar/seyyaherkek.webp",
-    x: 51.8,
-    y: 88.5,
+    x: 46.8,
+    y: 88.8,
     acilisLevel: 1,
   },
 };

@@ -22,11 +22,21 @@ export function HadisKutusu({ oyun, gorevKodu = "hadis" }) {
     oyun.gorevler.find((g) => g.kod === gorevKodu) ??
     oyun.gorevler.find((g) => g.tur === "hadis");
   const hadisler = aktifIcerik?.hadisler ?? [];
-  const aktifIndeks = gorev ? Math.min(gorev.yapilan, Math.max(0, hadisler.length - 1)) : 0;
-  const [ozelIndeks, setOzelIndeks] = useState(null);
-  const secili = ozelIndeks ?? aktifIndeks;
 
-  const h = hadisler[secili] ?? hadisler[0];
+  // Sonraki günlerin hadisleri bir önceki günden görülemez (gizli kalır)
+  const enYuksekAcikIndeks = gorev
+    ? gorev.tamam
+      ? Math.max(0, hadisler.length - 1)
+      : gorev.bugunYapildi
+      ? Math.max(0, gorev.yapilan - 1)
+      : Math.min(gorev.yapilan, Math.max(0, hadisler.length - 1))
+    : 0;
+
+  const [ozelIndeks, setOzelIndeks] = useState(null);
+  const secili = ozelIndeks ?? enYuksekAcikIndeks;
+  const seciliGizliMi = secili > enYuksekAcikIndeks;
+
+  const h = !seciliGizliMi ? (hadisler[secili] ?? hadisler[0]) : null;
 
   return (
     <div className="space-y-3">
@@ -45,6 +55,7 @@ export function HadisKutusu({ oyun, gorevKodu = "hadis" }) {
         <div className="flex flex-wrap gap-1.5">
           {hadisler.map((_, i) => {
             const okundu = gorev && i < gorev.yapilan;
+            const gizli = i > enYuksekAcikIndeks;
             return (
               <button
                 key={i}
@@ -53,19 +64,33 @@ export function HadisKutusu({ oyun, gorevKodu = "hadis" }) {
                 className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
                   secili === i
                     ? "bg-amber-400 text-stone-900"
+                    : gizli
+                    ? "bg-stone-900/90 text-stone-400 ring-1 ring-stone-700"
                     : okundu
                     ? "bg-emerald-900/60 text-emerald-200 ring-1 ring-emerald-500/40"
                     : "bg-stone-800 text-stone-300"
                 }`}
               >
-                {okundu ? "✅ " : ""}Hadis {i + 1}
+                {gizli
+                  ? `🔒 ${i + 1}. Gün Hadisi (Gizli)`
+                  : `${okundu ? "✅ " : ""}${i + 1}. Gün Hadisi`}
               </button>
             );
           })}
         </div>
       )}
 
-      {h ? (
+      {seciliGizliMi ? (
+        <div className="rounded-2xl bg-stone-950/85 p-5 text-center ring-1 ring-stone-700">
+          <div className="text-3xl">🔒</div>
+          <h4 className="mt-1.5 text-sm font-black text-amber-200">
+            {secili + 1}. Gün Hadis Görevi Şu An Gizli
+          </h4>
+          <p className="mt-1 text-xs leading-relaxed text-stone-300">
+            Sonraki günlerin görevleri bir önceki günden görüntülenemez. Bu Hadis-i Şerif yarın Mektep&apos;e geldiğinde açılacaktır!
+          </p>
+        </div>
+      ) : h ? (
         <div className="rounded-2xl bg-stone-950/70 p-4 ring-1 ring-amber-500/30">
           <p className="text-base leading-relaxed font-semibold text-amber-50">“{h.metin}”</p>
           {h.kaynak && <p className="mt-2 text-right text-xs font-bold text-amber-300/80">— {h.kaynak}</p>}
@@ -74,7 +99,7 @@ export function HadisKutusu({ oyun, gorevKodu = "hadis" }) {
         <p className="rounded-xl bg-stone-950/60 p-3 text-xs text-stone-400">Bu level için henüz hadis eklenmemiş.</p>
       )}
 
-      {gorev && (
+      {gorev && !seciliGizliMi && (
         <button
           type="button"
           disabled={oyun.bekliyor || gorev.tamam || gorev.bugunYapildi}
@@ -87,7 +112,7 @@ export function HadisKutusu({ oyun, gorevKodu = "hadis" }) {
           {gorev.tamam
             ? "✅ Hadis Görevi Tamamlandı"
             : gorev.bugunYapildi
-            ? "✅ Bugünün Hadisini Okudun (Yarın Devam Et)"
+            ? "✅ Bugünün Hadisini Okudun (Sonraki Görev Yarın Açılır)"
             : "📖 Günün Hadisini Okudum ve Tefekkür Ettim"}
         </button>
       )}
@@ -1085,7 +1110,8 @@ export function SeyyahKutusu({ oyun, gorevKodu = "seyyah" }) {
 export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup" }) {
   const [sekme, setSekme] = useState(varsayilanSekme);
   const { durum, aktifIcerik } = oyun;
-  const mektupAlindiMi = (durum.mektupAlindi ?? 0) >= durum.level;
+  const aileGorevi = oyun.gorevler.find((g) => g.tur === "aile" || g.kod === "aile");
+  const mektupAlindiMi = (durum.mektupAlindi ?? 0) >= durum.level || Boolean(aileGorevi?.tamam);
 
   return (
     <div className="space-y-3">
@@ -1115,18 +1141,18 @@ export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup
             />
             <div className="flex-1 space-y-2 text-center sm:text-left">
               <span className="inline-block rounded-full bg-amber-500/20 px-3 py-0.5 text-xs font-black text-amber-300 ring-1 ring-amber-400/40">
-                📜 Köy Habercisi · Level {durum.level} Aile Mektubu
+                📜 Köy Habercisi · Level {durum.level} Mühürlü Aile Mektubu
               </span>
               <h3 className="text-base font-black text-amber-100">
                 {aktifIcerik?.aile?.baslik ?? "Aile Meclisi Mektubu"}
               </h3>
               {!mektupAlindiMi ? (
                 <p className="text-xs leading-relaxed text-amber-100/90">
-                  “Selamünaleyküm! Uzak diyarlardan senin ve ev halkın için mühürlü bir okuma mektubu getirdim. Mektubu benden teslim alıp <b>Kendi Evine</b> götür; yanına büyüklerini veya sevdiklerini çağırarak birlikte okuyun!”
+                  “Selamünaleyküm! Uzak diyarlardan senin ve ev halkın için <b>mühürlü bir okuma mektubu</b> getirdim. Mektup burada açılmaz; benden teslim alıp <b>Kendi Evine</b> götür, yanına aileni/büyüklerini çağırdıktan sonra evinde açıp birlikte okuyun!”
                 </p>
               ) : (
                 <p className="text-xs leading-relaxed text-emerald-200">
-                  ✅ Mektubu Haberci&apos;den teslim aldın! Şimdi <b>Kendi Evine</b> girip &ldquo;Çağırdım&rdquo; butonuna tıklayarak mektubu okuyabilirsin.
+                  ✅ Mühürlü mektubu Haberci&apos;den teslim aldın! Mektubun içeriği sadece <b>Kendi Evinde</b>, aileni/büyüklerini yanına çağırdıktan (&ldquo;📣 Yanıma Çağır&rdquo; → &ldquo;✅ Çağırdım&rdquo;) sonra açılır.
                 </p>
               )}
 
@@ -1138,16 +1164,16 @@ export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup
                     onClick={() => oyun.mektupAl()}
                     className="animate-bounce rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 px-5 py-3 text-xs font-black text-stone-950 shadow-xl ring-2 ring-amber-200 hover:brightness-110 sm:text-sm"
                   >
-                    📬 Mektubu Haberci&apos;den Teslim Al
+                    📬 Mühürlü Mektubu Haberci&apos;den Teslim Al
                   </button>
                 ) : (
                   onSecimDegistir && (
                     <button
                       type="button"
                       onClick={() => onSecimDegistir({ tur: "bina", id: "kendi_evim" })}
-                      className="rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 px-5 py-3 text-xs font-black text-stone-950 shadow-xl ring-2 ring-emerald-200 hover:brightness-110 sm:text-sm"
+                      className="animate-bounce rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 px-5 py-3 text-xs font-black text-stone-950 shadow-xl ring-2 ring-emerald-200 hover:brightness-110 sm:text-sm"
                     >
-                      🏡 Kendi Evime Git ve Mektubu Oku →
+                      🏡 Kendi Evime Git ve Ailemle Mektubu Oku →
                     </button>
                   )
                 )}
@@ -1155,7 +1181,11 @@ export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup
             </div>
           </div>
 
-          {mektupAlindiMi && <AileOkumasiKutusu oyun={oyun} />}
+          {/* Mektup içeriği Haberci sayfasında gösterilmez; yalnızca Kendi Evim'de aile çağrıldıktan sonra açılır */}
+          <div className="rounded-2xl bg-stone-950/75 p-4 text-center text-xs text-amber-200/85 ring-1 ring-stone-800">
+            🔒 <b>Mühürlü Aile Mektubu:</b> Mektup metni Haberci ekranında gizlidir. Mektubu okumak için{" "}
+            <b>Kendi Evim</b> binasına girip ev halkını yanına davet etmelisin.
+          </div>
         </div>
       ) : (
         <SeyyahKutusu oyun={oyun} />
@@ -1168,20 +1198,26 @@ export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup
 // 8. KÖY MEYDANI DİVANI: HALK DAVALARI (TEKİL SORUN ÇÖZME) KUTUSU
 // ---------------------------------------------------------------
 export function ObaDavaKutusu({ oyun, onTamamKapat }) {
-  const { durum, ayarlar } = oyun;
+  const { durum, ayarlar, simdi } = oyun;
   const davalar = koyDavalariListesi(ayarlar);
   const cozulenler = Array.isArray(durum.cozulenDavalar) ? durum.cozulenDavalar : [];
   const mutluluk = durum.mutluluk ?? 60;
   const gorev = oyun.gorevler.find((g) => g.tur === "dava" || g.kod === "dava");
 
+  // Günde 1 Meydan Görevi kuralı: Bugünkü olay çözüldüyse sonraki günün görevi gizli kalır
+  const sonOlayZamani = durum.sonMeydanOlayZamani ?? 0;
+  const gecenMs = sonOlayZamani > 0 ? Math.max(0, simdi - sonOlayZamani) : 24 * 60 * 60 * 1000;
+  const gunlukOlayHazir = gecenMs >= 24 * 60 * 60 * 1000;
+  const kalanSaat = gunlukOlayHazir ? 0 : Math.max(1, Math.ceil((24 * 60 * 60 * 1000 - gecenMs) / (60 * 60 * 1000)));
+
   // Tüm davalar bir arada gösterilmez; yalnızca sıradaki çözülmemiş tek dava meydanda bekler
   const siradakiDava = davalar.find((d) => !cozulenler.includes(d.id)) ?? null;
   const [sonCozum, setSonCozum] = useState(null);
 
-  const gosterilenDava = sonCozum?.dava ?? siradakiDava;
+  const gosterilenDava = sonCozum?.dava ?? (gunlukOlayHazir ? siradakiDava : null);
 
   const kararVer = async (secenekIndeks) => {
-    if (!siradakiDava) return;
+    if (!siradakiDava || !gunlukOlayHazir) return;
     const secilenDava = siradakiDava;
     const sonuc = await oyun.davaCoz(secilenDava.id, secenekIndeks);
     if (sonuc) {
@@ -1189,24 +1225,24 @@ export function ObaDavaKutusu({ oyun, onTamamKapat }) {
     }
   };
 
-  // Karar verildikten sonra küçük bildirim yerine TAM EKRAN KARAR SONUCU KARTI
+  // Karar verildikten sonra TAM EKRAN / POP-UP KARAR SONUCU KARTI
   if (sonCozum) {
     const olumlu = sonCozum.mutlulukDegisimi >= 0;
     return (
       <div
-        className={`space-y-5 rounded-3xl p-6 text-center shadow-2xl ring-2 sm:p-8 ${
+        className={`space-y-4 rounded-3xl p-5 text-center shadow-2xl ring-2 sm:p-6 ${
           olumlu
             ? "bg-gradient-to-b from-emerald-950/95 to-stone-950 text-emerald-50 ring-emerald-400"
             : "bg-gradient-to-b from-red-950/95 to-stone-950 text-red-50 ring-red-400"
         }`}
       >
-        <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-stone-900/90 text-5xl shadow-xl ring-2 ring-amber-400">
+        <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-stone-900/90 text-4xl shadow-xl ring-2 ring-amber-400">
           {olumlu ? "🌟" : "⚠️"}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <span
-            className={`inline-block rounded-full px-4 py-1 text-sm font-black shadow ${
+            className={`inline-block rounded-full px-3.5 py-1 text-xs font-black shadow sm:text-sm ${
               olumlu ? "bg-emerald-400 text-stone-950" : "bg-red-500 text-white"
             }`}
           >
@@ -1214,22 +1250,22 @@ export function ObaDavaKutusu({ oyun, onTamamKapat }) {
               ? `+${sonCozum.mutlulukDegisimi} 😊 Köy Huzuru Arttı!`
               : `${sonCozum.mutlulukDegisimi} 😟 Köy Huzuru Azaldı`}
           </span>
-          <h3 className="text-xl font-black text-amber-100 sm:text-2xl">
+          <h3 className="text-lg font-black text-amber-100 sm:text-xl">
             {olumlu ? "Hikmetli Hükmün Köyde Huzur Sağladı!" : "Bu Karar Köylüleri Üzdü"}
           </h3>
         </div>
 
-        <div className="mx-auto max-w-xl rounded-2xl bg-stone-900/90 p-5 text-sm leading-relaxed text-amber-50 ring-1 ring-stone-700 sm:text-base">
+        <div className="mx-auto max-w-xl rounded-2xl bg-stone-900/90 p-4 text-xs leading-relaxed text-amber-50 ring-1 ring-stone-700 sm:text-sm">
           “{sonCozum.aciklama}”
         </div>
 
-        <div className="mx-auto max-w-md rounded-2xl bg-stone-950/80 p-3.5 text-xs text-amber-200 ring-1 ring-stone-800">
+        <div className="mx-auto max-w-md rounded-2xl bg-stone-950/80 p-3 text-xs text-amber-200 ring-1 ring-stone-800">
           <div className="flex items-center justify-between font-bold">
             <span>😊 Güncel Köy Huzuru:</span>
             <span className="text-sm font-black text-emerald-300">%{sonCozum.yeniMutluluk ?? mutluluk}</span>
           </div>
-          <p className="mt-1.5 text-[11px] text-amber-200/75">
-            Köylüler hükmünü dinleyip teşekkür ederek meydandan ayrıldılar. Yarın (1 gün sonra) meydanda yeni bir olay veya köye yerleşmek isteyen yeni misafirler seni bekleyecek!
+          <p className="mt-1 text-[11px] text-amber-200/75">
+            Köylüler hükmünü dinleyip teşekkür ederek meydandan ayrıldılar. Sonraki meydan görevi yarın açılacak!
           </p>
         </div>
 
@@ -1239,7 +1275,7 @@ export function ObaDavaKutusu({ oyun, onTamamKapat }) {
             setSonCozum(null);
             if (onTamamKapat) onTamamKapat();
           }}
-          className="w-full max-w-md rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 py-4 text-base font-black text-stone-950 shadow-xl ring-2 ring-amber-200 transition hover:brightness-110"
+          className="w-full max-w-md rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 text-sm font-black text-stone-950 shadow-xl ring-2 ring-amber-200 transition hover:brightness-110 sm:text-base"
         >
           ✅ Tamam
         </button>
@@ -1248,54 +1284,87 @@ export function ObaDavaKutusu({ oyun, onTamamKapat }) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Köy Huzur / Mutluluk Durumu */}
-      <div className="rounded-2xl bg-stone-950/80 p-4 ring-1 ring-amber-500/30">
+    <div className="space-y-3.5">
+      {/* Köy Huzur / Mutluluk Durumu + Görev İlerleme Rozetleri (Sonrakiler Gizli) */}
+      <div className="rounded-2xl bg-stone-950/85 p-3.5 ring-1 ring-amber-500/30">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <span className="font-bold text-amber-200">
-            ⚖️ Köy Meydanı Divanı · Köy Huzuru ve Mutluluğu
+            ⚖️ Köy Meydanı Divanı · Köy Huzuru
           </span>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-stone-800 px-2.5 py-0.5 text-[11px] font-bold text-amber-200">
-              Çözülen Mesele: {cozulenler.length} / {davalar.length}
+              Çözülen: {cozulenler.length} / {davalar.length}
             </span>
             <span className="text-sm font-black text-emerald-300">%{mutluluk}</span>
           </div>
         </div>
-        <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-stone-800">
-          <div
-            className={`h-full transition-all ${
-              mutluluk >= 70 ? "bg-emerald-500" : mutluluk >= 40 ? "bg-amber-400" : "bg-red-500"
-            }`}
-            style={{ width: `${mutluluk}%` }}
-          />
+        <div className="mt-1.5 flex flex-wrap gap-1.5 pt-1">
+          {davalar.map((d, idx) => {
+            const cozuldu = cozulenler.includes(d.id);
+            const bugunkuAktif = !cozuldu && gunlukOlayHazir && siradakiDava?.id === d.id;
+            return (
+              <span
+                key={d.id}
+                className={`rounded-lg px-2 py-0.5 text-[10px] font-bold ${
+                  cozuldu
+                    ? "bg-emerald-900/60 text-emerald-200 ring-1 ring-emerald-500/40"
+                    : bugunkuAktif
+                    ? "bg-amber-400 text-stone-950"
+                    : "bg-stone-900 text-stone-400 ring-1 ring-stone-700"
+                }`}
+              >
+                {cozuldu
+                  ? `✅ ${idx + 1}. Görev`
+                  : bugunkuAktif
+                  ? `⚖️ ${idx + 1}. Görev (Bugün)`
+                  : `🔒 ${idx + 1}. Görev (Gizli)`}
+              </span>
+            );
+          })}
         </div>
-        <p className="mt-2 text-xs text-amber-200/80">
-          Köylüler aralarındaki anlaşmazlıkları tek tek <b>Köy Meydanı</b>&apos;na getirir. Hikmetli ve adil kararların mutluluğu (+4 / +2) artırır; sert veya adaletsiz kararlar ise düşürür!
-        </p>
       </div>
 
-      {gosterilenDava ? (
-        <div className="space-y-4 rounded-3xl bg-stone-950/85 p-5 shadow-xl ring-1 ring-amber-500/40">
-          <div className="flex flex-wrap items-start justify-between gap-2 border-b border-stone-800 pb-3">
+      {!gunlukOlayHazir && siradakiDava ? (
+        <div className="rounded-3xl bg-stone-950/90 p-5 text-center ring-1 ring-stone-700">
+          <div className="text-3xl">🔒</div>
+          <h3 className="mt-2 text-base font-black text-amber-200 sm:text-lg">
+            Sonraki Meydan Görevi Şu An Gizli!
+          </h3>
+          <p className="mt-1 text-xs leading-relaxed text-stone-300 sm:text-sm">
+            Bugünkü Köy Meydanı görevini tamamladın. Sonraki günün meydan görevi bir önceki günden görüntülenemez;{" "}
+            <b>{kalanSaat} saat sonra</b> yeni günde açılacaktır!
+          </p>
+          {onTamamKapat && (
+            <button
+              type="button"
+              onClick={onTamamKapat}
+              className="mt-3 rounded-xl bg-amber-400 px-5 py-2 text-xs font-black text-stone-950 shadow"
+            >
+              ✅ Meydana Dön
+            </button>
+          )}
+        </div>
+      ) : gosterilenDava ? (
+        <div className="space-y-3.5 rounded-3xl bg-stone-950/90 p-4 shadow-xl ring-1 ring-amber-500/40 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-2 border-b border-stone-800 pb-2.5">
             <div>
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-3 py-0.5 text-xs font-black text-amber-300 ring-1 ring-amber-400/40">
                 📢 Meydanda Söz İsteyen Köylüler: {gosterilenDava.kisi}
               </span>
-              <h3 className="mt-2 text-lg font-black text-amber-100">{gosterilenDava.baslik}</h3>
+              <h3 className="mt-1.5 text-base font-black text-amber-100 sm:text-lg">{gosterilenDava.baslik}</h3>
             </div>
             {gorev && (
               <span className="shrink-0 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-200 ring-1 ring-emerald-500/40">
-                Level Görevi: {gorev.yapilan}/{gorev.hedef}
+                Görev: {gorev.yapilan}/{gorev.hedef}
               </span>
             )}
           </div>
 
-          <div className="rounded-2xl bg-stone-900/90 p-4 text-sm leading-relaxed text-amber-50/95 ring-1 ring-stone-800">
+          <div className="rounded-2xl bg-stone-900/90 p-3.5 text-xs leading-relaxed text-amber-50/95 ring-1 ring-stone-800 sm:text-sm">
             “{gosterilenDava.hikaye}”
           </div>
 
-          <div className="space-y-2.5 pt-1">
+          <div className="space-y-2 pt-0.5">
             <p className="text-xs font-black uppercase tracking-wider text-amber-300">
               ⚖️ Hükmün nedir genç yönetici?
             </p>
@@ -1305,7 +1374,7 @@ export function ObaDavaKutusu({ oyun, onTamamKapat }) {
                 type="button"
                 disabled={oyun.bekliyor}
                 onClick={() => kararVer(idx)}
-                className="w-full rounded-2xl bg-stone-900/95 p-3.5 text-left text-xs leading-relaxed text-amber-50 ring-1 ring-stone-700 transition hover:bg-amber-500/20 hover:ring-amber-400 sm:text-sm"
+                className="w-full rounded-2xl bg-stone-900/95 p-3 text-left text-xs leading-relaxed text-amber-50 ring-1 ring-stone-700 transition hover:bg-amber-500/20 hover:ring-amber-400 sm:text-sm"
               >
                 <b className="mr-2 inline-grid h-6 w-6 place-items-center rounded-lg bg-amber-500/20 text-amber-300">
                   {idx + 1}
@@ -1461,100 +1530,135 @@ export function KiraathaneKutusu({ oyun, varsayilanSekme = "ozan", onKiraathaneA
         <div className="space-y-3">
           {turkuler.length > 1 && (
             <div className="flex flex-wrap gap-1.5">
-              {turkuler.map((t, i) => (
-                <button
-                  key={t.id ?? i}
-                  type="button"
-                  onClick={() => {
-                    setKonusuyor(false);
-                    setSeciliIdx(i);
-                  }}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-bold ${
-                    seciliIdx === i ? "bg-amber-400 text-stone-900" : "bg-stone-800 text-stone-300"
-                  }`}
-                >
-                  🎵 Türkü {i + 1}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {turku && (
-            <div className="rounded-2xl bg-stone-950/80 p-4 ring-1 ring-amber-500/30">
-              <div className="flex flex-col items-center gap-3 sm:flex-row">
-                <div className="relative shrink-0">
-                  <img
-                    src={agizAcik ? "/assets/binalar/ozan_acik.webp" : "/assets/binalar/ozan_kapali.webp"}
-                    alt="Ozan Dede"
-                    className={`h-28 w-28 rounded-2xl object-cover ring-2 ${
-                      konusuyor ? "ring-amber-400 shadow-lg shadow-amber-500/20" : "ring-stone-700"
-                    }`}
-                  />
-                  {konusuyor && (
-                    <span className="absolute -top-2 -right-2 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black text-stone-950 animate-pulse">
-                      🎶 Anlatıyor…
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex-1 text-center sm:text-left">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
-                    🎵 {turku.turkuAdi}
-                  </span>
-                  <h3 className="text-base font-black text-amber-100">{turku.baslik}</h3>
+              {turkuler.map((t, i) => {
+                const enYuksekAcikTurku = gorev?.tamam
+                  ? Math.min(turkuler.length - 1, Math.max(0, durum.level - 1))
+                  : Math.min(turkuler.length - 1, Math.max(0, (gorev?.yapilan ?? 0)));
+                const gizli = i > enYuksekAcikTurku;
+                return (
                   <button
+                    key={t.id ?? i}
                     type="button"
-                    onClick={ozaniBaslatDurdur}
-                    className={`mt-2 inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-black shadow ${
-                      konusuyor
-                        ? "bg-red-600 text-white"
-                        : "bg-gradient-to-b from-amber-400 to-amber-600 text-stone-900"
+                    onClick={() => {
+                      setKonusuyor(false);
+                      setSeciliIdx(i);
+                    }}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-bold ${
+                      seciliIdx === i
+                        ? "bg-amber-400 text-stone-900"
+                        : gizli
+                        ? "bg-stone-900 text-stone-400 ring-1 ring-stone-700"
+                        : "bg-stone-800 text-stone-300"
                     }`}
                   >
-                    {konusuyor ? "⏹ Anlatımı Durdur" : "🔊 Ozan Dede'den Dinle"}
+                    {gizli ? `🔒 ${i + 1}. Türkü (Gizli)` : `🎵 Türkü ${i + 1}`}
                   </button>
-                </div>
-              </div>
-
-              {turku.sesUrl && (
-                <audio
-                  ref={sesRef}
-                  src={turku.sesUrl}
-                  onEnded={() => setKonusuyor(false)}
-                  onPause={() => setKonusuyor(false)}
-                  onPlay={() => setKonusuyor(true)}
-                  controls
-                  className="mt-3 h-9 w-full"
-                />
-              )}
-
-              <p className="mt-3 rounded-xl bg-stone-900/90 p-3 text-sm leading-relaxed text-amber-50/95">
-                “{turku.anlatim}”
-              </p>
-
-              {turku.odev && (
-                <div className="mt-3 rounded-xl bg-amber-500/15 p-3 text-xs text-amber-100 ring-1 ring-amber-400/30">
-                  <b className="block text-amber-300">📜 Ozan Dede&apos;nin Gönül Ödevi:</b>
-                  {turku.odev}
-                </div>
-              )}
+                );
+              })}
             </div>
           )}
 
-          {gorev && (
-            <button
-              type="button"
-              disabled={oyun.bekliyor || gorev.tamam || (!dinlendi && !gorev.tamam)}
-              onClick={() => oyun.gorevTamamla(gorev.kod)}
-              className="w-full rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 py-3 text-sm font-black text-white shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
-            >
-              {gorev.tamam
-                ? "✅ Ozan Dede Görevi Tamamlandı"
-                : dinlendi
-                ? "🎵 Türkünün Hikâyesini Dinledim ve Ödevimi Aldım"
-                : "🔒 Önce 'Ozan Dede'den Dinle' Butonuna Bas"}
-            </button>
-          )}
+          {(() => {
+            const enYuksekAcikTurku = gorev?.tamam
+              ? Math.min(turkuler.length - 1, Math.max(0, durum.level - 1))
+              : Math.min(turkuler.length - 1, Math.max(0, (gorev?.yapilan ?? 0)));
+            const seciliTurkuGizli = seciliIdx > enYuksekAcikTurku;
+
+            if (seciliTurkuGizli) {
+              return (
+                <div className="rounded-2xl bg-stone-950/85 p-5 text-center ring-1 ring-stone-700">
+                  <div className="text-3xl">🔒</div>
+                  <h4 className="mt-1.5 text-sm font-black text-amber-200">
+                    {seciliIdx + 1}. Kıraathane Görevi Şu An Gizli
+                  </h4>
+                  <p className="mt-1 text-xs leading-relaxed text-stone-300">
+                    Sonraki günlerin ve seviyelerin türkü hikâyeleri önceden görüntülenemez. Sırası geldiğinde Ozan Dede bu türkünün hikâyesini anlatacaktır!
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <>
+                {turku && (
+                  <div className="rounded-2xl bg-stone-950/80 p-4 ring-1 ring-amber-500/30">
+                    <div className="flex flex-col items-center gap-3 sm:flex-row">
+                      <div className="relative shrink-0">
+                        <img
+                          src={agizAcik ? "/assets/binalar/ozan_acik.webp" : "/assets/binalar/ozan_kapali.webp"}
+                          alt="Ozan Dede"
+                          className={`h-28 w-28 rounded-2xl object-cover ring-2 ${
+                            konusuyor ? "ring-amber-400 shadow-lg shadow-amber-500/20" : "ring-stone-700"
+                          }`}
+                        />
+                        {konusuyor && (
+                          <span className="absolute -top-2 -right-2 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black text-stone-950 animate-pulse">
+                            🎶 Anlatıyor…
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex-1 text-center sm:text-left">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                          🎵 {turku.turkuAdi}
+                        </span>
+                        <h3 className="text-base font-black text-amber-100">{turku.baslik}</h3>
+                        <button
+                          type="button"
+                          onClick={ozaniBaslatDurdur}
+                          className={`mt-2 inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-black shadow ${
+                            konusuyor
+                              ? "bg-red-600 text-white"
+                              : "bg-gradient-to-b from-amber-400 to-amber-600 text-stone-900"
+                          }`}
+                        >
+                          {konusuyor ? "⏹ Anlatımı Durdur" : "🔊 Ozan Dede'den Dinle"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {turku.sesUrl && (
+                      <audio
+                        ref={sesRef}
+                        src={turku.sesUrl}
+                        onEnded={() => setKonusuyor(false)}
+                        onPause={() => setKonusuyor(false)}
+                        onPlay={() => setKonusuyor(true)}
+                        controls
+                        className="mt-3 h-9 w-full"
+                      />
+                    )}
+
+                    <p className="mt-3 rounded-xl bg-stone-900/90 p-3 text-sm leading-relaxed text-amber-50/95">
+                      “{turku.anlatim}”
+                    </p>
+
+                    {turku.odev && (
+                      <div className="mt-3 rounded-xl bg-amber-500/15 p-3 text-xs text-amber-100 ring-1 ring-amber-400/30">
+                        <b className="block text-amber-300">📜 Ozan Dede&apos;nin Gönül Ödevi:</b>
+                        {turku.odev}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {gorev && (
+                  <button
+                    type="button"
+                    disabled={oyun.bekliyor || gorev.tamam || (!dinlendi && !gorev.tamam)}
+                    onClick={() => oyun.gorevTamamla(gorev.kod)}
+                    className="w-full rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 py-3 text-sm font-black text-white shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
+                  >
+                    {gorev.tamam
+                      ? "✅ Ozan Dede Görevi Tamamlandı"
+                      : dinlendi
+                      ? "🎵 Türkünün Hikâyesini Dinledim ve Ödevimi Aldım"
+                      : "🔒 Önce 'Ozan Dede'den Dinle' Butonuna Bas"}
+                  </button>
+                )}
+              </>
+            );
+          })()}
         </div>
       ) : (
         <div className="space-y-3">

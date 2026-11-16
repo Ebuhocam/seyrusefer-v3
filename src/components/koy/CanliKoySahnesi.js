@@ -3,11 +3,13 @@ import { useEffect, useRef, useState } from "react";
 
 // =============================================================
 // SEYRÜSEFER v3 — CANLI KÖY HARİTASI ATMOSFER & DERİNLİK KATMANI
-// - GLSL Fragment Shader ile Oba kalesinin ARKA vadisinden kıvrılarak akan Göksu Irmağı
-// - Sahte/ekstra harita ağacı eklemez (koy.webp'nin özgün çizimlerini korur)
-// - Yalnızca taş patikalarda çok yavaş yürüyen, durup etrafı seyreden 2 küçük köylü
-// - Ortak Y-derinlik sıralaması: zIndex = Math.round(y * 2) (binalarla tam uyumlu)
-// - SSR / Hydration %100 uyumlu
+// 1. GLSL Fragment Shader ile Oba kalesinin ARKA vadisinden kıvrılarak akan Göksu Irmağı
+// 2. Orijinal Harita Ağaçları Rüzgâr Salınımı: Haritaya YENİ/SAHTE ağaç eklemez!
+//    Doğrudan koy.webp'nin kendi içindeki ağaç taçlarını (GLSL UV wind-warp / doku yaması ile)
+//    olduğu yerde rüzgârda doğal olarak sallandırır.
+// 3. Oba Kamp Ateşi Katmanı: Oba çadırının önündeki taş ateş çukurunda canlı yanan alevler,
+//    yükselen kor kıvılcımlar ve sıcak ışık titremesi.
+// 4. Yalnızca taş patikalarda çok yavaş yürüyen, durup etrafı seyreden 2 küçük köylü.
 // =============================================================
 
 // ---------- TAŞ PATİKA WAYPOINT AĞI ----------
@@ -90,6 +92,27 @@ const IKI_KOYLU_PROFILI = [
   },
 ];
 
+// koy.webp'nin kendi içinde çizili olan orijinal ağaç taçlarının merkez koordinatları (%)
+// (Yeni ağaç çizilmez; yalnızca koy.webp'deki bu mevcut ağaç taçları rüzgârda esner)
+const ORIJINAL_AGAC_TAC_MERKEZLERI = [
+  { x: 6.5, y: 18.0, rx: 4.5, ry: 7.0, faz: 0.2 },
+  { x: 14.5, y: 12.0, rx: 5.5, ry: 7.5, faz: 1.1 },
+  { x: 28.5, y: 13.5, rx: 4.8, ry: 7.0, faz: 2.0 },
+  { x: 7.2, y: 35.0, rx: 5.2, ry: 8.5, faz: 0.7 },
+  { x: 25.0, y: 39.5, rx: 4.6, ry: 6.8, faz: 1.8 },
+  { x: 28.2, y: 50.5, rx: 4.8, ry: 6.5, faz: 2.6 },
+  { x: 16.5, y: 74.5, rx: 4.5, ry: 6.5, faz: 0.9 },
+  { x: 23.0, y: 76.0, rx: 4.5, ry: 6.5, faz: 1.5 },
+  { x: 3.8, y: 88.0, rx: 3.8, ry: 7.5, faz: 2.3 },
+  { x: 18.5, y: 92.5, rx: 6.0, ry: 6.5, faz: 3.1 },
+  { x: 32.5, y: 88.5, rx: 4.6, ry: 6.2, faz: 0.5 },
+  { x: 58.2, y: 93.0, rx: 4.0, ry: 5.5, faz: 1.9 },
+  { x: 71.5, y: 90.0, rx: 4.2, ry: 5.8, faz: 2.8 },
+  { x: 82.0, y: 57.5, rx: 4.6, ry: 6.2, faz: 1.3 },
+  { x: 81.5, y: 73.5, rx: 4.5, ry: 6.0, faz: 2.4 },
+  { x: 96.0, y: 49.0, rx: 3.8, ry: 6.5, faz: 0.4 },
+];
+
 function yazilimGlTespit(gl) {
   try {
     const dbg = gl.getExtension("WEBGL_debug_renderer_info");
@@ -102,7 +125,434 @@ function yazilimGlTespit(gl) {
 }
 
 // =============================================================
-// 1. KUZEY GÖKSU IRMAĞI — GERÇEK GLSL WATER SHADER KATMANI
+// 1. ORİJİNAL HARİTA AĞAÇLARI RÜZGÂR SALINIMI KATMANI
+// koy.webp'yi doku olarak okur, SADECE mevcut ağaçların yaprak
+// piksellerini yerinde hafifçe rüzgârla dalgalandırır.
+// =============================================================
+const AGAC_VERTEX = `
+attribute vec2 aPos;
+varying vec2 vUv;
+void main() {
+  vUv = aPos * 0.5 + 0.5;
+  vUv.y = 1.0 - vUv.y;
+  gl_Position = vec4(aPos, 0.0, 1.0);
+}
+`;
+
+const AGAC_FRAGMENT = `
+precision mediump float;
+varying vec2 vUv;
+uniform sampler2D uMap;
+uniform float uTime;
+
+// Oba kalesi, nehir ve merkezi meydan taşlarını hariç tutan yumuşak bölge maskesi
+float agacBolgeMaskesi(vec2 uv) {
+  // Üst nehir kuşağı hariç
+  if (uv.y < 0.06) return 0.0;
+  // Oba kalesi taş platformu hariç (x: 0.36..0.75, y: 0.0..0.38)
+  if (uv.x > 0.36 && uv.x < 0.75 && uv.y < 0.37) return 0.0;
+  // Köy meydanı taş göbeği hariç (x: 0.46..0.65, y: 0.44..0.64)
+  if (uv.x > 0.46 && uv.x < 0.64 && uv.y > 0.44 && uv.y < 0.63) return 0.0;
+  // Tarla sürülü iç toprak hariç (x: 0.04..0.21, y: 0.50..0.66)
+  if (uv.x > 0.04 && uv.x < 0.21 && uv.y > 0.50 && uv.y < 0.66) return 0.0;
+  return 1.0;
+}
+
+float yaprakRengiMi(vec3 c) {
+  // koy.webp içindeki çam ve yapraklı ağaçların doygun yeşil tonları
+  // (Açık sarı-yeşil çimen zemin r > 0.57 olduğu için elenir; sadece ağaç taçları seçilir)
+  float yesilFark = c.g - c.r;
+  float maviFark = c.g - c.b;
+  float koyuYaprak = smoothstep(0.018, 0.055, yesilFark) * smoothstep(0.06, 0.14, maviFark) * (1.0 - smoothstep(0.50, 0.58, c.r));
+  return koyuYaprak;
+}
+
+void main() {
+  float bolge = agacBolgeMaskesi(vUv);
+  if (bolge <= 0.01) {
+    discard;
+  }
+
+  vec4 merkezRenk = texture2D(uMap, vUv);
+  // Komşu örneklerle yumuşak ağaç tacı maskesi
+  vec3 c1 = texture2D(uMap, vUv + vec2(0.004, 0.0)).rgb;
+  vec3 c2 = texture2D(uMap, vUv - vec2(0.004, 0.0)).rgb;
+  vec3 c3 = texture2D(uMap, vUv + vec2(0.0, 0.006)).rgb;
+  vec3 c4 = texture2D(uMap, vUv - vec2(0.0, 0.006)).rgb;
+
+  float m0 = yaprakRengiMi(merkezRenk.rgb);
+  float mKomsu = (yaprakRengiMi(c1) + yaprakRengiMi(c2) + yaprakRengiMi(c3) + yaprakRengiMi(c4)) * 0.25;
+  float maske = clamp((m0 * 0.6 + mKomsu * 0.4) * bolge, 0.0, 1.0);
+
+  if (maske <= 0.05) {
+    discard;
+  }
+
+  // Doğal rüzgâr dalgası: her ağaç kümesi konumuna göre farklı fazda hafifçe salınır
+  float dalga = sin(uTime * 2.1 + vUv.x * 22.0 + vUv.y * 16.0)
+              + 0.45 * sin(uTime * 3.3 - vUv.x * 14.0 + vUv.y * 28.0);
+  float dikeyDalga = cos(uTime * 1.8 + vUv.x * 19.0 - vUv.y * 15.0);
+
+  vec2 kayma = vec2(dalga * 0.0028, dikeyDalga * 0.0011) * maske;
+  vec4 sallananRenk = texture2D(uMap, clamp(vUv - kayma, 0.001, 0.999));
+
+  // Rüzgâr vurdukça yaprak uçlarında çok hafif güneş ışıltısı
+  float gunesEsinti = max(0.0, dalga) * 0.035 * maske;
+  vec3 sonRenk = sallananRenk.rgb + vec3(0.04, 0.06, 0.01) * gunesEsinti;
+
+  gl_FragColor = vec4(sonRenk, smoothstep(0.05, 0.32, maske));
+}
+`;
+
+function OrijinalAgacRuzgarKatmani({ aktif }) {
+  const canvasRef = useRef(null);
+  const aktifRef = useRef(aktif);
+
+  useEffect(() => {
+    aktifRef.current = aktif;
+  }, [aktif]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let iptal = false;
+    let rafId = 0;
+    let timerId = 0;
+
+    const haritaGorsel = new Image();
+    haritaGorsel.crossOrigin = "anonymous";
+    haritaGorsel.src = "/assets/harita/koy.webp";
+
+    let temizleFn = null;
+
+    haritaGorsel.onload = () => {
+      if (iptal || !canvasRef.current) return;
+
+      const testTuval = document.createElement("canvas");
+      const webglVar = Boolean(
+        testTuval.getContext("webgl") || testTuval.getContext("experimental-webgl")
+      );
+      const gl = webglVar
+        ? canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false }) ||
+          canvas.getContext("experimental-webgl", { alpha: true, premultipliedAlpha: false })
+        : null;
+
+      // WebGL yoksa 2D Canvas üzerinde koy.webp'nin kendi ağaç taçlarını yerinde hafifçe esnet
+      if (!gl) {
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        canvas.width = 960;
+        canvas.height = 520;
+        const baslangic = performance.now();
+
+        const ciz2D = () => {
+          if (iptal) return;
+          if (aktifRef.current) {
+            const t = (performance.now() - baslangic) * 0.001;
+            const W = canvas.width;
+            const H = canvas.height;
+            const imgW = haritaGorsel.naturalWidth || 1376;
+            const imgH = haritaGorsel.naturalHeight || 768;
+            ctx.clearRect(0, 0, W, H);
+
+            for (const a of ORIJINAL_AGAC_TAC_MERKEZLERI) {
+              const cx = (a.x / 100) * W;
+              const cy = (a.y / 100) * H;
+              const rx = (a.rx / 100) * W;
+              const ry = (a.ry / 100) * H;
+
+              const sx = ((a.x - a.rx) / 100) * imgW;
+              const sy = ((a.y - a.ry) / 100) * imgH;
+              const sw = ((a.rx * 2) / 100) * imgW;
+              const sh = ((a.ry * 2) / 100) * imgH;
+
+              const salinimX = Math.sin(t * 2.1 + a.faz) * 2.4;
+              const egim = Math.sin(t * 2.1 + a.faz) * 0.022;
+
+              ctx.save();
+              ctx.beginPath();
+              ctx.ellipse(cx, cy, rx * 0.92, ry * 0.92, 0, 0, Math.PI * 2);
+              ctx.clip();
+
+              ctx.translate(cx + salinimX, cy + ry);
+              ctx.transform(1, 0, egim, 1, 0, 0);
+              ctx.drawImage(haritaGorsel, sx, sy, sw, sh, -rx, -ry * 2, rx * 2, ry * 2);
+              ctx.restore();
+            }
+          }
+          timerId = window.setTimeout(ciz2D, 55);
+        };
+
+        ciz2D();
+        temizleFn = () => clearTimeout(timerId);
+        return;
+      }
+
+      const yazilimGl = yazilimGlTespit(gl);
+
+      const derle = (tur, kaynak) => {
+        const sh = gl.createShader(tur);
+        if (!sh) return null;
+        gl.shaderSource(sh, kaynak);
+        gl.compileShader(sh);
+        if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+          gl.deleteShader(sh);
+          return null;
+        }
+        return sh;
+      };
+
+      const vs = derle(gl.VERTEX_SHADER, AGAC_VERTEX);
+      const fs = derle(gl.FRAGMENT_SHADER, AGAC_FRAGMENT);
+      if (!vs || !fs) return;
+
+      const prog = gl.createProgram();
+      if (!prog) return;
+      gl.attachShader(prog, vs);
+      gl.attachShader(prog, fs);
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+        gl.STATIC_DRAW
+      );
+
+      const tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, haritaGorsel);
+
+      const aPos = gl.getAttribLocation(prog, "aPos");
+      const uTime = gl.getUniformLocation(prog, "uTime");
+      const uMap = gl.getUniformLocation(prog, "uMap");
+
+      gl.useProgram(prog);
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+      gl.uniform1i(uMap, 0);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+      const baslangic = performance.now();
+
+      const ciz = () => {
+        if (iptal) return;
+        if (aktifRef.current) {
+          const genislik = yazilimGl ? 688 : 1140;
+          const yukseklik = yazilimGl ? 384 : 640;
+          if (canvas.width !== genislik || canvas.height !== yukseklik) {
+            canvas.width = genislik;
+            canvas.height = yukseklik;
+            gl.viewport(0, 0, genislik, yukseklik);
+          }
+          const sn = (performance.now() - baslangic) * 0.001;
+          gl.clearColor(0, 0, 0, 0);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, tex);
+          gl.uniform1f(uTime, sn);
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+
+        if (yazilimGl) {
+          timerId = window.setTimeout(ciz, 70);
+        } else {
+          rafId = requestAnimationFrame(ciz);
+        }
+      };
+
+      ciz();
+
+      temizleFn = () => {
+        cancelAnimationFrame(rafId);
+        clearTimeout(timerId);
+        gl.deleteTexture(tex);
+        gl.deleteBuffer(buf);
+        gl.deleteProgram(prog);
+        gl.deleteShader(vs);
+        gl.deleteShader(fs);
+      };
+    };
+
+    return () => {
+      iptal = true;
+      cancelAnimationFrame(rafId);
+      clearTimeout(timerId);
+      if (temizleFn) temizleFn();
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="pointer-events-none absolute inset-0 block h-full w-full"
+      style={{ zIndex: 8 }}
+    />
+  );
+}
+
+// =============================================================
+// 2. OBA KAMP ATEŞİ HAREKETLİ ALEV & KIVILCIM KATMANI
+// Oba çadırının önündeki taş ateş çukurunda (x: 55.18%, y: 21.70%)
+// canlı titreşen alev dilleri, yükselen kor kıvılcımlar ve sıcak parıltı
+// =============================================================
+function ObaAtesiKatmani({ aktif }) {
+  const canvasRef = useRef(null);
+  const aktifRef = useRef(aktif);
+
+  useEffect(() => {
+    aktifRef.current = aktif;
+  }, [aktif]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    canvas.width = 140;
+    canvas.height = 160;
+
+    const kivilcimlar = Array.from({ length: 14 }, (_, i) => ({
+      x: 70 + ((i % 5) - 2) * 5,
+      y: 108 - (i * 7) % 75,
+      vx: ((i % 3) - 1) * 8,
+      vy: 26 + (i % 4) * 9,
+      boy: 1.5 + (i % 3) * 0.8,
+      faz: i * 1.1,
+    }));
+
+    let rafId = 0;
+    let sonZaman = performance.now();
+
+    const ciz = (simdi) => {
+      const dt = Math.min(0.08, Math.max(0.001, (simdi - sonZaman) * 0.001));
+      sonZaman = simdi;
+
+      if (aktifRef.current) {
+        const t = simdi * 0.001;
+        const W = canvas.width;
+        const H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const cx = W * 0.5;
+        const cy = H * 0.72;
+
+        // 1. Taş zemine vuran sıcak ateş hareleri (pulsing glow)
+        const haleR = 46 + Math.sin(t * 7.5) * 4 + Math.cos(t * 11.3) * 2.5;
+        const haleGrad = ctx.createRadialGradient(cx, cy + 4, 4, cx, cy + 4, haleR);
+        haleGrad.addColorStop(0, "rgba(251, 146, 60, 0.55)");
+        haleGrad.addColorStop(0.5, "rgba(234, 88, 12, 0.24)");
+        haleGrad.addColorStop(1, "rgba(234, 88, 12, 0)");
+        ctx.fillStyle = haleGrad;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 6, haleR, haleR * 0.58, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Hafif yükselen sıcak duman halkaları
+        for (let s = 0; s < 3; s++) {
+          const dumanFaz = ((t * 0.45 + s * 0.33) % 1);
+          const dx = cx + Math.sin(t * 2.2 + s * 2) * (6 + dumanFaz * 10);
+          const dy = cy - 26 - dumanFaz * 62;
+          const dr = 8 + dumanFaz * 16;
+          const alpha = (1 - dumanFaz) * 0.18;
+          ctx.fillStyle = `rgba(228, 228, 231, ${alpha.toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(dx, dy, dr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // 3. Çok katmanlı dans eden alev dilleri (Kızıl -> Turuncu -> Altın Sarısı -> Beyaz Kor)
+        const alevKatmanlari = [
+          { gen: 22, yuk: 42, renk1: "rgba(220, 38, 38, 0.88)", renk2: "rgba(249, 115, 22, 0.0)", hiz: 6.2, faz: 0.0 },
+          { gen: 18, yuk: 36, renk1: "rgba(249, 115, 22, 0.92)", renk2: "rgba(251, 191, 36, 0.0)", hiz: 7.8, faz: 1.4 },
+          { gen: 14, yuk: 28, renk1: "rgba(251, 191, 36, 0.95)", renk2: "rgba(254, 240, 138, 0.0)", hiz: 9.4, faz: 2.7 },
+          { gen: 8.5, yuk: 18, renk1: "rgba(254, 249, 195, 0.96)", renk2: "rgba(254, 240, 138, 0.0)", hiz: 11.2, faz: 0.8 },
+        ];
+
+        for (let k = 0; k < alevKatmanlari.length; k++) {
+          const kat = alevKatmanlari[k];
+          for (let dal = -1; dal <= 1; dal++) {
+            const yanOfset = dal * (kat.gen * 0.36);
+            const boyEn = kat.yuk * (dal === 0 ? 1.08 : 0.82) + Math.sin(t * kat.hiz + kat.faz + dal) * 4.5;
+            const ucSalinim = Math.sin(t * (kat.hiz + 1.5) + dal * 1.7 + kat.faz) * 6.5;
+
+            const grad = ctx.createLinearGradient(cx, cy + 6, cx + ucSalinim, cy - boyEn);
+            grad.addColorStop(0, kat.renk1);
+            grad.addColorStop(0.75, kat.renk1);
+            grad.addColorStop(1, kat.renk2);
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.moveTo(cx + yanOfset - kat.gen * 0.5, cy + 4);
+            ctx.quadraticCurveTo(
+              cx + yanOfset - kat.gen * 0.65,
+              cy - boyEn * 0.45,
+              cx + yanOfset * 0.4 + ucSalinim,
+              cy - boyEn
+            );
+            ctx.quadraticCurveTo(
+              cx + yanOfset + kat.gen * 0.65,
+              cy - boyEn * 0.45,
+              cx + yanOfset + kat.gen * 0.5,
+              cy + 4
+            );
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+
+        // 4. Yükselen kor kıvılcımlar
+        for (const p of kivilcimlar) {
+          p.y -= p.vy * dt;
+          p.x += Math.sin(t * 5.0 + p.faz) * 14 * dt;
+          if (p.y < 18) {
+            p.y = cy + 2;
+            p.x = cx + (Math.random() - 0.5) * 22;
+          }
+          const omur = Math.max(0, Math.min(1, (p.y - 18) / (cy - 18)));
+          ctx.fillStyle = omur > 0.5 ? `rgba(254, 240, 138, ${omur.toFixed(2)})` : `rgba(249, 115, 22, ${omur.toFixed(2)})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.boy * omur + 0.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      rafId = requestAnimationFrame(ciz);
+    };
+
+    rafId = requestAnimationFrame(ciz);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  return (
+    <div
+      className="pointer-events-none absolute"
+      style={{
+        left: "55.18%",
+        top: "21.70%",
+        width: "4.6%",
+        minWidth: "46px",
+        aspectRatio: "140 / 160",
+        transform: "translate(-50%, -72%)",
+        zIndex: 43,
+      }}
+    >
+      <canvas ref={canvasRef} className="block h-full w-full" />
+    </div>
+  );
+}
+
+// =============================================================
+// 3. KUZEY GÖKSU IRMAĞI — GERÇEK GLSL WATER SHADER KATMANI
 // Oba kalesinin taş surlarının ve çadırının ARKA vadisinden akar;
 // kalenin üzerine tek bir piksel dahi taşmaz.
 // =============================================================
@@ -150,7 +600,6 @@ float fbm(vec2 p) {
   return v;
 }
 
-// Su içi güneş kostik ağ dokusu (ilk ırmaktaki berrak parıltı hissi)
 float caustic(vec2 p) {
   float n1 = noise(p);
   float n2 = noise(p * 1.65 + vec2(3.1, -2.4));
@@ -162,16 +611,13 @@ void main() {
   float mx = vUv.x;
   float my = vUv.y * 0.24;
 
-  // 1. Oba kalesinin taş platformu + Kuzeybatı çam tepeleri maskesi:
-  // koy.webp'de Oba kalesinin tepe köşesi (0.556, 0.002), sol sur (0.370, 0.165), sağ sur (0.745, 0.195).
-  // Bu sur sınırlarının iç kısmında kalan pikseller Oba kalesinin arkasında kaldığı için tamamen gizlenir!
+  // Oba kalesinin taş platformu + Kuzeybatı çam tepeleri maskesi
   float solSurX = 0.546 - my * 1.15;
   float sagSurX = 0.566 + my * 1.02;
   float solTaraf = 1.0 - smoothstep(solSurX - 0.008, solSurX + 0.002, mx);
   float sagTaraf = smoothstep(sagSurX - 0.002, sagSurX + 0.008, mx);
   float obaArkaMaske = max(solTaraf, sagTaraf);
 
-  // Sol uçtaki sık çam ağaçlarının arasından doğal çıkış + sağ vadi sınırı
   float solOrmanMaske = smoothstep(0.24, 0.33, mx);
   float sagKenarMaske = smoothstep(1.0, 0.965, mx);
   float gorunurMaske = obaArkaMaske * solOrmanMaske * sagKenarMaske;
@@ -180,8 +626,6 @@ void main() {
     discard;
   }
 
-  // 2. Doğal vadi menderesi:
-  // Sol kanyonda y ~ 0.038, Oba'nın arkasından geçip sağdaki güneşli yeşil vadi oluğuna (y: 0.055 -> 0.138) süzülür
   float sagVadi = smoothstep(0.58, 0.98, mx);
   float merkezY = 0.038
     + 0.008 * sin(mx * 10.5 + 0.4)
@@ -190,7 +634,6 @@ void main() {
 
   float yariGenislik = 0.021 + 0.013 * sagVadi + 0.003 * sin(mx * 13.0 + 0.8);
 
-  // Doğal kıyı girinti-çıkıntısı
   float kiyiDalga = (noise(vec2(mx * 42.0, my * 95.0)) - 0.5) * 0.0055;
   float d = abs(my - merkezY + kiyiDalga) / yariGenislik;
 
@@ -198,7 +641,6 @@ void main() {
     discard;
   }
 
-  // Islak çakıllı / çimenli doğal kıyı geçişi (1.0 .. 1.28)
   if (d > 1.0) {
     float kiyiT = 1.0 - smoothstep(1.0, 1.28, d);
     float tasDoku = noise(vec2(mx * 95.0, my * 220.0));
@@ -207,10 +649,8 @@ void main() {
     return;
   }
 
-  // 3. Soldan sağa vadi eğimi boyunca akan berrak su katmanları
   float t = uTime * 0.62;
-  float kesit = (my - merkezY) / yariGenislik; // -1 .. +1
-  // Merkezde akıntı kıyıya göre biraz daha hızlıdır (gerçek nehir fiziği)
+  float kesit = (my - merkezY) / yariGenislik;
   float hizFarki = 1.0 - 0.32 * kesit * kesit;
 
   vec2 akisUv1 = vec2(mx * 20.0 - t * 1.45 * hizFarki, kesit * 3.2 + sin(mx * 12.0 - t * 0.9) * 0.22);
@@ -220,7 +660,6 @@ void main() {
   float dalga2 = fbm(akisUv2);
   float dalga = dalga1 * 0.58 + dalga2 * 0.42;
 
-  // Derin zümrüt-maviden turkuaz sığlığa berrak su gradyanı
   float derinlik = clamp(1.0 - d * d, 0.0, 1.0);
   vec3 sigRenk = vec3(0.32, 0.78, 0.77);
   vec3 ortaRenk = vec3(0.10, 0.56, 0.66);
@@ -229,17 +668,14 @@ void main() {
   vec3 suRenk = mix(sigRenk, ortaRenk, smoothstep(0.05, 0.52, derinlik));
   suRenk = mix(suRenk, derinRenk, smoothstep(0.50, 0.96, derinlik));
 
-  // Su altı kostik ışık ağları
   float kostik = caustic(akisUv1 * 1.35 + vec2(dalga2 * 0.6, -t * 0.35));
   suRenk += vec3(0.18, 0.40, 0.42) * pow(kostik, 2.2) * (0.45 + 0.55 * derinlik);
 
-  // Güneş parıltıları (sağdaki güneşli vadide altın-turkuaz ışıltı artar)
   float gunesOrani = smoothstep(0.55, 0.95, mx);
   float parilti = smoothstep(0.67, 0.86, dalga) * (0.42 + 0.28 * gunesOrani);
   vec3 pariltiRenk = mix(vec3(0.80, 0.97, 0.98), vec3(0.99, 0.97, 0.82), gunesOrani * 0.65);
   suRenk += pariltiRenk * parilti;
 
-  // Kıyı boyunca akan yumuşak beyaz su köpüğü
   float kopukKusak = smoothstep(0.74, 0.99, d);
   float kopukDoku = smoothstep(0.40, 0.74, fbm(vec2(mx * 52.0 - t * 2.2, kesit * 6.5)));
   float kopuk = kopukKusak * (0.38 + 0.62 * kopukDoku);
@@ -272,7 +708,6 @@ function NehirShaderKatmani({ aktif }) {
         canvas.getContext("experimental-webgl", { alpha: true, premultipliedAlpha: false })
       : null;
 
-    // WebGL devre dışı olan cihazlar için Oba maskeli 2D Canvas akarsu yedeği
     if (!gl) {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
@@ -354,7 +789,6 @@ function NehirShaderKatmani({ aktif }) {
             ctx.restore();
           };
 
-          // Sol kanyon kolu (Oba sol surunun arkasına kadar) ve sağ güneşli vadi kolu
           parcaCiz(0.27, 0.49);
           parcaCiz(0.625, 0.99);
         }
@@ -459,7 +893,7 @@ function NehirShaderKatmani({ aktif }) {
 }
 
 // =============================================================
-// 2. KÜÇÜK KÖYLÜ SPRITE ÜRETİCİSİ (İstemci Belleğinde)
+// 4. KÜÇÜK KÖYLÜ SPRITE ÜRETİCİSİ (İstemci Belleğinde)
 // =============================================================
 function koyluKareleriUret(profil) {
   const kareler = [];
@@ -745,10 +1179,23 @@ export default function CanliKoySahnesi({ katman = "koy", insanSayisi = 5, aktif
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      {/* 1. Oba'nın Arka Vadisinden Akan Berrak Göksu Irmağı (GLSL Shader) */}
+      <style>{`
+        @keyframes haberciNefes {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-2.5px) rotate(-0.8deg); }
+        }
+      `}</style>
+
+      {/* 1. koy.webp'deki Orijinal Ağaçların Rüzgârda Salınımı (Yeni ağaç eklemez!) */}
+      <OrijinalAgacRuzgarKatmani aktif={aktif} />
+
+      {/* 2. Oba'nın Arka Vadisinden Akan Berrak Göksu Irmağı (GLSL Shader) */}
       <NehirShaderKatmani aktif={aktif} />
 
-      {/* 2. Sadece 2 Küçük Köylü (Taş Patikalarda Çok Yavaş Yürür, Durup Etrafı Seyreder, Y-Derinlikli) */}
+      {/* 3. Oba Kamp Ateşi (Canlı Alev Dilleri, Kıvılcımlar ve Sıcak Işık Haresi) */}
+      <ObaAtesiKatmani aktif={aktif} />
+
+      {/* 4. Sadece 2 Küçük Köylü (Taş Patikalarda Çok Yavaş Yürür, Durup Etrafı Seyreder, Y-Derinlikli) */}
       {IKI_KOYLU_PROFILI.slice(0, gosterilecekKoyluSayisi).map((p, idx) => {
         const bas = PATIKA_DUGUMLERI[p.baslangicDugum];
         return (
@@ -783,7 +1230,7 @@ export default function CanliKoySahnesi({ katman = "koy", insanSayisi = 5, aktif
         );
       })}
 
-      {/* 3. Hafif Yaprak & Polen Esintisi Katmanı */}
+      {/* 5. Hafif Yaprak & Polen Esintisi Katmanı */}
       <canvas
         ref={partikulCanvasRef}
         width={680}

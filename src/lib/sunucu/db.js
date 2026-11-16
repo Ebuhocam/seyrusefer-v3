@@ -79,6 +79,19 @@ function baglantiAl() {
     return globalThis.__seyruseferD1Adapter;
   }
 
+  if (typeof process !== "undefined" && typeof process.emitWarning === "function" && !process.__sqliteUyariGizlendi) {
+    const orijinalUyari = process.emitWarning.bind(process);
+    process.emitWarning = (uyari, ...argumanlar) => {
+      const metin = typeof uyari === "string" ? uyari : uyari?.message || "";
+      const tur = typeof argumanlar[0] === "string" ? argumanlar[0] : argumanlar[0]?.type || uyari?.name || "";
+      if (tur === "ExperimentalWarning" || String(metin).includes("SQLite")) {
+        return;
+      }
+      return orijinalUyari(uyari, ...argumanlar);
+    };
+    process.__sqliteUyariGizlendi = true;
+  }
+
   const sqlite = process.getBuiltinModule("node:sqlite");
   const dosyaYolu = process.env.SQLITE_DB_PATH || "/tmp/seyrusefer-v3.sqlite";
 

@@ -20,20 +20,20 @@ export const REHBER_ADIMLARI = [
     hedefler: [{ tur: "bina", id: "mektep" }],
   },
   {
-    kod: "tanitim_kiraathane",
-    bolum: "tanitim",
-    baslik: "Tanıtım 3/7: Kıraathane (Ozan Dede & Yolcular)",
-    metin:
-      "Meydanın sağındaki teras Kıraathane alanımızdır. Kıraathane'yi inşa ettikten sonra içeride Ozan Dede'den türkülerimizin hikâyesini dinler, köye uğrayan yolcuları hanelerimize davet ederek 👥 İnsan nüfusumuzu artırırız.",
-    hedefler: [{ tur: "bina", id: "kiraathane" }],
-  },
-  {
     kod: "tanitim_meydan",
     bolum: "tanitim",
-    baslik: "Tanıtım 4/7: Köy Meydanı & Çınar Altı Sohbeti",
+    baslik: "Tanıtım 3/7: Köy Meydanı & Çınar Altı Sohbeti",
     metin:
-      "Tam ortadaki taş döşeli alan Köy Meydanı'dır! Meydanda bekleyen köylülerin yanına giderek davalarını dinleyip hüküm verirsin; Çınar Altı Sohbeti'nde ise diğer öğrencilerle söz, hikâye ve video paylaşırsın.",
+      "Tam ortadaki taş döşeli alan Köy Meydanı'dır! Meydanda bekleyen köylülerin yanına 3D birinci şahıs gözünden yürüyerek davalarını dinleyip hüküm verirsin; Çınar Altı Sohbeti'nde ise diğer öğrencilerle söz, hikâye ve video paylaşırsın.",
     hedefler: [{ tur: "bina", id: "sosyalmeydan" }],
+  },
+  {
+    kod: "tanitim_kiraathane",
+    bolum: "tanitim",
+    baslik: "Tanıtım 4/7: Kıraathane (Ozan Dede & Yolcular)",
+    metin:
+      "Meydanın sağındaki teras Kıraathane alanımızdır. 2. günde yeterli Mahsul ve Tahta biriktiğinde Kıraathane'yi inşa edeceğiz; içeride Ozan Dede'den türkülerimizin hikâyesini dinleyip köye uğrayan yolcuları hanelerimize davet edeceğiz.",
+    hedefler: [{ tur: "bina", id: "kiraathane" }],
   },
   {
     kod: "tanitim_evler",
@@ -67,7 +67,7 @@ export const REHBER_ADIMLARI = [
     bolum: "tanitim",
     baslik: "Tanıtım 7/7: Haberci ve Görev Panosu",
     metin:
-      "Güney kapısındaki Haberci köye okuma mektupları ve günlük iyilik görevleri getirir. Ortadaki Görev Panosu'ndan ise level hedeflerini takip edersin. Köyümüzü tanıdığımıza göre şimdi yapılacak işlere geçebiliriz!",
+      "Güney yolundaki Haberci köye mühürlü aile okuma mektupları ve günlük iyilik görevleri getirir. Ortadaki Görev Panosu'ndan ise level hedeflerini takip edersin. Köyümüzü tanıdığımıza göre şimdi yapılacak işlere geçebiliriz!",
     hedefler: [
       { tur: "nokta", id: "haberci" },
       { tur: "nokta", id: "pano" },
@@ -109,9 +109,9 @@ export const REHBER_ADIMLARI = [
   {
     kod: "gorev_haberci_ev",
     bolum: "gorev",
-    baslik: "4. Yapılacak İş: Haberci'den Mektubu Al ve Evine Gir!",
+    baslik: "4. Yapılacak İş: Haberci'den Mektubu Al ve Evinde Oku!",
     metin:
-      "Köy kapısındaki Haberci'ye tıklayıp gelen Okuma Mektubunu teslim al! Ardından Kendi Evim binasına tıklayarak 2D Ev İçi odasına gir, büyüklerini yanına çağır ve mektubu birlikte okuyun!",
+      "Güney yolundaki Haberci'ye tıklayıp mühürlü Aile Mektubunu teslim al! Ardından Kendi Evim binasına tıklayarak Ev İçi odasına gir, aileni/büyüklerini yanına çağır ve mektubu açıp birlikte okuyun!",
     hedefler: [
       { tur: "nokta", id: "haberci", etiket: "📜 1. Haberci'den Mektubu Al" },
       { tur: "bina", id: "kendi_evim", etiket: "🏡 2. Kendi Evime Gir" },
@@ -119,31 +119,45 @@ export const REHBER_ADIMLARI = [
     tamamMi: (_durum, gorevler) => gorevler.some((g) => g.tur === "aile" && g.tamam),
   },
   {
+    kod: "gorev_meydan_dava",
+    bolum: "gorev",
+    baslik: "5. Yapılacak İş: Köy Meydanı'nda İlk Davayı Çöz!",
+    metin:
+      "Şimdi tam ortadaki Köy Meydanı'na tıkla! 3D meydanda bekleyen köylülerin yanına yürüyüp davalarını dinle ve hikmetle çözerek köyün Huzurunu artır!",
+    hedefler: [{ tur: "bina", id: "sosyalmeydan", etiket: "⚖️ Köy Meydanı'na Gir" }],
+    tamamMi: (durum) => (durum.cozulenDavalar?.length ?? 0) >= 1,
+  },
+  {
+    kod: "gorev_bugunluk_tamam",
+    bolum: "gorev",
+    baslik: "🌙 Bugünlük Yapılacak Görevlerimiz Tamamlandı!",
+    metin:
+      "Maşallah genç yönetici! Bugün Mektep'i kurdun, hadisini okudun, tarla ve ormanda çalıştın, evinde aile mektubunu okudun ve Köy Meydanı'nda ilk davayı çözdün! Bugünlük yapılacak zorunlu görev kalmadı. İşçilerin yarına kadar Kıraathane için gereken Mahsul (80) ve Tahta'yı (75) biriktiriyor. Yarın kaynakların dolunca Kıraathane'yi inşa edeceğiz!",
+    hedefler: [
+      { tur: "bina", id: "sosyalmeydan", etiket: "🌳 Çınar Altı Sohbeti'ne Göz At" },
+      { tur: "nokta", id: "pano", etiket: "📜 Görev Panosuna Bak" },
+    ],
+    tamamMi: (durum) =>
+      (durum.binalar?.kiraathane ?? 0) >= 1 ||
+      ((durum.envanter?.erzak ?? 0) >= 80 && (durum.envanter?.kereste ?? 0) >= 75),
+  },
+  {
     kod: "gorev_kiraathane_insa",
     bolum: "gorev",
-    baslik: "5. Yapılacak İş (2. Gün Hedefi): Kıraathane'yi İnşa Et!",
+    baslik: "6. Yapılacak İş (2. Gün Hedefi): Kıraathane'yi İnşa Et!",
     metin:
-      "Mektep'i kurduk ve Haberci'nin Aile Mektubunu okuduk! Şimdi topladığın Mahsul ve Tahtalarla meydanın sağındaki Kıraathane arsasına tıkla ve köyümüzün Kıraathane binasını inşa et!",
+      "Kaynaklarımız (80 Mahsul ve 75 Tahta) tamamlandı! Şimdi meydanın sağındaki Kıraathane arsasına tıkla ve köyümüzün Kıraathane binasını inşa et!",
     hedefler: [{ tur: "bina", id: "kiraathane", etiket: "🍵 Kıraathane Arsasına Git ve Kur" }],
     tamamMi: (durum) => (durum.binalar?.kiraathane ?? 0) >= 1,
   },
   {
     kod: "gorev_ozan_dinle",
     bolum: "gorev",
-    baslik: "6. Yapılacak İş: Kıraathane'de Ozan Dede'yi Dinle!",
+    baslik: "7. Yapılacak İş: Kıraathane'de Ozan Dede'yi Dinle!",
     metin:
       "Harika, Kıraathane'mizi inşa ettik! Şimdi Kıraathane'nin içine girerek Ozan Dede'den türkümüzün hikâyesini dinle; dilersen içeride bekleyen yolcuları da köyümüze davet et!",
     hedefler: [{ tur: "bina", id: "kiraathane", etiket: "🎵 Kıraathane İçine Gir (Ozan Dede)" }],
     tamamMi: (_durum, gorevler) => gorevler.some((g) => g.tur === "turku" && g.tamam),
-  },
-  {
-    kod: "gorev_meydan_dava",
-    bolum: "gorev",
-    baslik: "7. Yapılacak İş: Köy Meydanı'nda İlk Davayı Çöz!",
-    metin:
-      "Köy Meydanı'na tıkla! Meydanda bekleyen köylülerin yanına yürüyüp davalarını dinle ve hikmetle çözerek köyün Huzurunu artır!",
-    hedefler: [{ tur: "bina", id: "sosyalmeydan", etiket: "⚖️ Köy Meydanı'na Gir" }],
-    tamamMi: (durum) => (durum.cozulenDavalar?.length ?? 0) >= 1,
   },
 ];
 
