@@ -26,12 +26,15 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
       : "text-red-300 ring-red-500/50";
   const mutlulukIkon = mutluluk >= 70 ? "😊" : mutluluk >= 40 ? "🙂" : "😟";
 
+  const erkekKarakterler = Object.values(KARAKTERLER).filter((k) => k.cinsiyet === "erkek");
+  const kizKarakterler = Object.values(KARAKTERLER).filter((k) => k.cinsiyet === "kiz");
+
   return (
     <header className="pointer-events-none fixed inset-x-0 top-0 z-[250] flex flex-wrap items-start justify-between gap-1.5 p-2 sm:p-3">
       <div className="pointer-events-auto flex min-w-0 flex-wrap items-center gap-1.5">
         <button
           onClick={onLevelTikla}
-          className="flex min-w-0 shrink items-center gap-1.5 rounded-2xl bg-stone-900/90 py-1 pl-1 pr-2.5 text-left shadow-xl ring-1 ring-amber-500/50 backdrop-blur sm:gap-2 sm:py-1.5 sm:pl-1.5 sm:pr-3"
+          className="flex min-w-0 shrink items-center gap-1.5 rounded-2xl bg-stone-900/95 py-1 pl-1 pr-2.5 text-left shadow-xl ring-1 ring-amber-500/50 sm:gap-2 sm:py-1.5 sm:pl-1.5 sm:pr-3"
         >
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 font-black text-stone-900 sm:h-10 sm:w-10 sm:text-lg">
             {durum.level}
@@ -47,19 +50,20 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
         <button
           type="button"
           onClick={() => setKarakterModalAcik(true)}
-          title="Oyun Karakterini Değiştir"
-          className="flex items-center gap-1.5 rounded-2xl bg-stone-900/90 py-1 pl-1 pr-2.5 text-xs font-black text-amber-100 shadow-xl ring-1 ring-amber-500/50 backdrop-blur hover:bg-stone-800"
+          title="Oyun Karakterini Değiştir (10 Özgün Karakter)"
+          className="flex items-center gap-1.5 rounded-2xl bg-stone-900/95 py-1 pl-1 pr-2.5 text-xs font-black text-amber-100 shadow-xl ring-1 ring-amber-500/50 hover:bg-stone-800"
         >
           <img
-            src={karakter?.gorsel ?? "/assets/karakterler/erkek_alp.webp"}
+            src={karakter?.gorsel ?? "/assets/karakterler/ahmet.webp"}
             alt={karakter?.ad ?? "Karakter"}
-            className="h-8 w-8 rounded-xl object-cover ring-1 ring-amber-400 sm:h-9 sm:w-9"
+            referrerPolicy="no-referrer"
+            className="h-8 w-8 rounded-xl bg-stone-800 p-0.5 object-contain ring-1 ring-amber-400 sm:h-9 sm:w-9"
           />
           <span className="hidden lg:inline">{karakter?.ad ?? "Karakterim"}</span>
         </button>
 
         {/* 3 Katmanlı Harita Geçiş Barı */}
-        <div className="flex items-center gap-1 rounded-2xl bg-stone-900/90 p-1 shadow-xl ring-1 ring-amber-500/50 backdrop-blur">
+        <div className="flex items-center gap-1 rounded-2xl bg-stone-900/95 p-1 shadow-xl ring-1 ring-amber-500/50">
           <button
             type="button"
             onClick={() => onKatmanSec?.("koy")}
@@ -106,10 +110,10 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
           type="button"
           onClick={onRehberAcKapat}
           title="Adım Adım Oyun Rehberi (Bilge Rehber)"
-          className={`flex items-center gap-1 rounded-2xl px-2.5 py-2 text-xs font-black shadow-xl ring-1 backdrop-blur transition ${
+          className={`flex items-center gap-1 rounded-2xl px-2.5 py-2 text-xs font-black shadow-xl ring-1 transition ${
             rehberAcik
               ? "bg-amber-400 text-stone-950 ring-amber-200"
-              : "bg-stone-900/90 text-amber-200 ring-amber-500/50 hover:bg-stone-800"
+              : "bg-stone-900/95 text-amber-200 ring-amber-500/50 hover:bg-stone-800"
           }`}
         >
           <span>🧭</span>
@@ -120,7 +124,7 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
           <Link
             href="/admin"
             title="Admin Level Tasarım Merkezi"
-            className="flex items-center gap-1 rounded-2xl bg-stone-900/90 px-2.5 py-2 text-xs font-black text-lime-300 shadow-xl ring-1 ring-lime-500/50 backdrop-blur hover:bg-stone-800"
+            className="flex items-center gap-1 rounded-2xl bg-stone-900/95 px-2.5 py-2 text-xs font-black text-lime-300 shadow-xl ring-1 ring-lime-500/50 hover:bg-stone-800"
           >
             <span>⚙️</span>
             <span className="hidden sm:inline">Yönetim</span>
@@ -129,7 +133,7 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
       </div>
 
       {/* Mutluluk + 4 Kaynak (Mahsul, Tahta, Taş, İnsan) */}
-      <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-2xl bg-stone-900/90 p-1 shadow-xl ring-1 ring-amber-500/50 backdrop-blur sm:gap-1.5 sm:p-1.5">
+      <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-2xl bg-stone-900/95 p-1 shadow-xl ring-1 ring-amber-500/50 sm:gap-1.5 sm:p-1.5">
         <div
           className={`flex items-center gap-0.5 rounded-xl bg-stone-800 px-1.5 py-1 text-sm ring-1 sm:gap-1 sm:px-2 ${mutlulukRenk}`}
           title="Köy Mutluluğu (Oba'da davaları hikmetle çözerek artar, Kıraathane'de köye yeni insanların yerleşme ihtimalini belirler)"
@@ -172,63 +176,128 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
         )}
       </div>
 
-      {/* Karakter Seçim / Değiştirme Penceresi */}
+      {/* Karakter Seçim / Değiştirme Penceresi (5 Erkek + 5 Kız Özgün Ortaokul Karakteri) */}
       {karakterModalAcik && (
-        <div className="pointer-events-auto fixed inset-0 z-[500] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md space-y-4 rounded-3xl bg-stone-900 p-5 text-amber-50 shadow-2xl ring-2 ring-amber-400 sm:p-6">
+        <div className="pointer-events-auto fixed inset-0 z-[500] flex items-center justify-center bg-black/85 p-3 sm:p-5">
+          <div className="max-h-[88dvh] w-full max-w-3xl space-y-4 overflow-y-auto rounded-3xl bg-stone-900 p-4 text-amber-50 shadow-2xl ring-2 ring-amber-400 sm:p-6">
             <div className="flex items-center justify-between border-b border-stone-800 pb-3">
               <div>
-                <h3 className="text-base font-black text-amber-100">👤 Oyun Karakterini Seç</h3>
+                <h3 className="text-base font-black text-amber-100 sm:text-lg">
+                  👤 Oyun Karakterini Seç (10 Özgün Ortaokul Karakteri)
+                </h3>
                 <p className="text-xs text-amber-200/75">
-                  Seçtiğin karakter tüm 2D mekanlarda ve Çınar Altı paylaşımlarında seni temsil eder.
+                  Şeffaf arka planlı karakterin tüm iç sahnelerde, köy meydanında ve Çınar Altı paylaşımlarında seni temsil eder.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setKarakterModalAcik(false)}
-                className="rounded-xl bg-stone-800 px-3 py-1.5 text-xs font-bold text-amber-200 hover:bg-stone-700"
+                className="shrink-0 rounded-xl bg-stone-800 px-3 py-1.5 text-xs font-bold text-amber-200 hover:bg-stone-700"
               >
                 ✕ Kapat
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              {Object.values(KARAKTERLER).map((k) => {
-                const aktif = karakter?.id === k.id;
-                return (
-                  <button
-                    key={k.id}
-                    type="button"
-                    disabled={oyun.bekliyor}
-                    onClick={async () => {
-                      await oyun.karakterSec(k.id, k.cinsiyet);
-                      setKarakterModalAcik(false);
-                    }}
-                    className={`flex flex-col items-center rounded-2xl p-3 text-center ring-2 transition ${
-                      aktif
-                        ? "bg-amber-500/25 text-amber-100 ring-amber-400 shadow-lg"
-                        : "bg-stone-950/80 text-stone-300 ring-stone-800 hover:bg-stone-800"
-                    }`}
-                  >
-                    <img
-                      src={k.gorsel}
-                      alt={k.ad}
-                      className="h-20 w-20 rounded-full object-cover ring-2 ring-amber-400/70"
-                    />
-                    <span className="mt-2 text-sm font-black text-amber-100">
-                      {k.ikon} {k.ad}
-                    </span>
-                    <span className="text-[11px] text-amber-300/80">
-                      {k.cinsiyet === "kiz" ? "Kız Öğrenci" : "Erkek Öğrenci"} · {k.unvan}
-                    </span>
-                    {aktif && (
-                      <span className="mt-1.5 rounded-full bg-emerald-500 px-2.5 py-0.5 text-[10px] font-black text-stone-950">
-                        ✅ Seçili
+            {/* 5 ERKEK ÖĞRENCİ KARAKTERİ */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase tracking-wider text-amber-300">
+                  👦 Erkek Öğrenci Karakterleri (5 Özgün Karakter)
+                </h4>
+                <span className="text-[11px] text-stone-400">Takke · Börk · İlim Talebesi · Seyyah</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+                {erkekKarakterler.map((k) => {
+                  const aktif = karakter?.id === k.id;
+                  return (
+                    <button
+                      key={k.id}
+                      type="button"
+                      disabled={oyun.bekliyor}
+                      onClick={async () => {
+                        await oyun.karakterSec(k.id, k.cinsiyet);
+                        setKarakterModalAcik(false);
+                      }}
+                      className={`group flex flex-col items-center rounded-2xl p-2.5 text-center ring-2 transition ${
+                        aktif
+                          ? "bg-gradient-to-b from-amber-500/30 to-amber-600/15 text-amber-100 ring-amber-400 shadow-lg"
+                          : "bg-stone-950/85 text-stone-300 ring-stone-800 hover:bg-stone-800 hover:ring-amber-500/40"
+                      }`}
+                    >
+                      <div className="flex h-24 w-full items-end justify-center rounded-xl bg-gradient-to-b from-stone-800/70 to-stone-950/90 p-1 ring-1 ring-amber-400/20">
+                        <img
+                          src={k.gorsel}
+                          alt={k.ad}
+                          referrerPolicy="no-referrer"
+                          className="h-full w-full object-contain drop-shadow-[0_4px_6px_rgba(0,0,0,0.7)] transition-transform group-hover:scale-105"
+                        />
+                      </div>
+                      <span className="mt-2 text-xs font-black text-amber-100 sm:text-sm">
+                        {k.ikon} {k.ad}
                       </span>
-                    )}
-                  </button>
-                );
-              })}
+                      <span className="mt-0.5 line-clamp-2 min-h-[1.75rem] text-[10px] leading-tight text-amber-300/85">
+                        {k.unvan}
+                      </span>
+                      {aktif && (
+                        <span className="mt-1.5 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-black text-stone-950">
+                          ✅ Seçili
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 5 KIZ ÖĞRENCİ KARAKTERİ (3 BAŞÖRTÜLÜ + 2 BAŞÖRTÜSÜZ) */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase tracking-wider text-amber-300">
+                  👧 Kız Öğrenci Karakterleri (5 Özgün Karakter)
+                </h4>
+                <span className="text-[11px] text-stone-400">3 Başörtülü · 2 Açık Saçlı</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+                {kizKarakterler.map((k) => {
+                  const aktif = karakter?.id === k.id;
+                  return (
+                    <button
+                      key={k.id}
+                      type="button"
+                      disabled={oyun.bekliyor}
+                      onClick={async () => {
+                        await oyun.karakterSec(k.id, k.cinsiyet);
+                        setKarakterModalAcik(false);
+                      }}
+                      className={`group flex flex-col items-center rounded-2xl p-2.5 text-center ring-2 transition ${
+                        aktif
+                          ? "bg-gradient-to-b from-amber-500/30 to-amber-600/15 text-amber-100 ring-amber-400 shadow-lg"
+                          : "bg-stone-950/85 text-stone-300 ring-stone-800 hover:bg-stone-800 hover:ring-amber-500/40"
+                      }`}
+                    >
+                      <div className="flex h-24 w-full items-end justify-center rounded-xl bg-gradient-to-b from-stone-800/70 to-stone-950/90 p-1 ring-1 ring-amber-400/20">
+                        <img
+                          src={k.gorsel}
+                          alt={k.ad}
+                          referrerPolicy="no-referrer"
+                          className="h-full w-full object-contain drop-shadow-[0_4px_6px_rgba(0,0,0,0.7)] transition-transform group-hover:scale-105"
+                        />
+                      </div>
+                      <span className="mt-2 text-xs font-black text-amber-100 sm:text-sm">
+                        {k.ikon} {k.ad}
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 min-h-[1.75rem] text-[10px] leading-tight text-amber-300/85">
+                        {k.unvan}
+                      </span>
+                      {aktif && (
+                        <span className="mt-1.5 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-black text-stone-950">
+                          ✅ Seçili
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

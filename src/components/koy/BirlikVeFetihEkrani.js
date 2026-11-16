@@ -16,6 +16,7 @@ export function BirlikPaneli({ oyun, varsayilanSekme = "birlik", seciliBolgeId =
   const [bagisKaynak, setBagisKaynak] = useState("erzak");
   const [bagisMiktar, setBagisMiktar] = useState(50);
   const [sohbetMetni, setSohbetMetni] = useState("");
+  const [ayrilOnay, setAyrilOnay] = useState(false);
 
   const yukle = useCallback(() => {
     setYukleniyor(true);
@@ -431,15 +432,38 @@ export function BirlikPaneli({ oyun, varsayilanSekme = "birlik", seciliBolgeId =
             })}
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              confirm("Birlikten ayrılmak istediğine emin misin?") && islemYap({ eylem: "ayril" }, "Birlikten ayrıldın.")
-            }
-            className="w-full rounded-xl bg-stone-800 py-2 text-xs font-bold text-red-300 hover:bg-red-950/60"
-          >
-            Birlikten Ayrıl
-          </button>
+          {!ayrilOnay ? (
+            <button
+              type="button"
+              onClick={() => setAyrilOnay(true)}
+              className="w-full rounded-xl bg-stone-800 py-2 text-xs font-bold text-red-300 hover:bg-red-950/60"
+            >
+              Birlikten Ayrıl
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 rounded-xl bg-red-950/80 p-2.5 ring-1 ring-red-400/50">
+              <span className="flex-1 text-xs font-bold text-red-100">
+                Birlikten ayrılmak istediğine emin misin?
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  setAyrilOnay(false);
+                  await islemYap({ eylem: "ayril" }, "Birlikten ayrıldın.");
+                }}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-black text-white hover:bg-red-500"
+              >
+                Evet, Ayrıl
+              </button>
+              <button
+                type="button"
+                onClick={() => setAyrilOnay(false)}
+                className="rounded-lg bg-stone-800 px-2.5 py-1.5 text-xs font-bold text-stone-200 hover:bg-stone-700"
+              >
+                Vazgeç
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

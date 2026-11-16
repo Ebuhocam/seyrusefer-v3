@@ -5,55 +5,155 @@
 // 3. Katman: Genel Harita (6 Stratejik Sancak Bölgesi)
 // =============================================================
 
-// ---------- ÖĞRENCİ KARAKTERLERİ (KIZ & ERKEK SEÇİLEBİLİR) ----------
+// ---------- ORTAOKUL SEVİYESİ 10 ÖZGÜN ÖĞRENCİ KARAKTERİ (5 ERKEK + 5 KIZ) ----------
+// Veritabanı geriye dönük indeks uyumluluğu için KARAKTER_KODLARI sırası sabittir.
 export const KARAKTERLER = {
+  ahmet: {
+    id: "ahmet",
+    ad: "Ahmet",
+    cinsiyet: "erkek",
+    unvan: "Takkeli İlim Talebesi",
+    ikon: "👦",
+    gorsel: "/assets/karakterler/ahmet.webp",
+  },
   alp: {
     id: "alp",
-    ad: "Genç Alp",
+    ad: "Alp",
     cinsiyet: "erkek",
-    unvan: "Cesur Yiğit",
-    ikon: "👦",
-    gorsel: "/assets/karakterler/erkek_alp.webp",
+    unvan: "Börklü Genç Okçu",
+    ikon: "🏹",
+    gorsel: "/assets/karakterler/alp.webp",
   },
-  celebi: {
-    id: "celebi",
-    ad: "Genç Çelebi",
+  omer: {
+    id: "omer",
+    ad: "Ömer",
     cinsiyet: "erkek",
-    unvan: "İlim Talebesi",
-    ikon: "🧑",
-    gorsel: "/assets/karakterler/erkek_celebi.webp",
+    unvan: "Kalem Ehli Genç Çelebi",
+    ikon: "📖",
+    gorsel: "/assets/karakterler/omer.webp",
   },
-  bala: {
-    id: "bala",
-    ad: "Bala Hatun",
-    cinsiyet: "kiz",
-    unvan: "Oba Beyi Kızı",
-    ikon: "👧",
-    gorsel: "/assets/karakterler/kiz_bala.webp",
+  yusuf: {
+    id: "yusuf",
+    ad: "Yusuf",
+    cinsiyet: "erkek",
+    unvan: "Yeşil Takkeli Hafız Adayı",
+    ikon: "🌿",
+    gorsel: "/assets/karakterler/yusuf.webp",
+  },
+  kerem: {
+    id: "kerem",
+    ad: "Kerem",
+    cinsiyet: "erkek",
+    unvan: "Külahlı Genç Seyyah",
+    ikon: "🧭",
+    gorsel: "/assets/karakterler/kerem.webp",
   },
   elif: {
     id: "elif",
-    ad: "Elif Bacı",
+    ad: "Elif",
     cinsiyet: "kiz",
-    unvan: "İlim & Hikmet Talebesi",
+    basortulu: true,
+    unvan: "Hikmet Talebesi",
     ikon: "🧕",
-    gorsel: "/assets/karakterler/kiz_elif.webp",
+    gorsel: "/assets/karakterler/elif.webp",
+  },
+  zeynep: {
+    id: "zeynep",
+    ad: "Zeynep",
+    cinsiyet: "kiz",
+    basortulu: true,
+    unvan: "Kitap Dostu Talebe",
+    ikon: "📚",
+    gorsel: "/assets/karakterler/zeynep.webp",
+  },
+  meryem: {
+    id: "meryem",
+    ad: "Meryem",
+    cinsiyet: "kiz",
+    basortulu: true,
+    unvan: "Şefkatli İlim Yolcusu",
+    ikon: "🌿",
+    gorsel: "/assets/karakterler/meryem.webp",
+  },
+  bala: {
+    id: "bala",
+    ad: "Bala",
+    cinsiyet: "kiz",
+    basortulu: false,
+    unvan: "Cesur Oba Kızı",
+    ikon: "👧",
+    gorsel: "/assets/karakterler/bala.webp",
+  },
+  defne: {
+    id: "defne",
+    ad: "Defne",
+    cinsiyet: "kiz",
+    basortulu: false,
+    unvan: "Genç Anadolu Zanaatkârı",
+    ikon: "🌸",
+    gorsel: "/assets/karakterler/defne.webp",
   },
 };
 
+// Eski 0..3 indeksleriyle ("alp", "celebi"->"omer", "bala", "elif") tam uyumlu dizilim
+export const KARAKTER_KODLARI = [
+  "alp",
+  "omer",
+  "bala",
+  "elif",
+  "ahmet",
+  "yusuf",
+  "kerem",
+  "zeynep",
+  "meryem",
+  "defne",
+];
+
 export function oyuncuKarakteriBul(karakterId, cinsiyet = "erkek") {
+  if (karakterId === "celebi") return KARAKTERLER.omer;
   if (karakterId && KARAKTERLER[karakterId]) return KARAKTERLER[karakterId];
-  return cinsiyet === "kiz" ? KARAKTERLER.bala : KARAKTERLER.alp;
+  return cinsiyet === "kiz" ? KARAKTERLER.elif : KARAKTERLER.ahmet;
 }
 
+// ---------- ÜRETİM SAHALARI: BAĞIMSIZ PARSEL / KAYA / KEŞİF TANIMLARI ----------
+export const TARLA_PARSELLERI = [
+  { id: 1, tur: "domates", ad: "Domates Ocağı", mahsulAd: "Salkım Domates", temelMiktar: 8, renk: "#dc2626" },
+  { id: 2, tur: "bugday", ad: "Buğday Karığı", mahsulAd: "Altın Başak", temelMiktar: 8, renk: "#eab308" },
+  { id: 3, tur: "karpuz", ad: "Karpuz Bostanı", mahsulAd: "Çizgili Karpuz", temelMiktar: 8, renk: "#16a34a" },
+];
+
+export const MADEN_KAYALARI_TANIM = [
+  { id: 1, ad: "Kuzey Granit Kayası", tur: "granit", temelMiktar: 4, renk: "#78716c", damarRenk: "#fbbf24" },
+  { id: 2, ad: "Kehribar Damarlı Kaya", tur: "kehribar", temelMiktar: 4, renk: "#57534e", damarRenk: "#f59e0b" },
+  { id: 3, ad: "Boz Mermer Kütle", tur: "mermer", temelMiktar: 4, renk: "#a8a29e", damarRenk: "#e7e5e4" },
+  { id: 4, ad: "Bazalt Taş Yatağı", tur: "bazalt", temelMiktar: 4, renk: "#44403c", damarRenk: "#38bdf8" },
+  { id: 5, ad: "Dere Taşı Kayası", tur: "dere", temelMiktar: 4, renk: "#6b7280", damarRenk: "#cbd5e1" },
+  { id: 6, ad: "Güney Kalker Damarı", tur: "kalker", temelMiktar: 4, renk: "#8c7a6b", damarRenk: "#fde68a" },
+];
+
+export const ORMAN_KESIF_BOLGELERI = [
+  { id: 0, ad: "Kuzey Çamlığı", x: 18, y: 24 },
+  { id: 1, ad: "Kuru Dere Sırtı", x: 38, y: 20 },
+  { id: 2, ad: "Yosunlu Yamaç", x: 60, y: 22 },
+  { id: 3, ad: "Kartal Kayası Altı", x: 81, y: 26 },
+  { id: 4, ad: "Eski Değirmen Yolu", x: 15, y: 50 },
+  { id: 5, ad: "Gürgen Korusu", x: 35, y: 46 },
+  { id: 6, ad: "Doğu Meşeliği", x: 58, y: 48 },
+  { id: 7, ad: "Gölge Vadisi", x: 80, y: 52 },
+  { id: 8, ad: "Kızılağaç Tepesi", x: 22, y: 76 },
+  { id: 9, ad: "Rüzgârlı Boğaz", x: 44, y: 73 },
+  { id: 10, ad: "Güney Sedirliği", x: 66, y: 75 },
+  { id: 11, ad: "Ulu Çınar Çevresi", x: 85, y: 78 },
+];
+
 // ---------- 4 TEMEL KAYNAK ----------
-// Mahsul, Tahta, Taş üretim alanlarından 24 saatte 15 birim (her 96 dakikada 1 birim) dolacak şekilde birikir.
+// Mahsul, Tahta, Taş üretim alanlarından 24 saatte 24 birim dolacak şekilde dengelenmiştir.
 // İnsan (Ahali) ise Köy Meydanı ve Kıraathane'ye gelen yolculara ev kurma teklif edilerek kazanılır.
-export const SAHA_MAKS_BIRIM = 15;
+export const SAHA_MAKS_BIRIM = 24;
 export const KAYNAKLAR = {
-  erzak: { ad: "Mahsul", ikon: "🌾", alan: "tarla", gunluk: 15, acilisLevel: 1, uretim: true },
-  kereste: { ad: "Tahta", ikon: "🌲", alan: "orman", gunluk: 15, acilisLevel: 1, uretim: true },
-  tas: { ad: "Taş", ikon: "🧱", alan: "maden", gunluk: 15, acilisLevel: 2, uretim: true },
+  erzak: { ad: "Mahsul", ikon: "🌾", alan: "tarla", gunluk: 24, acilisLevel: 1, uretim: true },
+  kereste: { ad: "Tahta", ikon: "🌲", alan: "orman", gunluk: 24, acilisLevel: 1, uretim: true },
+  tas: { ad: "Taş", ikon: "🧱", alan: "maden", gunluk: 24, acilisLevel: 2, uretim: true },
   insan: { ad: "İnsan", ikon: "👥", alan: "kiraathane", gunluk: 0, acilisLevel: 1, uretim: false },
 };
 
@@ -130,10 +230,10 @@ export const BINALAR = {
     maksSeviye: 4,
     acilis: { 1: 1, 2: 5, 3: 7, 4: 9 },
     bedel: {
-      1: { erzak: 200, kereste: 180, insan: 3 },
-      2: { erzak: 300, kereste: 250, tas: 150, insan: 6 },
-      3: { erzak: 450, kereste: 350, tas: 250, insan: 9 },
-      4: { erzak: 600, kereste: 450, tas: 350, insan: 14 },
+      1: { erzak: 80, kereste: 75, insan: 3 },
+      2: { erzak: 260, kereste: 220, tas: 120, insan: 6 },
+      3: { erzak: 420, kereste: 340, tas: 220, insan: 9 },
+      4: { erzak: 580, kereste: 450, tas: 320, insan: 14 },
     },
   },
   sosyalmeydan: {
@@ -143,10 +243,10 @@ export const BINALAR = {
     maksSeviye: 4,
     acilis: { 1: 2, 2: 5, 3: 7, 4: 9 },
     bedel: {
-      1: { erzak: 250, kereste: 200, tas: 100, insan: 5 },
-      2: { erzak: 300, kereste: 250, tas: 150, insan: 8 },
-      3: { erzak: 450, kereste: 350, tas: 250, insan: 12 },
-      4: { erzak: 600, kereste: 450, tas: 350, insan: 16 },
+      1: { erzak: 140, kereste: 120, tas: 48, insan: 5 },
+      2: { erzak: 280, kereste: 240, tas: 140, insan: 8 },
+      3: { erzak: 440, kereste: 350, tas: 240, insan: 12 },
+      4: { erzak: 580, kereste: 450, tas: 340, insan: 16 },
     },
   },
   kendi_evim: evTanimi("Kendi Evim", 1, 1),
@@ -177,7 +277,14 @@ export const NOKTALAR = {
   tarla: { ad: "Tarla", ikon: "🌾", x: 12.5, y: 56.5, kaynak: "erzak" },
   orman: { ad: "Orman", ikon: "🌲", x: 21.0, y: 24.0, kaynak: "kereste" },
   maden: { ad: "Taş Ocağı", ikon: "⛏️", x: 88.5, y: 81.0, kaynak: "tas" },
-  haberci: { ad: "Haberci", ikon: "🏇", x: 51.8, y: 88.5, acilisLevel: 1 },
+  haberci: {
+    ad: "Haberci",
+    ikon: "📜",
+    gorsel: "/assets/binalar/seyyaherkek.webp",
+    x: 51.8,
+    y: 88.5,
+    acilisLevel: 1,
+  },
 };
 
 // ---------- 2. KATMAN: BİRLİK ALANI BİNALARI (Level 4+) ----------

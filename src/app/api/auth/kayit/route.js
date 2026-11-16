@@ -11,7 +11,7 @@ export async function POST(request) {
   const kAdi = String(kullaniciAdi ?? "").trim().toLowerCase();
   const gorunenAd = String(ad ?? "").trim().replace(/\s+/g, " ");
   const secilenCinsiyet = cinsiyet === "kiz" ? "kiz" : "erkek";
-  const secilenKarakter = String(karakter ?? (secilenCinsiyet === "kiz" ? "bala" : "alp"));
+  const secilenKarakter = String(karakter ?? (secilenCinsiyet === "kiz" ? "elif" : "ahmet"));
 
   if (!AD_DESENI.test(kAdi)) return hata("Kullanıcı adı 3-20 karakter olmalı; sadece İngilizce harf, rakam, _ ve . kullanılabilir.");
   if (gorunenAd.length < 2 || gorunenAd.length > 40) return hata("Ad 2-40 karakter olmalı.");

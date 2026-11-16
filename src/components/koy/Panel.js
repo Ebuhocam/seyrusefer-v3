@@ -61,7 +61,12 @@ function mekanBasligi(secim, durum) {
       return { ikon: "📜", baslik: "Görev Panosu", alt: `Level ${durum.level} Hedefleri` };
     }
     if (secim.id === "haberci" || secim.id === "seyyah") {
-      return { ikon: "🏇", baslik: "Köy Habercisi", alt: "Aile Mektubu & Günün İyiliği" };
+      return {
+        ikon: "📜",
+        gorsel: "/assets/binalar/seyyaherkek.webp",
+        baslik: "Köy Habercisi",
+        alt: "Aile Mektubu & Günün İyiliği",
+      };
     }
     const n = NOKTALAR[secim.id];
     if (n) {
@@ -87,7 +92,7 @@ export default function Panel({ secim, oyun, kapat, onSecimDegistir }) {
   return (
     <div className="fixed inset-0 z-[400] flex flex-col overflow-hidden bg-gradient-to-b from-stone-900 via-stone-900 to-stone-950 text-amber-50">
       {/* Üst Tam Ekran Mekan Çubuğu */}
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/30 bg-stone-950/90 px-3 py-2.5 shadow-lg backdrop-blur sm:px-6 sm:py-3">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/30 bg-stone-950/95 px-3 py-2.5 shadow-lg sm:px-6 sm:py-3">
         <div className="flex items-center gap-2.5 sm:gap-3">
           <button
             type="button"
@@ -99,8 +104,12 @@ export default function Panel({ secim, oyun, kapat, onSecimDegistir }) {
           </button>
 
           <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-stone-800 text-lg ring-1 ring-amber-500/40 sm:h-10 sm:w-10 sm:text-xl">
-              {baslikBilgi.ikon}
+            <span className="grid h-9 w-9 place-items-center overflow-hidden rounded-xl bg-stone-800 text-lg ring-1 ring-amber-500/40 sm:h-10 sm:w-10 sm:text-xl">
+              {baslikBilgi.gorsel ? (
+                <img src={baslikBilgi.gorsel} alt="" className="h-8 w-8 object-contain" />
+              ) : (
+                baslikBilgi.ikon
+              )}
             </span>
             <div>
               <h1 className="text-sm font-black leading-tight text-amber-100 sm:text-lg">{baslikBilgi.baslik}</h1>
@@ -142,7 +151,9 @@ export default function Panel({ secim, oyun, kapat, onSecimDegistir }) {
           {secim.tur === "bina" && (
             <BinaIcerik key={secim.id} id={secim.id} oyun={oyun} onSecimDegistir={onSecimDegistir} kapat={kapat} />
           )}
-          {secim.tur === "nokta" && secim.id === "pano" && <PanoIcerik oyun={oyun} kapat={kapat} />}
+          {secim.tur === "nokta" && secim.id === "pano" && (
+            <PanoIcerik oyun={oyun} kapat={kapat} onSecimDegistir={onSecimDegistir} />
+          )}
           {secim.tur === "nokta" && NOKTALAR[secim.id]?.kaynak && (
             <UretimSahnesi key={secim.id} id={secim.id} oyun={oyun} />
           )}
@@ -214,7 +225,7 @@ function Sart({ tamam, children, eylem }) {
   );
 }
 
-function GorevEkrani({ gorevKodu, oyun, geri }) {
+function GorevEkrani({ gorevKodu, oyun, geri, onSecimDegistir }) {
   const gorev = oyun.gorevler.find((g) => g.kod === gorevKodu);
   const tur = gorev?.tur ?? gorevKodu;
 
@@ -225,14 +236,22 @@ function GorevEkrani({ gorevKodu, oyun, geri }) {
         onClick={geri}
         className="inline-flex items-center gap-1 rounded-xl bg-stone-800 px-3 py-1.5 text-xs font-bold text-amber-200 hover:bg-stone-700"
       >
-        ← Bina Ekranına Geri Dön
+        ← Ekranına Geri Dön
       </button>
       {tur === "hadis" && <HadisKutusu oyun={oyun} gorevKodu={gorevKodu} />}
       {tur === "video" && <VideoKutusu oyun={oyun} gorevKodu={gorevKodu} />}
       {tur === "aile" && <AileOkumasiKutusu oyun={oyun} gorevKodu={gorevKodu} />}
       {tur === "namaz" && <NamazCetelesiKutusu oyun={oyun} />}
       {tur === "sinav" && <SinavKutusu oyun={oyun} />}
-      {tur === "turku" && <KiraathaneKutusu oyun={oyun} varsayilanSekme="ozan" />}
+      {tur === "turku" && (
+        <KiraathaneKutusu
+          oyun={oyun}
+          varsayilanSekme="ozan"
+          onKiraathaneAc={
+            onSecimDegistir ? () => onSecimDegistir({ tur: "bina", id: "kiraathane" }) : null
+          }
+        />
+      )}
       {tur === "dava" && <ObaDavaKutusu oyun={oyun} />}
       {(tur === "meydan_paylasim" || tur === "meydan_yorum") && <SosyalMeydanKutusu oyun={oyun} />}
       {tur === "seyyah" && <SeyyahKutusu oyun={oyun} gorevKodu={gorevKodu} />}
@@ -259,7 +278,12 @@ function BinaIcerik({ id, oyun, onSecimDegistir, kapat }) {
   if (acikGorev) {
     return (
       <div className="space-y-4">
-        <GorevEkrani gorevKodu={acikGorev} oyun={oyun} geri={() => setAcikGorev(null)} />
+        <GorevEkrani
+          gorevKodu={acikGorev}
+          oyun={oyun}
+          geri={() => setAcikGorev(null)}
+          onSecimDegistir={onSecimDegistir}
+        />
       </div>
     );
   }
@@ -526,16 +550,22 @@ function BinaIcerik({ id, oyun, onSecimDegistir, kapat }) {
   );
 }
 
-function PanoIcerik({ oyun, kapat }) {
+function PanoIcerik({ oyun, kapat, onSecimDegistir }) {
   const { level, durum, gorevler } = oyun;
   const sonLevel = durum.level >= LEVELLAR.length;
   const mektepKurulu = (durum.binalar.mektep ?? 0) >= 1;
+  const kiraathaneKurulu = (durum.binalar.kiraathane ?? 0) >= 1;
   const [acikGorev, setAcikGorev] = useState(null);
 
   if (acikGorev) {
     return (
       <div className="space-y-4">
-        <GorevEkrani gorevKodu={acikGorev} oyun={oyun} geri={() => setAcikGorev(null)} />
+        <GorevEkrani
+          gorevKodu={acikGorev}
+          oyun={oyun}
+          geri={() => setAcikGorev(null)}
+          onSecimDegistir={onSecimDegistir}
+        />
       </div>
     );
   }
@@ -579,32 +609,46 @@ function PanoIcerik({ oyun, kapat }) {
             </p>
           ) : (
             <ul className="space-y-2">
-              {gorevler.map((g) => (
-                <Sart
-                  key={g.kod}
-                  tamam={g.tamam}
-                  eylem={
-                    <button
-                      type="button"
-                      onClick={() => setAcikGorev(g.kod)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-black ${
-                        g.tamam ? "bg-stone-700 text-amber-100" : "bg-amber-400 text-stone-900"
-                      }`}
-                    >
-                      {g.tamam ? "Aç" : "Yap →"}
-                    </button>
-                  }
-                >
-                  <span>
-                    {GOREV_TURLERI[g.tur]?.ikon ?? "✨"} {g.ad}
-                  </span>
-                  <span className="block text-xs text-amber-200/70">
-                    İlerleme: <b className="tabular-nums">{g.yapilan}/{g.hedef}</b>
-                    {g.bina && BINALAR[g.bina] && ` · 🔑 ${BINALAR[g.bina].ad}`}
-                    {g.bugunYapildi && !g.tamam && " · Bugün yapıldı"}
-                  </span>
-                </Sart>
-              ))}
+              {gorevler.map((g) => {
+                const kiraathaneBekliyor = g.tur === "turku" && !kiraathaneKurulu && !g.tamam;
+                return (
+                  <Sart
+                    key={g.kod}
+                    tamam={g.tamam}
+                    eylem={
+                      kiraathaneBekliyor && onSecimDegistir ? (
+                        <button
+                          type="button"
+                          onClick={() => onSecimDegistir({ tur: "bina", id: "kiraathane" })}
+                          className="rounded-lg bg-stone-800 px-3 py-1.5 text-xs font-black text-amber-200 ring-1 ring-amber-400/50 hover:bg-stone-700"
+                        >
+                          🔨 Önce Kıraathane Kur
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setAcikGorev(g.kod)}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-black ${
+                            g.tamam ? "bg-stone-700 text-amber-100" : "bg-amber-400 text-stone-900"
+                          }`}
+                        >
+                          {g.tamam ? "Aç" : "Yap →"}
+                        </button>
+                      )
+                    }
+                  >
+                    <span>
+                      {GOREV_TURLERI[g.tur]?.ikon ?? "✨"} {g.ad}
+                    </span>
+                    <span className="block text-xs text-amber-200/70">
+                      İlerleme: <b className="tabular-nums">{g.yapilan}/{g.hedef}</b>
+                      {g.bina && BINALAR[g.bina] && ` · 🔑 ${BINALAR[g.bina].ad}`}
+                      {kiraathaneBekliyor && " · 🔒 Kıraathane inşa edilince açılır"}
+                      {g.bugunYapildi && !g.tamam && " · Bugün yapıldı"}
+                    </span>
+                  </Sart>
+                );
+              })}
             </ul>
           )}
         </div>

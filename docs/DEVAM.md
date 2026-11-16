@@ -32,24 +32,24 @@ Son güncelleme: 15 Kasım 2026
 - **Teknoloji:** Next.js 16 (App Router, JS) + Tailwind 4 → Cloudflare (OpenNext) + D1 (`seyrusefer-v3-db`, `e23293e1-7e9a-4ce1-b319-6fe0eec32a45`).
 - Canlı eski sisteme (`Desktop\seyrusefer\seyrusefer-app`, `seyrusefer.org`) **dokunulmaz**.
 
-## Son Tamamlanan Güncellemeler (15 Kasım 2026)
-1. **Harita Etrafına Sisli Keşif Alanı & Bilge Rehber Tanıtım Modu (`KoyHaritasi.js`, `RehberKarakter.js`):**
-   - Harita etrafına sisli çerçeve (`px-[18vw] py-[28dvh]`) eklendi; en alttaki **Haberci** rehber açıkken bile rahatça yukarı kaydırılıp görülüyor.
-   - Rehberin `tanitim` bölümünde `"👇 Buraya Tıkla!"` oku ve `"Binaya Git"` butonu kaldırıldı; kamera ilgili alanı yatay+dikey ortalar ve sadece **"İlerle →"** butonuyla tanıtım yapılır.
-2. **Ev İçi Yetim/Öksüz Çocuk Hassasiyeti (`MekanSahnesi.js`):**
-   - Ev İçi sahnesinde anne/baba/kardeş NPC'leri gelmez; **"📣 Yanıma Çağır"** butonuna basınca **"✅ Çağırdım"** butonu çıkar ve doğrudan mektup okuma ekranı açılır.
-3. **Kayıtta Cinsiyet & Karakter Seçimi + Oyun İçi Karakter Değiştirme (`GirisFormu.js`, `UstBar.js`, `sabitler.js`):**
-   - Kayıtta kız/erkek seçimi ve karakter kartları (`alp`, `celebi`, `bala`, `elif`) eklendi; üst bardan oyun içinde de her zaman değiştirilebilir.
-4. **24 Saatte 15 Birim Kaynak Dolumu, Harita Dolum Çubuğu, 3 Aşamalı Tarla Görseli ve Hover Efekti (`kurallar.js`, `eylemler.js`, `KoyHaritasi.js`, `MekanSahnesi.js`):**
-   - 15 kaynak 24 saate bölündü (1 işçiyle 96 dakikada 1 birim). `0/15` iken toplama yapılamaz; hem haritada hem sahnede `%Doluluk (X/15)` görünür.
-   - Tarla doluluğuna göre `tarla_bos.webp`, `tarla_yari.webp`, `tarla_dolu.webp` görselleri gösterilir; Tarla, Orman ve Taş Ocağı üzerine mouse gelince diğer binalar gibi öne gelir (`hover:-translate-y-1.5 hover:scale-110`).
-5. **Köy Meydanı Sabit Karakterler, Yürüyerek Diyalog, Tam Ekran Sonuç ve Günde 1 Olay (`MekanSahnesi.js`, `GorevlerEkrani.js`):**
-   - Meydandaki karakterler sabit bekler; yanlarına yürüyünce konuşma balonu + altta daktilo diyalog kutusu açılır, konuşma bitince karar ekranına geçilir ve karar sonrası tam ekran sonuç kartı (`"✅ Tamam"`) gösterilir.
-   - Olay çözülünce karakterler kaybolur ve 24 saat sonra yeni olay gelir (bir gün **⚖️ Dava**, bir gün **🏡 Köye Yeni İnsan Daveti**).
-6. **Tam Sayfa Çınar Altı Sosyal Medya (`GorevlerEkrani.js`, `/api/meydan/route.js`):**
-   - Pop-up yerine tam sayfa sosyal medya düzeni; Gündem İçi (`+3 😊 Huzur`) ve Serbest (`+1 😊 Huzur`) paylaşım, söz/hikâye/dua/hatıra/YouTube & Instagram video paylaşımı, beğeni (`+1 😊 Huzur`), yorum, yöneticiye şikayet ve öğrenci profili.
+## Son Tamamlanan Güncellemeler (Oyun Motoru & 3D Sahne Mimarisi)
+1. **Canlı Köy Haritası (`CanliKoySahnesi.js`, `KoyHaritasi.js`):**
+   - PixiJS denemesi kaldırılarak orijinal yüksek çözünürlüklü `.webp` harita ve bina katmanlarına dönüldü; SSR/Client hydration uyumsuzluğu tamamen giderildi.
+   - Kuzey sınırında gerçek zamanlı **WebGL GLSL su akışı shader'ı (`NehirShaderKatmani`)** ile kıvrımlı akan nehir, su parıltıları ve kıyı köpüğü çalışır.
+   - Rüzgârda hafifçe salınan ağaçlar (`KOY_AGACLARI`), yaprak/polen partikülleri ve taş patika ağı (`PATIKA_DUGUMLERI`) üzerinde çok yavaş yürüyüp etrafta oyalanan **2 küçük köylü** (`zIndex = Math.round(y * 2)` derinlik sıralamasıyla binaların önünden/arkasından geçer).
+   - **Haberci (`haberci`):** Yarışçı at emojisi kaldırılıp projenin kendi atlı ulak görseli (`/assets/binalar/seyyaherkek.webp`) köy giriş yoluna yerleştirildi.
+   - **Geliştirici Sıfırla Butonu (`GelistiriciPaneli.js`, `/api/oyun`):** Tarayıcı iframe engeline takılan `confirm()` yerine satır içi iki adımlı onay (`Evet, Sıfırla` / `Vazgeç`) ve tam sunucu veritabanı temizliği eklendi.
+2. **3D Birinci Şahıs (Kendi Gözünden) Köy Meydanı (`KoyMeydani3DSahnesi.js`, `MekanSahnesi.js`):**
+   - **Three.js 3D Anadolu Köy Meydanı:** Selçuklu yıldız motifli taş meydan, su damlaları akan taş şadırvan, Ulu Çınar & kilimli sohbet sediri, duyuru kürsüsü, cumbalı köy evleri ve meydan ortasında bekleyen 3D misafir karakterler.
+   - **Kendi Gözünden (FPS) Kontroller:** Göz hizası kamerası (`1.65m`), sol altta dokunmatik **mobil sanal joystick**, ekranı sürükleyerek 360° etrafa bakış ve zemine/karakterlere dokununca yanlarına yürüyüp otomatik konuşma başlatma (`Raycaster` tap-to-walk).
+3. **Three.js 3D Üretim Mini Oyunları (`UretimOyunlari3D.js`):**
+   - **Taş Ocağı:** 6 bağımsız 3D kaya kütlesi, kazma darbeleriyle çatlama ve taş bloklarına parçalanma.
+   - **Orman:** İşçi başına günlük 2 keşif seferi hakkı ve kurumuş ağaç çıkarsa 3D baltayla devirme.
+   - **Tarla:** 6 bağımsız sebze/meyve parseli, birinci şahıs bakır su ibriğiyle sulama ve elle hasat.
+4. **Ortaokul Seviyesinde 10 Özgün Şeffaf Karakter (`public/assets/karakterler/*.webp`, `GirisFormu.js`, `UstBar.js`):**
+   - 11–14 yaş seviyesinde şeffaf arka planlı **5 erkek** (`ahmet`, `alp`, `omer`, `yusuf`, `kerem`) ve **5 kız** (3 başörtülü: `elif`, `zeynep`, `meryem`; 2 başörtüsüz: `bala`, `defne`) karakter.
 
 ## Çalıştırma ve Yayınlama
-- Yerel geliştirme: `npm run dev` (yerel D1 otomatik bağlanır)
-- Cloudflare önizleme: `npm run preview`
-- Cloudflare yayınlama: `npm run deploy`
+- Yerel geliştirme: `npm run dev` (yerel SQLite veritabanı otomatik bağlanır)
+- Üretim derlemesi: `npm run build`
+

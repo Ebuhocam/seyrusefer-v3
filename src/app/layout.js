@@ -9,6 +9,10 @@ const geistSans = Geist({
 export const metadata = {
   title: "Seyrüsefer",
   description: "Seyrüsefer — köyünü kur, gündemini yaşa, birliğinle yüksel.",
+  openGraph: {
+    title: "Seyrüsefer",
+    description: "Seyrüsefer — köyünü kur, gündemini yaşa, birliğinle yüksel.",
+  },
 };
 
 export const viewport = {

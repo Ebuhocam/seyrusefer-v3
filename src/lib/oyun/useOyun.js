@@ -5,7 +5,14 @@
 // =============================================================
 import { useCallback, useEffect, useState } from "react";
 import { BINALAR, oyuncuKarakteriBul } from "./sabitler";
-import { biriken, dolumBilgisi, binaDurumu, levelDurumu } from "./kurallar";
+import {
+  biriken,
+  dolumBilgisi,
+  binaDurumu,
+  levelDurumu,
+  sahaNoktalariDurumu,
+  ormanSeferBilgisi,
+} from "./kurallar";
 import { gorevKontrol, levelAtlanabilirMi } from "./eylemler";
 import { levelGorevListesi, levelIcerigi, gununSeyyahGorevi, tumLevelGorevleriTamamMi } from "./gorevler";
 
@@ -25,7 +32,7 @@ export function useOyun(baslangic) {
 
   useEffect(() => {
     if (!mesaj) return;
-    const t = setTimeout(() => setMesaj(null), 3000);
+    const t = setTimeout(() => setMesaj(null), 3200);
     return () => clearTimeout(t);
   }, [mesaj]);
 
@@ -82,7 +89,10 @@ export function useOyun(baslangic) {
     durum.sonToplama[k] != null ? biriken(k, durum.sonToplama[k], simdi, otag, durum.isciler?.[k] ?? 1) : 0;
 
   const dolum = (k) =>
-    dolumBilgisi(k, durum.sonToplama?.[k], simdi, otag, durum.isciler?.[k] ?? 1);
+    dolumBilgisi(k, durum.sonToplama?.[k], simdi, otag, durum.isciler?.[k] ?? 1, durum);
+
+  const sahaNoktalari = (k) => sahaNoktalariDurumu(k, durum, simdi);
+  const ormanSefer = () => ormanSeferBilgisi(durum, simdi);
 
   const karakter = oyuncuKarakteriBul(durum.karakter, durum.cinsiyet);
 
@@ -91,14 +101,51 @@ export function useOyun(baslangic) {
     if (j?.miktar) setMesaj({ tur: "tamam", metin: `+${j.miktar} toplandı` });
   };
 
-  const isciAta = (kaynak, degisim) =>
-    gonder(
-      { eylem: "isciAta", kaynak, degisim },
-      degisim > 0 ? "Yeni çalışan görevlendirildi!" : "Çalışan dinlenmeye çekildi."
-    );
+  const isciAta = async (kaynak, degisim) => {
+    const j = await gonder({ eylem: "isciAta", kaynak, degisim });
+    if (j?.sonuc?.mesaj) {
+      setMesaj({ tur: "tamam", metin: j.sonuc.mesaj });
+    }
+    return j?.sonuc ?? null;
+  };
 
-  const uretimEtkilesim = async (kaynak) => {
-    const j = await gonder({ eylem: "uretimEtkilesim", kaynak });
+  const sahaHasat = async (kaynak, noktaId) => {
+    const j = await gonder({ eylem: "sahaHasat", kaynak, noktaId });
+    if (j?.sonuc?.mesaj) {
+      setMesaj({ tur: "tamam", metin: j.sonuc.mesaj });
+    }
+    return j?.sonuc ?? null;
+  };
+
+  const sahaHepsiniTopla = async (kaynak) => {
+    const j = await gonder({ eylem: "sahaHepsiniTopla", kaynak });
+    if (j?.sonuc?.mesaj) {
+      setMesaj({ tur: "tamam", metin: j.sonuc.mesaj });
+    }
+    return j?.sonuc ?? null;
+  };
+
+  const ormanKesif = async (bolgeId) => {
+    const j = await gonder({ eylem: "ormanKesif", bolgeId });
+    if (j?.sonuc?.mesaj) {
+      setMesaj({
+        tur: j.sonuc.agacTuru === "kurumus" ? "tamam" : "bilgi",
+        metin: j.sonuc.mesaj,
+      });
+    }
+    return j?.sonuc ?? null;
+  };
+
+  const ormanAgacKes = async () => {
+    const j = await gonder({ eylem: "ormanAgacKes" });
+    if (j?.sonuc?.mesaj) {
+      setMesaj({ tur: "tamam", metin: j.sonuc.mesaj });
+    }
+    return j?.sonuc ?? null;
+  };
+
+  const uretimEtkilesim = async (kaynak, noktaId = null) => {
+    const j = await gonder({ eylem: "uretimEtkilesim", kaynak, noktaId });
     if (j?.sonuc?.mesaj) {
       setMesaj({ tur: "tamam", metin: j.sonuc.mesaj });
     }
@@ -187,8 +234,14 @@ export function useOyun(baslangic) {
     gocmenTeklifEt,
     bekleyen,
     dolum,
+    sahaNoktalari,
+    ormanSefer,
     topla,
     isciAta,
+    sahaHasat,
+    sahaHepsiniTopla,
+    ormanKesif,
+    ormanAgacKes,
     uretimEtkilesim,
     mektupAl,
     karakter,

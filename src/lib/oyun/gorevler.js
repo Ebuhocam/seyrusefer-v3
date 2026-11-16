@@ -22,7 +22,7 @@ export const GOREV_TURLERI = {
   dava: { ad: "Köy Meydanı Halk Davası", ikon: "⚖️", yer: "Köy Meydanı" },
   meydan_paylasim: { ad: "Meydan Paylaşımı", ikon: "💬", yer: "Köy Meydanı" },
   meydan_yorum: { ad: "Kardeş Yorumu", ikon: "🤝", yer: "Köy Meydanı" },
-  seyyah: { ad: "Haberci İyilik Görevi", ikon: "🏇", yer: "Haberci" },
+  seyyah: { ad: "Haberci İyilik Görevi", ikon: "📜", yer: "Haberci" },
   onay: { ad: "Özel Görev / Etkinlik", ikon: "✨", yer: "Görev Panosu" },
 };
 
@@ -31,8 +31,8 @@ export const LEVEL_GOREVLERI = {
   1: [
     { kod: "hadis", tur: "hadis", ad: "Mektep'te 3 Günlük Hadis Oku", hedef: 3, gunluk: true, bina: "mektep" },
     { kod: "video", tur: "video", ad: "Niyet ve İhlas Videosunu İzle", hedef: 1, gunluk: false, bina: "mektep" },
-    { kod: "turku", tur: "turku", ad: "Kıraathane'de Ozan Dede'yi Dinle", hedef: 1, gunluk: false, bina: "kiraathane" },
     { kod: "aile", tur: "aile", ad: "Haberci'nin Aile Mektubunu Oku", hedef: 1, gunluk: false, bina: "kiraathane" },
+    { kod: "turku", tur: "turku", ad: "Kıraathane'de Ozan Dede'yi Dinle", hedef: 1, gunluk: false, bina: null },
   ],
   2: [
     { kod: "namaz", tur: "namaz", ad: "5 Gün Namaz Çetelesi Doldur", hedef: 5, gunluk: true, bina: "sosyalmeydan" },

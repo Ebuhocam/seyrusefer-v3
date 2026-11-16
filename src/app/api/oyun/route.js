@@ -7,6 +7,10 @@ import { oyunGunu } from "@/lib/oyun/gorevler";
 import {
   topla,
   isciAta,
+  sahaHasat,
+  sahaHepsiniTopla,
+  ormanKesifYap,
+  ormanAgacKes,
   uretimEtkilesim,
   mektupTeslimAl,
   karakterSec,
@@ -43,8 +47,20 @@ export async function POST(request) {
     case "isciAta":
       sonuc = isciAta(durum, g.kaynak, Number(g.degisim), simdi);
       break;
+    case "sahaHasat":
+      sonuc = sahaHasat(durum, g.kaynak, g.noktaId, simdi);
+      break;
+    case "sahaHepsiniTopla":
+      sonuc = sahaHepsiniTopla(durum, g.kaynak, simdi);
+      break;
+    case "ormanKesif":
+      sonuc = ormanKesifYap(durum, g.bolgeId, simdi);
+      break;
+    case "ormanAgacKes":
+      sonuc = ormanAgacKes(durum, simdi);
+      break;
     case "uretimEtkilesim":
-      sonuc = uretimEtkilesim(durum, g.kaynak, simdi);
+      sonuc = uretimEtkilesim(durum, g.kaynak, simdi, g.noktaId);
       break;
     case "mektupAl":
       sonuc = mektupTeslimAl(durum);
@@ -82,6 +98,8 @@ export async function POST(request) {
         await d.batch([
           d.prepare("DELETE FROM gorev_ilerlemesi WHERE kullanici_id = ?").bind(kullanici.id),
           d.prepare("DELETE FROM namaz_cetelesi WHERE kullanici_id = ?").bind(kullanici.id),
+          d.prepare("DELETE FROM kaynaklar WHERE kullanici_id = ?").bind(kullanici.id),
+          d.prepare("DELETE FROM binalar WHERE kullanici_id = ?").bind(kullanici.id),
         ]);
       }
       sonuc = { durum: islem(durum, g, g.islem === "sifirla" ? Date.now() : simdi) };
@@ -92,7 +110,8 @@ export async function POST(request) {
   }
 
   if (sonuc.hata) return Response.json({ hata: sonuc.hata }, { status: 409 });
-  await durumYaz(kullanici.id, sonuc.durum, simdi, ayarlar);
+  const yazimSaati = g.eylem === "gelistirici" && g.islem === "sifirla" ? Date.now() : simdi;
+  await durumYaz(kullanici.id, sonuc.durum, yazimSaati, ayarlar);
 
   if (["gorevTamamla", "namazIsaretle", "sinavCevapla", "davaCoz"].includes(g.eylem)) {
     await tesvikOdulunuKontrolEt(kullanici.id, oyunGunu(simdi));

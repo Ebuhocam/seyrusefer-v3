@@ -264,42 +264,42 @@ export const TURKU_HIKAYELERI = [
   {
     id: "turku_1",
     level: 1,
-    baslik: "Veysel Dede ve Sadık Yâr Kara Toprak",
-    turkuAdi: "Benim Sadık Yârim Kara Topraktır",
+    baslik: "Âşık Veysel'in Sivrialan'daki Elma Bahçesi",
+    turkuAdi: "Uzun İnce Bir Yoldayım & Kara Toprak",
     anlatim:
-      "Hoş geldin evladım, sedire buyur! Âşık Veysel gözleriyle değil gönül gözüyle gören büyük bir bilgeydi. İnsanlara kızıp küsmek yerine toprağa baktı: 'İşkence yaptıkça bana gülerdi, bunda yalan yoktur herkes gördü, bir çekirdek verdim dört bostan verdi!' dedi. Yani insan da toprak gibi olmalı: kendisine taş atılsa bile gül ve meyve vermeli, niyetini hep temiz tutmalı.",
+      "Çaylar taze demlendi genç yönetici, hoş geldin Kıraathane'mize! Sana Sivas'ın kurak Sivrialan köyünde Âşık Veysel'in kurduğu ilk meyve bahçesini anlatayım. Veysel Dede gözlerini küçük yaşta kaybetmesine rağmen kazmayı eline alıp yüzlerce elma ve kayısı fidanı dikmeye başlamış. Komşuları şaşırıp sormuşlar: 'Veysel Ağa, gözlerin görmüyor, bu ağaçların meyvesini nasıl bulup toplayacaksın?' Veysel Dede sazının teline dokunup gülümsemiş: 'Ben görmesem ne çıkar? Dalına kuş konar, gölgesinde yorgun yolcu dinlenir, meyvesini de köyün çocukları yer. İnsanın niyeti halis olduktan sonra diktiği hiçbir fidan boşa gitmez!' İşte bizim 'Kara Toprak' ve 'Uzun İnce Bir Yoldayım' türkülerimizin sırrı budur: karşılık beklemeden, tertemiz bir niyetle iyilik ekmek.",
     sesUrl: "",
-    odev: "Bugün tıpkı bereketli toprak gibi, sana ters bir söz söyleyene bile tebessümle ve iyilikle karşılık ver.",
+    odev: "Bugün kimseden övgü veya karşılık beklemeden, sadece iyilik olsun diye evde ya da okulda bir işi sessizce güzelleştir.",
   },
   {
     id: "turku_2",
     level: 2,
-    baslik: "Yunus Emre ve 'Gelin Tanış Olalım'",
+    baslik: "Yunus Emre'nin Doğru Odun Sırrı",
     turkuAdi: "Gelin Tanış Olalım, İşi Kolay Kılalım",
     anlatim:
-      "Evladım, Anadolu'nun mayasını yoğuran Yunus Emre dergâha kırk yıl tek bir eğri odun bile taşımadı; 'Bu kapıdan eğri girmez' dedi. Sonra sazı sözüyle seslendi: 'Gelin tanış olalım, işi kolay kılalım, sevelim sevilelim, dünya kimseye kalmaz!' Gönül kırmak Kâbe yıkmak gibidir, gönül yapmak ise en büyük imandır.",
+      "Sazımızın bugünkü teli Nallıhan sırtlarından, Yunus Emre'nin izinden ses veriyor. Genç Yunus, hocası Tapduk Emre'nin ocağına yıllarca ormandan odun taşımış. Bir gün hocası bakmış ki Yunus'un getirdiği bütün odunlar cetvel gibi dümdüz, aralarında bir tane bile eğri dal yok! Merak edip sormuş: 'Yunus, ormanda hiç mi eğri ağaç kalmadı?' Yunus başını eğip cevap vermiş: 'Ormanda eğri çoktur hocam; ama doğruların meclisine eğri odun bile yakışmaz dedim.' Yıllar sonra o samimiyet, 'Gelin tanış olalım, işi kolay kılalım, sevelim sevilelim!' dizelerine dönüşüp tüm Anadolu'nun kalbini ısıttı.",
     sesUrl: "",
-    odev: "Bugün çevrende selamlaşmadığın veya az konuştuğun birine ilk selamı sen ver, halini hatırını sor.",
+    odev: "Bugün bir arkadaşına ya da komşuna içten bir selam verip işini kolaylaştıracak küçük bir yardımda bulun.",
   },
   {
     id: "turku_3",
     level: 4,
-    baslik: "Yemen Türküsü ve Kardeşlik Vefası",
+    baslik: "Uzak Diyarlardaki Kardeşin Sesi",
     turkuAdi: "Havada Bulut Yok Bu Ne Dumandır",
     anlatim:
-      "Dinle bak, bu türkü sadece bir ezgi değil, binlerce kilometre ötedeki kardeşinin derdiyle dertlenen anaların, yiğitlerin vefa destanıdır. Eskiler 'Komşusu açken tok yatan bizden değildir' buyruğunu öyle yaşadılar ki, Yemen'deki kardeşinin acısını Anadolu'daki ocağında hissettiler.",
+      "Bazı türküler vardır, tek bir notasında binlerce kilometrelik vefa saklıdır. Eskiden Anadolu'nun bir köyünden yola çıkan gençler, uzak beldelerdeki mazlumları korumaya giderdi. Geride kalan komşular ise o hanenin tarlasını imeceyle sürer, çatısını onarır, kapısını hiç yalnız bırakmazdı. Çünkü gerçek kardeşlik, yan yana olmasan bile kardeşinin yükünü omuzlamaktır.",
     sesUrl: "",
-    odev: "Birliğindeki bir arkadaşının bugün görevini yapmasına yardımcı ol veya ona güzel bir dua mesajı gönder.",
+    odev: "Birliğindeki bir arkadaşının eksiğini sor veya ona moral verecek samimi bir mesaj gönder.",
   },
   {
     id: "turku_4",
     level: 6,
-    baslik: "Çanakkale Türküsü ve Fedakârlık Ruhu",
+    baslik: "Mataradaki Son Yudumun Hikâyesi",
     turkuAdi: "Çanakkale İçinde Aynalı Çarşı",
     anlatim:
-      "Genç yönetici! Çanakkale'de on beşliler kendi rahatları için değil, arkalarından gelecek nesiller huzurla ezan dinlesin, ilim öğrensin diye yürüdüler. Yaralı düşman askerine bile matarasındaki son suyu içiren o merhamet ve ihsan ruhu bizim asıl hazinemizdir.",
+      "Bu türkü her çaldığında gözümüzün önüne sadece cesaret değil, eşsiz bir merhamet gelir. Çanakkale sırtlarında en zorlu günlerde bile kendi ekmeğini arkadaşıyla bölüşen, yaralıya matarasındaki son suyu uzatan gençler vardı. Güçlü olmak sadece bilekle değil; en zor anda bile adaleti, şefkati ve ihsanı koruyabilmekle ölçülür.",
     sesUrl: "",
-    odev: "Bugün kendi hakkından veya zamanından fedakârlık ederek ailendeki ya da birliğindeki birine iyilik yap.",
+    odev: "Bugün kendi zamanından biraz fedakârlık ederek evdeki veya okulundaki birinin yükünü hafiflet.",
   },
 ];
 

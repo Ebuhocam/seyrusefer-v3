@@ -3,8 +3,23 @@
 // Bir oyun durumunu alıp yeni durumu döner. Sunucu (API) bunları kullanır;
 // istemci sadece sonucu gösterir. Geçersiz eylemde { hata } döner.
 // =============================================================
-import { KAYNAKLAR, BINALAR, LEVELLAR, KARAKTERLER, oyuncuKarakteriBul, toplamKonutKapasitesi } from "./sabitler";
-import { biriken, binaDurumu, kaynakAcikMi, levelDurumu } from "./kurallar";
+import {
+  KAYNAKLAR,
+  BINALAR,
+  LEVELLAR,
+  KARAKTERLER,
+  ORMAN_KESIF_BOLGELERI,
+  oyuncuKarakteriBul,
+  toplamKonutKapasitesi,
+} from "./sabitler";
+import {
+  biriken,
+  binaDurumu,
+  kaynakAcikMi,
+  levelDurumu,
+  sahaNoktalariDurumu,
+  ormanSeferBilgisi,
+} from "./kurallar";
 import {
   NAMAZ_VAKITLERI,
   oyunGunu,
@@ -37,6 +52,14 @@ export function baslangicDurumu(simdi, cinsiyet = "erkek", karakter = null) {
     envanter,
     isciler: { erzak: 1, kereste: 1, tas: 0 },
     sonEtkilesim: { erzak: 0, kereste: 0, tas: 0 },
+    sahaDurumu: { tarla: {}, maden: {} },
+    ormanSefer: {
+      gun: Math.floor((simdi + 3 * SAAT_MS) / (24 * SAAT_MS)),
+      kullanilan: 0,
+      maske: 0,
+      sonSonuc: 0,
+      aktifBolge: -1,
+    },
     mektupAlindi: 0,
     sonMeydanOlayZamani: 0,
     sonToplama: Object.fromEntries(Object.keys(KAYNAKLAR).map((k) => [k, null])),
@@ -51,20 +74,24 @@ export function baslangicDurumu(simdi, cinsiyet = "erkek", karakter = null) {
   return uretimiBaslat(d, simdi);
 }
 
-/** Level'a göre açılmış ama henüz başlamamış üretim alanlarını başlatır (ilk açılışta 3 birim birikmiş olarak başlar) */
+/** Level'a göre açılmış ama henüz başlamamış üretim alanlarını başlatır */
 export function uretimiBaslat(d, simdi) {
   const sonToplama = { ...d.sonToplama };
   const isciler = { ...(d.isciler ?? { erzak: 1, kereste: 1, tas: 0 }) };
   for (const [k, tanim] of Object.entries(KAYNAKLAR)) {
     if (tanim.uretim !== false && kaynakAcikMi(k, d.level) && sonToplama[k] == null) {
-      // İlk kez açıldığında 3 birim (yaklaşık 5 saatlik) hazır olsun ki öğrenci hemen sulama/kesme deneyebilsin, sonra sıfırlansın
       sonToplama[k] = simdi - 5 * SAAT_MS;
       if (k === "tas" && (isciler.tas ?? 0) === 0 && (d.envanter?.insan ?? 5) > (isciler.erzak ?? 1) + (isciler.kereste ?? 1)) {
         isciler.tas = 1;
       }
     }
   }
-  return { ...d, sonToplama, isciler };
+  return {
+    ...d,
+    sonToplama,
+    isciler,
+    sahaDurumu: d.sahaDurumu ?? { tarla: {}, maden: {} },
+  };
 }
 
 export const gorevKontrol = (d, ayarlar = null) => ({
@@ -75,11 +102,22 @@ export const gorevKontrol = (d, ayarlar = null) => ({
 export function topla(d, kaynak, simdi) {
   if (!KAYNAKLAR[kaynak] || KAYNAKLAR[kaynak].uretim === false) return { hata: "Bu kaynak üretim alanından toplanmaz" };
   if (!kaynakAcikMi(kaynak, d.level) || d.sonToplama[kaynak] == null) return { hata: "Bu alan henüz açılmadı" };
+  if (kaynak === "erzak" || kaynak === "tas") {
+    return {
+      hata:
+        kaynak === "erzak"
+          ? "Tarladaki mahsulleri toplamak için parsellere tıklayıp su ibriğiyle sula ve elle hasat et!"
+          : "Taş ocağındaki kayalara tıklayıp kazmayla parçalayarak taşları çıkar!",
+    };
+  }
+  if (kaynak === "kereste") {
+    return { hata: "Orman keşif haritasında bölge arayıp kurumuş ağaçları baltayla devirerek tahta kazan!" };
+  }
   const isciSayisi = d.isciler?.[kaynak] ?? 1;
   const miktar = biriken(kaynak, d.sonToplama[kaynak], simdi, d.binalar.otag ?? 1, isciSayisi);
   if (!miktar) {
     return {
-      hata: "Henüz toplanacak kaynak birikmedi! 24 saatte 15 birim (her 96 dakikada 1 birim) dolar.",
+      hata: "Henüz toplanacak kaynak birikmedi!",
     };
   }
   return {
@@ -100,7 +138,7 @@ export function topla(d, kaynak, simdi) {
 
 /**
  * Üretim alanlarına (Tarla, Orman, Taş Ocağı) köydeki 👥 İnsan nüfusundan kalıcı işçi görevlendirir (+1).
- * Bir kişi bir yerde görevlendirildiyse oradan çıkarılamaz (başka alana kaydırılıp suistimal edilmemesi için).
+ * Bir kişi bir yerde görevlendirildiyse oradan kesinlikle çıkarılamaz!
  */
 export function isciAta(d, kaynak, degisim, simdi) {
   if (!["erzak", "kereste", "tas"].includes(kaynak)) return { hata: "Geçersiz üretim alanı" };
@@ -108,7 +146,7 @@ export function isciAta(d, kaynak, degisim, simdi) {
 
   if (Number(degisim) <= 0) {
     return {
-      hata: "Bir üretim alanında görevlendirilen köylü oradan çıkarılamaz! Başka alanlara işçi görevlendirmek için köye yeni insanlar davet etmelisin.",
+      hata: "Bir üretim alanında görevlendirilen işçi kalıcıdır, oradan geri çıkarılamaz! Başka alanlar için köye yeni insanlar davet etmelisin.",
     };
   }
 
@@ -127,22 +165,12 @@ export function isciAta(d, kaynak, degisim, simdi) {
     };
   }
 
-  // İşçi sayısı değişirken o ana kadar biriken üretimi envantere aktar
-  const birikenMiktar =
-    d.sonToplama?.[kaynak] != null
-      ? biriken(kaynak, d.sonToplama[kaynak], simdi, d.binalar.otag ?? 1, mevcut)
-      : 0;
-
   return {
     durum: {
       ...d,
-      envanter: {
-        ...d.envanter,
-        [kaynak]: (d.envanter[kaynak] ?? 0) + birikenMiktar,
-      },
       sonToplama: {
         ...d.sonToplama,
-        [kaynak]: simdi,
+        [kaynak]: d.sonToplama?.[kaynak] ?? simdi,
       },
       isciler: {
         ...isciler,
@@ -152,35 +180,45 @@ export function isciAta(d, kaynak, degisim, simdi) {
     sonuc: {
       kaynak,
       yeniSayi,
-      birikenMiktar,
+      mesaj:
+        kaynak === "kereste"
+          ? `👷 Ormana yeni kalıcı oduncu görevlendirildi! Günlük keşif seferi hakkın ${yeniSayi * 2} sefere yükseldi!`
+          : `👷 ${KAYNAKLAR[kaynak].ad} sahasına yeni kalıcı çalışan görevlendirildi!`,
     },
   };
 }
 
 /**
- * Tarlada sulama, Ormanda kurumuş ağaç kesme veya Taş Ocağında kaya kırma işlemi:
- * 24 saatte 15 birim (her 96 dakikada 1 birim) dolan birikmiş kaynağı toplar ve sayacı sıfırlar.
- * Eğer henüz hiç kaynak birikmemişse (0/15), toplamaya izin vermez.
+ * Tarla (3 ayrı sebze/meyve parseli) ve Taş Ocağı (6 ayrı 3D kaya) için BAĞIMSIZ nokta hasadı.
+ * Sadece ilgili noktaId'yi sıfırlar; diğer parseller/kayalar kilitlenmez!
  */
-export function uretimEtkilesim(d, kaynak, simdi) {
-  if (!["erzak", "kereste", "tas"].includes(kaynak)) return { hata: "Geçersiz üretim alanı" };
-  if (!kaynakAcikMi(kaynak, d.level) || d.sonToplama?.[kaynak] == null) {
-    return { hata: "Bu alan henüz açılmadı" };
+export function sahaHasat(d, kaynak, noktaId, simdi) {
+  if (!["erzak", "tas"].includes(kaynak)) return { hata: "Geçersiz üretim sahası" };
+  if (!kaynakAcikMi(kaynak, d.level)) return { hata: "Bu saha henüz açılmadı" };
+
+  const isci = d.isciler?.[kaynak] ?? (kaynak === "tas" ? 0 : 1);
+  if (isci <= 0) {
+    return { hata: "Bu sahada henüz görevli çalışan yok! Önce yukarıdan +1 kalıcı işçi görevlendir." };
   }
 
-  const isciSayisi = d.isciler?.[kaynak] ?? 1;
-  const miktar = biriken(kaynak, d.sonToplama[kaynak], simdi, d.binalar.otag ?? 1, isciSayisi);
-  if (miktar <= 0) {
+  const noktalar = sahaNoktalariDurumu(kaynak, d, simdi);
+  const secilen = noktalar.find((n) => n.id === Number(noktaId)) ?? noktalar.find((n) => n.hazir);
+  if (!secilen) return { hata: "Geçersiz parsel veya kaya seçimi" };
+  if (!secilen.hazir) {
     return {
-      hata: "Henüz toplanacak kaynak birikmedi! 24 saatte 15 birim (her 96 dakikada 1 birim) dolar.",
+      hata: `${secilen.ad} henüz yeniden yetişmedi (~${secilen.kalanDakika} dk kaldı). Diğer hazır noktalardan devam edebilirsin!`,
     };
   }
 
-  const mesajlar = {
-    erzak: `🌾 Tarladaki biriken ekinleri sulayıp hasat ettin! +${miktar} Mahsul kazandın!`,
-    kereste: `🌲 Ormandaki kurumuş ağaçları kesip topladın! +${miktar} Tahta kazandın!`,
-    tas: `⛏️ Taş ocağındaki kaya damarlarını işledin! +${miktar} Taş kazandın!`,
-  };
+  const sahaAnahtari = kaynak === "erzak" ? "tarla" : "maden";
+  const mevcutSaha = d.sahaDurumu ?? { tarla: {}, maden: {} };
+  const guncelHarita = { ...(mevcutSaha[sahaAnahtari] ?? {}), [secilen.id]: simdi };
+  const miktar = secilen.miktar;
+
+  const mesaj =
+    kaynak === "erzak"
+      ? `🌾 ${secilen.ad} sulandı ve elle toplandı! +${miktar} Mahsul (${secilen.mahsulAd}) sepete eklendi!`
+      : `⛏️ ${secilen.ad} kazmayla parçalandı! +${miktar} Taş envantere eklendi!`;
 
   return {
     durum: {
@@ -188,6 +226,10 @@ export function uretimEtkilesim(d, kaynak, simdi) {
       envanter: {
         ...d.envanter,
         [kaynak]: (d.envanter[kaynak] ?? 0) + miktar,
+      },
+      sahaDurumu: {
+        ...mevcutSaha,
+        [sahaAnahtari]: guncelHarita,
       },
       sonToplama: {
         ...d.sonToplama,
@@ -201,10 +243,191 @@ export function uretimEtkilesim(d, kaynak, simdi) {
     miktar,
     sonuc: {
       kaynak,
+      noktaId: secilen.id,
       miktar,
-      mesaj: mesajlar[kaynak],
+      mesaj,
     },
   };
+}
+
+/**
+ * Tarla veya Taş Ocağı'ndaki TÜM hazır parsel/kayaları tek tıkla toplar ("Hepsini Topla").
+ */
+export function sahaHepsiniTopla(d, kaynak, simdi) {
+  if (!["erzak", "tas"].includes(kaynak)) return { hata: "Geçersiz üretim sahası" };
+  if (!kaynakAcikMi(kaynak, d.level)) return { hata: "Bu saha henüz açılmadı" };
+
+  const isci = d.isciler?.[kaynak] ?? (kaynak === "tas" ? 0 : 1);
+  if (isci <= 0) {
+    return { hata: "Bu sahada henüz görevli çalışan yok! Önce yukarıdan +1 kalıcı işçi görevlendir." };
+  }
+
+  const noktalar = sahaNoktalariDurumu(kaynak, d, simdi);
+  const hazirlar = noktalar.filter((n) => n.hazir);
+  if (hazirlar.length === 0) {
+    return { hata: "Şu anda toplanmaya hazır parsel veya kaya bulunmuyor!" };
+  }
+
+  const sahaAnahtari = kaynak === "erzak" ? "tarla" : "maden";
+  const mevcutSaha = d.sahaDurumu ?? { tarla: {}, maden: {} };
+  const guncelHarita = { ...(mevcutSaha[sahaAnahtari] ?? {}) };
+  let toplamMiktar = 0;
+  for (const h of hazirlar) {
+    guncelHarita[h.id] = simdi;
+    toplamMiktar += h.miktar;
+  }
+
+  const mesaj =
+    kaynak === "erzak"
+      ? `🌾 Hazır olan ${hazirlar.length} parselin tamamı sulanıp hasat edildi! +${toplamMiktar} Mahsul depoya eklendi!`
+      : `⛏️ Hazır olan ${hazirlar.length} kayanın tamamı çıkarıldı! +${toplamMiktar} Taş depoya eklendi!`;
+
+  return {
+    durum: {
+      ...d,
+      envanter: {
+        ...d.envanter,
+        [kaynak]: (d.envanter[kaynak] ?? 0) + toplamMiktar,
+      },
+      sahaDurumu: {
+        ...mevcutSaha,
+        [sahaAnahtari]: guncelHarita,
+      },
+      sonToplama: {
+        ...d.sonToplama,
+        [kaynak]: simdi,
+      },
+      sonEtkilesim: {
+        ...(d.sonEtkilesim ?? {}),
+        [kaynak]: simdi,
+      },
+    },
+    miktar: toplamMiktar,
+    sonuc: {
+      kaynak,
+      adet: hazirlar.length,
+      miktar: toplamMiktar,
+      mesaj,
+    },
+  };
+}
+
+/**
+ * Orman Keşif Haritası: İşçi başına 2 sefer hakkı (`işçiSayısı * 2`).
+ * Seçilen bölgeyi keşfeder: Şansa göre Kurumuş Ağaç veya Yaş Ağaç çıkar.
+ */
+export function ormanKesifYap(d, bolgeId, simdi) {
+  if (!kaynakAcikMi("kereste", d.level)) return { hata: "Orman henüz açılmadı" };
+  const sefer = ormanSeferBilgisi(d, simdi);
+  if (sefer.isci <= 0) {
+    return { hata: "Ormanda görevli oduncu yok! Önce +1 kalıcı işçi görevlendir." };
+  }
+  if (sefer.aktifBolge >= 0) {
+    return { hata: "Önce bulduğun kurumuş ağacı baltayla kesip devirmelisin!" };
+  }
+  if (sefer.kalanSefer <= 0) {
+    return {
+      hata: `Bugünkü tüm keşif seferlerini (${sefer.maksSefer}/${sefer.maksSefer}) kullandın! Yeni işçi görevlendirerek (+2 sefer) veya ertesi gün devam edebilirsin.`,
+    };
+  }
+
+  const bId = Number(bolgeId);
+  const bolge = ORMAN_KESIF_BOLGELERI.find((b) => b.id === bId);
+  if (!bolge) return { hata: "Geçersiz keşif bölgesi" };
+  if ((sefer.maske & (1 << bId)) !== 0) {
+    return { hata: "Bu bölgeyi bugün zaten aradın! Haritadan başka bir bölge seç." };
+  }
+
+  // Adil şans sistemi: Önceki sefer yaş ağaç çıktıysa bu sefer yüksek ihtimalle kurumuş ağaç çıkar (~%62 kurumuş)
+  const kurumusIhtimali = sefer.sonSonuc === 2 ? 0.85 : 0.6;
+  const kurumusCikti = Math.random() < kurumusIhtimali;
+
+  const yeniMaske = sefer.maske | (1 << bId);
+  const yeniKullanilan = sefer.kullanilan + 1;
+
+  return {
+    durum: {
+      ...d,
+      ormanSefer: {
+        gun: sefer.gun,
+        kullanilan: yeniKullanilan,
+        maske: yeniMaske,
+        sonSonuc: kurumusCikti ? 1 : 2,
+        aktifBolge: kurumusCikti ? bId : -1,
+      },
+      sonEtkilesim: {
+        ...(d.sonEtkilesim ?? {}),
+        kereste: simdi,
+      },
+    },
+    sonuc: {
+      bolgeId: bId,
+      bolgeAd: bolge.ad,
+      agacTuru: kurumusCikti ? "kurumus" : "yas",
+      kalanSefer: Math.max(0, sefer.maksSefer - yeniKullanilan),
+      maksSefer: sefer.maksSefer,
+      mesaj: kurumusCikti
+        ? `🪓 ${bolge.ad} bölgesinde kurumuş bir ağaç buldun! Baltayla vurup devirerek tahtaları topla!`
+        : `🌲 ${bolge.ad} bölgesinde yemyeşil yaş ağaçlar çıktı! Yaş ağaca balta vurulmaz; kalan seferinle başka bölge ara.`,
+    },
+  };
+}
+
+/**
+ * Ormanda keşfedilen kurumuş ağacı 3D sahnede baltayla devirdikten sonra tahtayı envantere ekler.
+ */
+export function ormanAgacKes(d, simdi) {
+  if (!kaynakAcikMi("kereste", d.level)) return { hata: "Orman henüz açılmadı" };
+  const sefer = ormanSeferBilgisi(d, simdi);
+  if (sefer.aktifBolge < 0) {
+    return { hata: "Kesilecek aktif bir kurumuş ağaç bulunmuyor. Önce keşif haritasından arama yap!" };
+  }
+
+  const bolge = ORMAN_KESIF_BOLGELERI.find((b) => b.id === sefer.aktifBolge);
+  const miktar = sefer.agacOdulu;
+
+  return {
+    durum: {
+      ...d,
+      envanter: {
+        ...d.envanter,
+        kereste: (d.envanter.kereste ?? 0) + miktar,
+      },
+      ormanSefer: {
+        gun: sefer.gun,
+        kullanilan: sefer.kullanilan,
+        maske: sefer.maske,
+        sonSonuc: 1,
+        aktifBolge: -1,
+      },
+      sonToplama: {
+        ...d.sonToplama,
+        kereste: simdi,
+      },
+      sonEtkilesim: {
+        ...(d.sonEtkilesim ?? {}),
+        kereste: simdi,
+      },
+    },
+    miktar,
+    sonuc: {
+      kaynak: "kereste",
+      miktar,
+      bolgeId: sefer.aktifBolge,
+      mesaj: `🌲 ${bolge?.ad ?? "Orman"} bölgesindeki kurumuş ağacı devirdin! +${miktar} Tahta kazandın!`,
+    },
+  };
+}
+
+/** Geriye dönük uyumluluk için uretimEtkilesim yönlendiricisi */
+export function uretimEtkilesim(d, kaynak, simdi, noktaId = null) {
+  if (kaynak === "erzak" || kaynak === "tas") {
+    return sahaHasat(d, kaynak, noktaId, simdi);
+  }
+  if (kaynak === "kereste") {
+    return ormanAgacKes(d, simdi);
+  }
+  return { hata: "Geçersiz üretim alanı" };
 }
 
 /**
@@ -286,6 +509,9 @@ export function gorevIlerlet(d, gorevKodu, simdi, ayarlar = null) {
       tanimlar.find((g) => g.tur === gorevKodu);
   }
   if (!tanim) return { hata: "Bu levelda böyle bir görev yok" };
+  if (tanim.tur === "turku" && (d.binalar?.kiraathane ?? 0) < 1) {
+    return { hata: "Ozan Dede'yi dinlemek için önce Kıraathane binasını inşa etmelisin!" };
+  }
 
   const mevcut = d.gorevIlerlemesi?.[tanim.kod] ?? { ilerleme: 0, sonGun: null };
   if (mevcut.ilerleme >= tanim.hedef) return { hata: "Bu görev zaten tamamlandı" };
@@ -470,5 +696,5 @@ export const gelistiriciEylemleri = {
       ])
     ),
   }),
-  sifirla: (_d, _p, simdi) => baslangicDurumu(simdi),
+  sifirla: (d, _p, simdi) => baslangicDurumu(simdi, d.cinsiyet, d.karakter),
 };

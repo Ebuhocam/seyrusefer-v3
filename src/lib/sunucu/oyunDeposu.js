@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { baslangicDurumu } from "@/lib/oyun/eylemler";
+import { KARAKTERLER, KARAKTER_KODLARI } from "@/lib/oyun/sabitler";
 import { levelGorevTanimlari, oyunGunu } from "@/lib/oyun/gorevler";
 
 const BOS_NAMAZ = { sabah: 0, ogle: 0, ikindi: 0, aksam: 0, yatsi: 0 };
@@ -58,22 +59,45 @@ export async function durumOku(kullaniciId) {
     envanter.kereste = 150;
   }
 
-const KARAKTER_KODLARI = ["alp", "celebi", "bala", "elif"];
-
   const isciler = {
     erzak: tumKaynakSatirlari.isci_erzak?.envanter ?? 1,
     kereste: tumKaynakSatirlari.isci_kereste?.envanter ?? 1,
-    tas: tumKaynakSatirlari.isci_tas?.envanter ?? 0,
+    tas: tumKaynakSatirlari.isci_tas?.envanter ?? (o.level >= 2 ? 1 : 0),
   };
   const sonEtkilesim = {
     erzak: tumKaynakSatirlari.isci_erzak?.son_toplama ?? 0,
     kereste: tumKaynakSatirlari.isci_kereste?.son_toplama ?? 0,
     tas: tumKaynakSatirlari.isci_tas?.son_toplama ?? 0,
   };
+
+  // Bağımsız 6 Tarla Parseli & 6 Taş Ocağı Kayası zaman damgaları
+  const tarlaSaha = {};
+  const madenSaha = {};
+  for (let i = 1; i <= 6; i++) {
+    if (tumKaynakSatirlari[`saha_tarla_${i}`]?.son_toplama) {
+      tarlaSaha[i] = tumKaynakSatirlari[`saha_tarla_${i}`].son_toplama;
+    }
+    if (tumKaynakSatirlari[`saha_maden_${i}`]?.son_toplama) {
+      madenSaha[i] = tumKaynakSatirlari[`saha_maden_${i}`].son_toplama;
+    }
+  }
+
+  // Orman Keşif Seferi durumu
+  const seferAna = tumKaynakSatirlari.orman_sefer;
+  const seferDetay = tumKaynakSatirlari.orman_sefer_detay;
+  const paketKod = Number(seferDetay?.son_toplama ?? 0);
+  const ormanSefer = {
+    gun: Number(seferAna?.son_toplama ?? 0),
+    kullanilan: Number(seferAna?.envanter ?? 0),
+    maske: Number(seferDetay?.envanter ?? 0),
+    aktifBolge: Math.floor(paketKod / 10) - 1,
+    sonSonuc: paketKod % 10,
+  };
+
   const mektupAlindi = tumKaynakSatirlari.mektup_durumu?.envanter ?? 0;
   const karakterIndeks = tumKaynakSatirlari.oyuncu_karakter?.envanter ?? 0;
-  const karakter = KARAKTER_KODLARI[karakterIndeks] ?? "alp";
-  const cinsiyet = karakter === "bala" || karakter === "elif" ? "kiz" : "erkek";
+  const karakter = KARAKTER_KODLARI[karakterIndeks] ?? "ahmet";
+  const cinsiyet = KARAKTERLER[karakter]?.cinsiyet ?? "erkek";
   const sonMeydanOlayZamani = tumKaynakSatirlari.oyuncu_karakter?.son_toplama ?? 0;
 
   // Dinamik Huzur (Mutluluk) Mekanizması: Her 12 saatte bir ilgilenilmezse huzur -2 azalır (en az 25'e kadar)
@@ -108,6 +132,8 @@ const KARAKTER_KODLARI = ["alp", "celebi", "bala", "elif"];
     sonToplama,
     isciler,
     sonEtkilesim,
+    sahaDurumu: { tarla: tarlaSaha, maden: madenSaha },
+    ormanSefer,
     mektupAlindi,
     gorevIlerlemesi: Object.fromEntries(
       gorevler.results.map((g) => [g.gorev_kodu, { ilerleme: g.ilerleme, sonGun: g.son_gun }])
@@ -130,6 +156,10 @@ export async function durumYaz(kullaniciId, durum, islemSaati = null, ayarlar = 
   const insanSayisi = Math.max(0, Number(durum.envanter?.insan ?? 5));
   const cozulenJson = JSON.stringify(Array.isArray(durum.cozulenDavalar) ? durum.cozulenDavalar : []);
   const sonGocmen = Number(durum.sonGocmenKontrol || 0);
+  const tarlaSaha = durum.sahaDurumu?.tarla ?? {};
+  const madenSaha = durum.sahaDurumu?.maden ?? {};
+  const oSefer = durum.ormanSefer ?? { gun: 0, kullanilan: 0, maske: 0, sonSonuc: 0, aktifBolge: -1 };
+  const paketKod = (Math.max(-1, Number(oSefer.aktifBolge ?? -1)) + 1) * 10 + (Number(oSefer.sonSonuc || 0) % 10);
 
   const ifadeler = [
     d
@@ -171,6 +201,34 @@ export async function durumYaz(kullaniciId, durum, islemSaati = null, ayarlar = 
         )
         .bind(kullaniciId, `isci_${k}`, durum.isciler?.[k] ?? (k === "tas" ? 0 : 1), durum.sonEtkilesim?.[k] ?? 0)
     ),
+    ...[1, 2, 3, 4, 5, 6].map((i) =>
+      d
+        .prepare(
+          `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, ?2, 0, ?3)
+           ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET son_toplama = ?3`
+        )
+        .bind(kullaniciId, `saha_tarla_${i}`, Number(tarlaSaha[i] || 0))
+    ),
+    ...[1, 2, 3, 4, 5, 6].map((i) =>
+      d
+        .prepare(
+          `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, ?2, 0, ?3)
+           ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET son_toplama = ?3`
+        )
+        .bind(kullaniciId, `saha_maden_${i}`, Number(madenSaha[i] || 0))
+    ),
+    d
+      .prepare(
+        `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, 'orman_sefer', ?2, ?3)
+         ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET envanter = ?2, son_toplama = ?3`
+      )
+      .bind(kullaniciId, Number(oSefer.kullanilan || 0), Number(oSefer.gun || 0)),
+    d
+      .prepare(
+        `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, 'orman_sefer_detay', ?2, ?3)
+         ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET envanter = ?2, son_toplama = ?3`
+      )
+      .bind(kullaniciId, Number(oSefer.maske || 0), paketKod),
     d
       .prepare(
         `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, 'mektup_durumu', ?2, 0)
@@ -184,7 +242,7 @@ export async function durumYaz(kullaniciId, durum, islemSaati = null, ayarlar = 
       )
       .bind(
         kullaniciId,
-        Math.max(0, ["alp", "celebi", "bala", "elif"].indexOf(durum.karakter ?? "alp")),
+        Math.max(0, KARAKTER_KODLARI.indexOf(durum.karakter ?? "ahmet")),
         durum.sonMeydanOlayZamani ?? 0
       ),
     d

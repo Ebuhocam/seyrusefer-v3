@@ -10,7 +10,7 @@ export default function GirisFormu() {
   const [ad, setAd] = useState("");
   const [sifre, setSifre] = useState("");
   const [cinsiyet, setCinsiyet] = useState("erkek"); // 'erkek' | 'kiz'
-  const [karakter, setKarakter] = useState("alp");
+  const [karakter, setKarakter] = useState("ahmet");
   const [hata, setHata] = useState(null);
   const [yukleniyor, setYukleniyor] = useState(false);
 
@@ -49,7 +49,11 @@ export default function GirisFormu() {
         className="pointer-events-none fixed inset-0 h-full w-full object-cover opacity-25 blur-[2px]"
       />
 
-      <div className="relative w-full max-w-sm rounded-3xl bg-gradient-to-b from-stone-800/95 to-stone-900/95 p-6 shadow-2xl ring-1 ring-amber-500/40 backdrop-blur">
+      <div
+        className={`relative w-full rounded-3xl bg-gradient-to-b from-stone-800/95 to-stone-900/95 p-6 shadow-2xl ring-1 ring-amber-500/40 transition-all ${
+          kip === "kayit" ? "max-w-xl" : "max-w-sm"
+        }`}
+      >
         <div className="mb-5 text-center">
           <img src="/assets/binalar/otag1.webp" alt="Otağ" className="mx-auto mb-2 h-20 object-contain drop-shadow-lg" />
           <h1 className="text-2xl font-black tracking-tight text-amber-200">Seyrüsefer</h1>
@@ -102,41 +106,46 @@ export default function GirisFormu() {
                     type="button"
                     onClick={() => {
                       setCinsiyet("erkek");
-                      setKarakter("alp");
+                      setKarakter("ahmet");
                     }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black ring-1 transition ${
+                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black ring-1 transition ${
                       cinsiyet === "erkek"
                         ? "bg-amber-400 text-stone-950 ring-amber-200 shadow"
-                        : "bg-stone-950/70 text-amber-100 ring-stone-700"
+                        : "bg-stone-950/70 text-amber-100 ring-stone-700 hover:bg-stone-900"
                     }`}
                   >
                     <span>👦</span>
-                    <span>Erkek Öğrenci</span>
+                    <span>Erkek Öğrenci (5 Karakter)</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setCinsiyet("kiz");
-                      setKarakter("bala");
+                      setKarakter("elif");
                     }}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black ring-1 transition ${
+                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black ring-1 transition ${
                       cinsiyet === "kiz"
                         ? "bg-amber-400 text-stone-950 ring-amber-200 shadow"
-                        : "bg-stone-950/70 text-amber-100 ring-stone-700"
+                        : "bg-stone-950/70 text-amber-100 ring-stone-700 hover:bg-stone-900"
                     }`}
                   >
                     <span>👧</span>
-                    <span>Kız Öğrenci</span>
+                    <span>Kız Öğrenci (5 Karakter)</span>
                   </button>
                 </div>
               </div>
 
-              {/* Oyun Karakteri Seçimi */}
+              {/* Oyun Karakteri Seçimi (5 Erkek veya 5 Kız Özgün Ortaokul Karakteri) */}
               <div>
-                <span className="mb-1 block text-xs font-bold text-amber-200/80">
-                  Oyun Karakterini Seç (Sonradan oyun içinde de değiştirebilirsin)
-                </span>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-amber-200/90">
+                    Oyun Karakterini Seç (Sonradan oyun içinde de değiştirebilirsin)
+                  </span>
+                  <span className="text-[10px] font-semibold text-amber-300/75">
+                    {cinsiyet === "kiz" ? "3 Başörtülü · 2 Açık Saçlı" : "5 Özgün Ortaokul Karakteri"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                   {cinsiyetKarakterleri.map((k) => {
                     const secili = karakter === k.id;
                     return (
@@ -144,19 +153,24 @@ export default function GirisFormu() {
                         key={k.id}
                         type="button"
                         onClick={() => setKarakter(k.id)}
-                        className={`flex flex-col items-center rounded-2xl p-2.5 text-center ring-2 transition ${
+                        className={`group flex flex-col items-center rounded-2xl p-2 text-center ring-2 transition ${
                           secili
-                            ? "bg-amber-500/25 text-amber-100 ring-amber-400 shadow-lg"
-                            : "bg-stone-950/70 text-stone-300 ring-stone-800 hover:bg-stone-900"
+                            ? "bg-gradient-to-b from-amber-500/30 to-amber-600/15 text-amber-100 ring-amber-400 shadow-lg"
+                            : "bg-stone-950/75 text-stone-300 ring-stone-800 hover:bg-stone-900 hover:ring-amber-500/40"
                         }`}
                       >
-                        <img
-                          src={k.gorsel}
-                          alt={k.ad}
-                          className="h-14 w-14 rounded-full object-cover ring-2 ring-amber-400/60"
-                        />
+                        <div className="relative flex h-20 w-full items-end justify-center rounded-xl bg-gradient-to-b from-stone-800/80 to-stone-950/90 p-1 ring-1 ring-amber-400/25">
+                          <img
+                            src={k.gorsel}
+                            alt={k.ad}
+                            referrerPolicy="no-referrer"
+                            className="h-full w-full object-contain drop-shadow-[0_4px_6px_rgba(0,0,0,0.65)] transition-transform duration-200 group-hover:scale-105"
+                          />
+                        </div>
                         <span className="mt-1.5 text-xs font-black text-amber-100">{k.ad}</span>
-                        <span className="text-[10px] text-amber-300/80">{k.unvan}</span>
+                        <span className="line-clamp-2 min-h-[1.6rem] text-[10px] leading-tight text-amber-300/85">
+                          {k.unvan}
+                        </span>
                       </button>
                     );
                   })}

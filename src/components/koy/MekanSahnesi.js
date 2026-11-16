@@ -4,6 +4,12 @@ import { BINALAR, KAYNAKLAR, NOKTALAR, toplamKonutKapasitesi } from "@/lib/oyun/
 import { kaynakAcikMi, saatlikUretim } from "@/lib/oyun/kurallar";
 import { koyDavalariListesi, gocmenDurumu } from "@/lib/oyun/hikayeler";
 import { AileOkumasiKutusu, ObaDavaKutusu, SosyalMeydanKutusu } from "./GorevlerEkrani";
+import {
+  TasOcagi3DSahnesi,
+  OrmanKesifVeKesimSahnesi,
+  TarlaFPS3DSahnesi,
+} from "./UretimOyunlari3D";
+import KoyMeydani3DSahnesi from "./KoyMeydani3DSahnesi";
 
 const YIRMI_DORT_SAAT_MS = 24 * 60 * 60 * 1000;
 
@@ -41,9 +47,9 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-stone-950/85 p-4 ring-1 ring-amber-500/30">
         <div className="flex items-center gap-3">
           <img
-            src={karakter?.gorsel ?? "/assets/karakterler/erkek_alp.webp"}
+            src={karakter?.gorsel ?? "/assets/karakterler/ahmet.webp"}
             alt={karakter?.ad ?? "Karakter"}
-            className="h-12 w-12 rounded-2xl object-cover ring-2 ring-amber-400"
+            className="h-14 w-14 rounded-2xl bg-stone-900/95 p-1 object-contain ring-2 ring-amber-400"
           />
           <div>
             <h3 className="text-sm font-black text-amber-100 sm:text-base">
@@ -97,7 +103,7 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
                     onClick={() => onSecimDegistir({ tur: "nokta", id: "haberci" })}
                     className="rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 px-4 py-2.5 text-xs font-black text-stone-950 shadow-lg hover:brightness-110"
                   >
-                    🏇 Haberci&apos;ye Git ve Mektubu Al →
+                    📜 Haberci&apos;ye Git ve Mektubu Al →
                   </button>
                 )}
                 <button
@@ -187,7 +193,7 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
         </div>
       )}
 
-      {/* 2D İNTERAKTİF EV İÇİ SAHNESİ */}
+      {/* İNTERAKTİF EV İÇİ ODA SAHNESİ */}
       <div
         onClick={zemineTikla}
         className="relative aspect-[16/9] w-full cursor-pointer overflow-hidden rounded-3xl bg-stone-950 shadow-2xl ring-2 ring-amber-500/40 select-none"
@@ -196,7 +202,16 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
           src="/assets/mekanlar/ev_ici.webp"
           alt="Ev İçi Oda Sahnesi"
           draggable={false}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover select-none"
+        />
+
+        {/* Pencere Gün Işığı Hüzmesi */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse at 28% 24%, rgba(254,243,199,0.22) 0%, rgba(251,191,36,0.08) 38%, transparent 70%)",
+          }}
         />
 
         {/* Orta Rahle ve Mektup Objesi */}
@@ -247,21 +262,20 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
           </div>
         </button>
 
-        {/* Öğrencinin Seçtiği Karakter (Oda İçinde Yürüyebilen) */}
+        {/* Oda İçinde Yürüyen Karakter ve İsim Etiketi */}
         <div
           style={{ left: `${oyuncuKonum.x}%`, top: `${oyuncuKonum.y}%` }}
-          className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ease-out"
+          className="pointer-events-none absolute z-30 flex -translate-x-1/2 -translate-y-[82%] flex-col items-center transition-all duration-500 ease-out"
         >
-          <div className="flex flex-col items-center">
-            <img
-              src={karakter?.gorsel ?? "/assets/karakterler/erkek_alp.webp"}
-              alt={karakter?.ad ?? "Oyuncu"}
-              className="h-14 w-14 rounded-full object-cover shadow-2xl ring-3 ring-emerald-300 sm:h-16 sm:w-16"
-            />
-            <span className="mt-1 rounded-full bg-emerald-400 px-2.5 py-0.5 text-[10px] font-black text-stone-950 shadow">
-              {oyun.kullanici?.ad ?? karakter?.ad ?? "Genç Yönetici"}
-            </span>
-          </div>
+          <img
+            src={karakter?.gorsel ?? "/assets/karakterler/ahmet.webp"}
+            alt={karakter?.ad ?? "Genç Yönetici"}
+            draggable={false}
+            className="h-24 w-auto object-contain drop-shadow-[0_10px_12px_rgba(0,0,0,0.6)] sm:h-28"
+          />
+          <span className="-mt-1 rounded-full bg-emerald-400 px-2.5 py-0.5 text-[10px] font-black text-stone-950 shadow ring-1 ring-stone-950/30 whitespace-nowrap">
+            {oyun.kullanici?.ad ?? karakter?.ad ?? "Genç Yönetici"}
+          </span>
         </div>
 
         {/* Alt Oda İpucu */}
@@ -279,16 +293,15 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
 }
 
 // =============================================================
-// 2. KÖY MEYDANI 2D SAHNESİ
-// - Karakterler kötü yürümez, sabit beklerler.
-// - Oyuncu karakterini yanlarına götürünce konuşma balonu + altta Rehber gibi
-//   daktilo diyalog kutusu açılır; konuşma bitince karar verme ekranı gelir.
-// - Bir olay (Dava veya Yeni İnsan Daveti) bitince karakterler kaybolur;
-//   1 gün (24 saat) sonra yeni olay gelir.
-// - Çınar Altı Sohbeti'ne tıklanınca pop-up yerine tam sayfa sosyal medya açılır!
+// 2. KÖY MEYDANI 3D BİRİNCİ ŞAHIS (KENDİ GÖZÜNDEN) SAHNESİ
+// - Three.js 3D Anadolu Köy Meydanı: Taş Şadırvan, Ulu Çınar & Sohbet Sediri,
+//   cumbalı köy evleri ve ortada bekleyen günlük misafirler.
+// - Birinci şahıs (FPS) kamerası: Mobil sanal joystick ile yürüme, ekranı
+//   sürükleyerek 360° etrafa bakma ve dokununca (tap-to-walk) yanlarına gitme.
+// - Çınar Altı Sohbeti'ne tıklanınca tam sayfa sosyal medya açılır!
 // =============================================================
 export function KoyMeydaniSahnesi({ oyun }) {
-  const { durum, ayarlar, simdi, karakter } = oyun;
+  const { durum, ayarlar, simdi } = oyun;
   const davalar = koyDavalariListesi(ayarlar);
   const cozulenler = Array.isArray(durum.cozulenDavalar) ? durum.cozulenDavalar : [];
   const siradakiDava = davalar.find((d) => !cozulenler.includes(d.id)) ?? null;
@@ -318,8 +331,6 @@ export function KoyMeydaniSahnesi({ oyun }) {
   const [seciliOlayTuru, setSeciliOlayTuru] = useState(null);
   const aktifOlayTuru = ilkDavaZorunlu ? "dava" : seciliOlayTuru ?? varsayilanOlayTuru;
 
-  // Oyuncunun meydandaki konumu
-  const [oyuncu, setOyuncu] = useState({ x: 28, y: 78 });
   // Oyuncu meydandaki misafirlerin yanına gitti mi? (Diyalog kutusu açık mı?)
   const [diyalogAcik, setDiyalogAcik] = useState(false);
   const [harfSayisi, setHarfSayisi] = useState(0);
@@ -468,25 +479,17 @@ export function KoyMeydaniSahnesi({ oyun }) {
     );
   }
 
-  const meydanaTikla = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.min(84, Math.max(16, ((e.clientX - rect.left) / rect.width) * 100));
-    const y = Math.min(86, Math.max(56, ((e.clientY - rect.top) / rect.height) * 100));
-    setOyuncu({ x: Math.round(x), y: Math.round(y) });
-
-    // Eğer oyuncu meydanın ortasında bekleyen karakterlerin yakınına yürüdüyse konuşmayı başlat
-    if (gunlukOlayHazir && Math.abs(x - 50) < 13 && Math.abs(y - 66) < 13) {
-      setTimeout(() => setDiyalogAcik(true), 400);
-    }
-  };
-
-  const misafirlerinYaninaGit = (e) => {
-    if (e) e.stopPropagation();
-    setOyuncu({ x: 41, y: 68 });
-    setTimeout(() => setDiyalogAcik(true), 450);
-  };
-
   const yaziliyor = diyalogAcik && harfSayisi < diyalogMetni.length;
+
+  const misafirBaslik =
+    aktifOlayTuru === "dava" && siradakiDava
+      ? "⚖️ “Beyim bir anlaşmazlığımız var, yanımıza gelir misin?”"
+      : "🏡 “Selamünaleyküm! Köyünüze yerleşmek isteriz, yanımıza gel!”";
+
+  const misafirAltYazi =
+    aktifOlayTuru === "dava" && siradakiDava
+      ? siradakiDava.kisi
+      : `Yeni İnsanlar: ${gocmen.aday.ad}`;
 
   return (
     <div className="space-y-4">
@@ -494,10 +497,10 @@ export function KoyMeydaniSahnesi({ oyun }) {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-stone-950/85 p-4 ring-1 ring-amber-500/30">
         <div>
           <h3 className="text-sm font-black text-amber-100 sm:text-base">
-            ⚖️ 2D Köy Meydanı · Meydan Misafirleri & Çınar Altı Sohbeti
+            ⚖️ 3D Köy Meydanı (Kendi Gözünden · Birinci Şahıs)
           </h3>
           <p className="text-xs text-amber-200/80">
-            Karakterini meydanda bekleyenlerin yanına götürdüğünde seninle konuşurlar; konuşma bitince karar ekranı açılır!
+            Mobil joystick ile meydanda gez, ekranı sürükleyip etrafa bak veya karakterlere dokunarak yanlarına yürü!
           </p>
         </div>
 
@@ -524,120 +527,18 @@ export function KoyMeydaniSahnesi({ oyun }) {
         </div>
       </div>
 
-      {/* 2D KÖY MEYDANI SAHNESİ */}
-      <div
-        onClick={meydanaTikla}
-        className="relative aspect-[16/9] w-full cursor-pointer overflow-hidden rounded-3xl bg-stone-950 shadow-2xl ring-2 ring-amber-500/40 select-none"
-      >
-        <img
-          src="/assets/mekanlar/meydan_sahne.webp"
-          alt="Köy Meydanı 2D Sahnesi"
-          draggable={false}
-          className="h-full w-full object-cover"
-        />
-
-        {/* Sol Taş Çeşme */}
-        <div
-          style={{ left: "20%", top: "54%" }}
-          className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
-        >
-          <span className="rounded-full bg-stone-950/85 px-2.5 py-1 text-[10px] font-bold text-sky-200 ring-1 ring-sky-400/40">
-            ⛲ Meydan Çeşmesi
-          </span>
-        </div>
-
-        {/* Sağ Çınar Ağacı (Tam Sayfa Sosyal Medyayı Açar) */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setGorunum("cinar_sohbet");
-          }}
-          style={{ left: "80%", top: "54%" }}
-          className="group absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-stone-950/90 px-3.5 py-2 text-xs font-black text-amber-200 shadow-xl ring-2 ring-amber-400 transition hover:scale-110"
-        >
-          🌳 Çınar Altı Sohbeti (Tam Sayfa Aç)
-        </button>
-
-        {/* MEYDANDA SABİT BEKLEYEN GÜNLÜK MİSAFİRLER (Dava veya Yeni İnsan Daveti) */}
-        {gunlukOlayHazir ? (
-          <button
-            type="button"
-            onClick={misafirlerinYaninaGit}
-            style={{ left: "50%", top: "65%" }}
-            className="group absolute z-20 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-105"
-          >
-            <div className="flex flex-col items-center">
-              {/* Başlarının Üstündeki Konuşma Balonu */}
-              <div className="mb-1.5 max-w-[230px] rounded-2xl bg-stone-950/95 px-3 py-1.5 text-center text-[11px] font-bold text-amber-100 shadow-2xl ring-2 ring-amber-400">
-                {diyalogAcik ? (
-                  <span>💬 “{diyalogMetni.slice(0, 75)}…”</span>
-                ) : aktifOlayTuru === "dava" && siradakiDava ? (
-                  <span className="animate-pulse text-amber-300">
-                    ⚖️ “Beyim bir anlaşmazlığımız var, yanımıza gelir misin?”
-                  </span>
-                ) : (
-                  <span className="animate-pulse text-emerald-300">
-                    🏡 “Selamünaleyküm! Köyünüze yerleşmek isteriz, yanımıza gel!”
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1.5 rounded-full bg-amber-950/95 px-3.5 py-2 text-2xl shadow-2xl ring-2 ring-amber-400">
-                {aktifOlayTuru === "dava" ? (
-                  <>
-                    <span>🧔</span>
-                    <span className="text-base">⚖️</span>
-                    <span>👴</span>
-                  </>
-                ) : (
-                  <>
-                    <span>🧳</span>
-                    <span>🧔</span>
-                    <span>🧕</span>
-                  </>
-                )}
-              </div>
-
-              <span className="mt-1 rounded-full bg-stone-950/95 px-3 py-0.5 text-[10px] font-black text-amber-200 ring-1 ring-amber-400/50">
-                {aktifOlayTuru === "dava" && siradakiDava
-                  ? `${siradakiDava.kisi} (Yanlarına Yürü)`
-                  : `Yeni İnsanlar: ${gocmen.aday.ad} (Yanlarına Yürü)`}
-              </span>
-            </div>
-          </button>
-        ) : (
-          /* Olay Çözüldüğünde Karakterler Kaybolur, 1 Gün Sonra Yenisi Gelir */
-          <div
-            style={{ left: "50%", top: "64%" }}
-            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2"
-          >
-            <div className="max-w-xs rounded-2xl bg-stone-950/90 px-4 py-2.5 text-center text-xs font-bold text-emerald-200 shadow-xl ring-1 ring-emerald-400/50">
-              🌿 Bugünkü meydan meselesi çözüldü, köylüler evlerine döndü.
-              <span className="mt-1 block text-[11px] text-amber-300">
-                ⏳ Yeni dava veya yeni insanlar {kalanSaat} saat sonra (yarın) meydana gelecek!
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Öğrencinin Seçtiği Karakter */}
-        <div
-          style={{ left: `${oyuncu.x}%`, top: `${oyuncu.y}%` }}
-          className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ease-out"
-        >
-          <div className="flex flex-col items-center">
-            <img
-              src={karakter?.gorsel ?? "/assets/karakterler/erkek_alp.webp"}
-              alt={karakter?.ad ?? "Oyuncu"}
-              className="h-14 w-14 rounded-full object-cover shadow-2xl ring-3 ring-emerald-300 sm:h-16 sm:w-16"
-            />
-            <span className="mt-1 rounded-full bg-emerald-400 px-2.5 py-0.5 text-[10px] font-black text-stone-950 shadow">
-              {oyun.kullanici?.ad ?? karakter?.ad ?? "Sen"}
-            </span>
-          </div>
-        </div>
-      </div>
+      {/* THREE.JS 3D BİRİNCİ ŞAHIS KÖY MEYDANI (Mobil Joystick + Dokun-ve-Yürü + 360° Bakış) */}
+      <KoyMeydani3DSahnesi
+        gunlukOlayHazir={gunlukOlayHazir}
+        aktifOlayTuru={aktifOlayTuru}
+        misafirBaslik={misafirBaslik}
+        misafirAltYazi={misafirAltYazi}
+        kalanSaat={kalanSaat}
+        diyalogAcik={diyalogAcik}
+        onMisafirEtkilesim={() => setDiyalogAcik(true)}
+        onCinarSohbetAc={() => setGorunum("cinar_sohbet")}
+        onBilgiMesaji={(metin) => oyun.setMesaj({ tur: "bilgi", metin })}
+      />
 
       {/* REHBER TARZI ALT DİYALOG KUTUSU (Karakterlerin Yanına Gidince Açılır) */}
       {diyalogAcik && gunlukOlayHazir && (
@@ -703,62 +604,27 @@ export function KoyMeydaniSahnesi({ oyun }) {
 }
 
 // =============================================================
-// 3. TARLA (SULAMA), ORMAN (KURUMUŞ AĞAÇ KESME) VE TAŞ OCAĞI 2D SAHNESİ
-// - 24 saatte 15 birim (her 96 dakikada 1 birim) dolar.
-// - Eğer 0/15 ise (henüz hiç birikmemişse) sulama/toplama yapılamaz; dolum oranı görünür.
-// - Tarla boş/yarı/tam dolu görsel durumunu da gösterir.
+// 3. ÜRETİM ALANLARI 3D & İNTERAKTİF MİNİ OYUN SAHNELERİ
+// - Tarla: 6 Bağımsız Sebze/Meyve Parseli + Birinci Şahıs (FPS) Bakır İbrikle Sulama & Elle Toplama
+// - Orman: Keşif Haritası (İşçi Sayısı × 2 Sefer Hakkı) + Kurumuş Ağaç Çıkarsa 3D Baltayla Devirme
+// - Taş Ocağı: 6 Bağımsız 3D Kaya Kütlesi + Kazma Darbeleriyle Çatlama & Taş Bloklarına Parçalanma
+// - Kalıcı İşçi Kuralı: Bir üretim alanına atanan işçi oradan geri çıkarılamaz.
 // =============================================================
-const TARLA_EKINLERI = [
-  { id: 1, ad: "1. Ekin Sırası", x: 40, y: 36 },
-  { id: 2, ad: "2. Ekin Sırası", x: 54, y: 31 },
-  { id: 3, ad: "3. Ekin Sırası", x: 76, y: 46 },
-  { id: 4, ad: "4. Ekin Sırası", x: 60, y: 58 },
-  { id: 5, ad: "5. Ekin Sırası", x: 77, y: 68 },
-  { id: 6, ad: "6. Ekin Sırası", x: 46, y: 78 },
-];
-
-const ORMAN_AGACLARI = [
-  { id: 1, ad: "Kurumuş Meşe", x: 38, y: 42, kurumus: true },
-  { id: 2, ad: "Genç Çam Ağacı", x: 50, y: 36, kurumus: false },
-  { id: 3, ad: "Kurumuş Gürgen", x: 64, y: 43, kurumus: true },
-  { id: 4, ad: "Canlı Sedir Ağacı", x: 77, y: 39, kurumus: false },
-  { id: 5, ad: "Kurumuş Kütük", x: 45, y: 64, kurumus: true },
-  { id: 6, ad: "Yeşil Çınar", x: 58, y: 60, kurumus: false },
-  { id: 7, ad: "Kurumuş Çam", x: 73, y: 67, kurumus: true },
-  { id: 8, ad: "Fidanlık Ağacı", x: 32, y: 72, kurumus: false },
-];
-
-const MADEN_KAYALARI = [
-  { id: 1, ad: "Kuzey Kaya Damarı", x: 35, y: 45 },
-  { id: 2, ad: "Orta Mermer Kaya", x: 53, y: 40 },
-  { id: 3, ad: "Doğu Granit Damarı", x: 72, y: 52 },
-  { id: 4, ad: "Güney Taş Yatağı", x: 48, y: 70 },
-];
-
 export function UretimSahnesi({ id, oyun }) {
   const n = NOKTALAR[id];
   const k = n.kaynak; // "erzak" | "kereste" | "tas"
   const t = KAYNAKLAR[k];
-  const { durum, karakter } = oyun;
+  const { durum } = oyun;
   const acik = kaynakAcikMi(k, durum.level);
   const dBilgi = oyun.dolum(k);
-  const bekleyen = dBilgi.biriken;
-  const kap = dBilgi.kapasite;
-  const doluluk = dBilgi.dolumOrani;
 
-  // İşçi görevlendirme hesapları
+  // Kalıcı işçi görevlendirme hesapları
   const isciler = durum.isciler ?? { erzak: 1, kereste: 1, tas: 0 };
   const buradakiIsci = isciler[k] ?? 0;
   const toplamAtanan = (isciler.erzak ?? 0) + (isciler.kereste ?? 0) + (isciler.tas ?? 0);
   const toplamInsan = durum.envanter.insan ?? 5;
   const bostakiInsan = Math.max(0, toplamInsan - toplamAtanan);
   const gunlukHiz = Math.round(saatlikUretim(k, buradakiIsci) * 24);
-
-  const [oyuncu, setOyuncu] = useState({ x: 24, y: 70 });
-  const [sulananlar, setSulananlar] = useState({});
-  const [agacVurus, setAgacVurus] = useState({});
-  const [kayaVurus, setKayaVurus] = useState({});
-  const [sahneBildirim, setSahneBildirim] = useState(null);
 
   const tarlaDurumGorseli =
     dBilgi.evre === "dolu"
@@ -767,96 +633,9 @@ export function UretimSahnesi({ id, oyun }) {
       ? "/assets/binalar/tarla_yari.webp"
       : "/assets/binalar/tarla_bos.webp";
 
-  const sahneyeTikla = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.min(86, Math.max(14, ((e.clientX - rect.left) / rect.width) * 100));
-    const y = Math.min(86, Math.max(30, ((e.clientY - rect.top) / rect.height) * 100));
-    setOyuncu({ x: Math.round(x), y: Math.round(y) });
-  };
-
-  // TARLA: Ekin sulama ve biriken kaynağı toplama
-  const ekinSula = async (ekin, e) => {
-    e.stopPropagation();
-    setOyuncu({ x: Math.max(16, ekin.x - 6), y: ekin.y + 4 });
-
-    if (bekleyen <= 0) {
-      setSahneBildirim(
-        `⏳ Tarla henüz boş (0/${kap} · Dolum: %${doluluk}). 24 saatte 15 birim dolar; ilk 1 birimin hazır olmasına yaklaşık ${dBilgi.sonrakiBirimDakika ?? 96} dakika kaldı!`
-      );
-      return;
-    }
-
-    const yeni = { ...sulananlar, [ekin.id]: true };
-    setSulananlar(yeni);
-    const sonuc = await oyun.uretimEtkilesim("erzak");
-    if (sonuc?.mesaj) {
-      setSahneBildirim(sonuc.mesaj);
-      setSulananlar({});
-    }
-  };
-
-  // ORMAN: Kurumuş ağaç kesme ve biriken kaynağı toplama
-  const agacaTikla = async (agac, e) => {
-    e.stopPropagation();
-    setOyuncu({ x: Math.max(16, agac.x - 6), y: agac.y + 6 });
-
-    if (!agac.kurumus) {
-      setSahneBildirim(
-        "🌱 Yaş kesen baş keser! Yeşil ağaçlara dokunmayalım, sadece kurumuş kahverengi ağaçları bulup keselim."
-      );
-      return;
-    }
-
-    if (bekleyen <= 0) {
-      setSahneBildirim(
-        `⏳ Ormanda henüz kesilecek yeni odun birikmedi (0/${kap} · Dolum: %${doluluk}). 1 birim birikmesi için yaklaşık ${dBilgi.sonrakiBirimDakika ?? 96} dakika kaldı!`
-      );
-      return;
-    }
-
-    const mevcut = agacVurus[agac.id] ?? 0;
-    if (mevcut === 0) {
-      setAgacVurus({ ...agacVurus, [agac.id]: 1 });
-      setSahneBildirim(`🪓 ${agac.ad} gövdesine ilk balta vuruşu! Kesip toplamak için 1 kez daha vur.`);
-      return;
-    }
-
-    const sonuc = await oyun.uretimEtkilesim("kereste");
-    setAgacVurus({});
-    if (sonuc?.mesaj) {
-      setSahneBildirim(sonuc.mesaj);
-    }
-  };
-
-  // MADEN: Kaya kırma
-  const kayayaTikla = async (kaya, e) => {
-    e.stopPropagation();
-    setOyuncu({ x: Math.max(16, kaya.x - 6), y: kaya.y + 6 });
-
-    if (bekleyen <= 0) {
-      setSahneBildirim(
-        `⏳ Taş ocağında henüz çıkarılacak taş birikmedi (0/${kap} · Dolum: %${doluluk}). 1 birim birikmesi için yaklaşık ${dBilgi.sonrakiBirimDakika ?? 96} dakika kaldı!`
-      );
-      return;
-    }
-
-    const mevcut = kayaVurus[kaya.id] ?? 0;
-    if (mevcut === 0) {
-      setKayaVurus({ ...kayaVurus, [kaya.id]: 1 });
-      setSahneBildirim(`⛏️ ${kaya.ad} çatladı! Kırıp toplamak için 1 kez daha kazma vur.`);
-      return;
-    }
-
-    const sonuc = await oyun.uretimEtkilesim("tas");
-    setKayaVurus({});
-    if (sonuc?.mesaj) {
-      setSahneBildirim(sonuc.mesaj);
-    }
-  };
-
   if (!acik) {
     return (
-      <div className="rounded-3xl bg-stone-950/85 p-6 text-center ring-1 ring-amber-500/30">
+      <div className="rounded-3xl bg-stone-950/90 p-6 text-center ring-1 ring-amber-500/30">
         <div className="text-4xl">🔒</div>
         <h3 className="mt-2 text-lg font-black text-amber-100">
           {n.ikon} {n.ad} · Level {t.acilisLevel}&apos;de Açılır
@@ -867,274 +646,133 @@ export function UretimSahnesi({ id, oyun }) {
 
   return (
     <div className="space-y-4">
-      {/* ÜST PANEL: İŞÇİ GÖREVLENDİRME VE 24 SAATLİK DOLUM ORANI */}
+      {/* ÜST PANEL: KALICI İŞÇİ GÖREVLENDİRME VE SAHA DURUM ÖZETİ */}
       <div className="grid gap-3 md:grid-cols-2">
-        {/* Sol Kutu: İşçi Görevlendirme */}
-        <div className="flex flex-col justify-between rounded-3xl bg-stone-950/85 p-4 ring-1 ring-amber-500/30">
+        {/* Sol Kutu: Kalıcı İşçi Görevlendirme */}
+        <div className="flex flex-col justify-between rounded-3xl bg-stone-950/90 p-4 ring-1 ring-amber-500/35">
           <div className="flex items-start justify-between gap-2">
             <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
-                👷 Köylü İşçi Görevlendirme
+                👷 Kalıcı İşçi Görevlendirme
               </span>
               <h3 className="text-base font-black text-amber-100">
-                {k === "erzak" ? "🌾 Tarla Çiftçileri" : k === "kereste" ? "🌲 Orman Oduncuları" : "⛏️ Taş Ocağı Ustaları"}
+                {k === "erzak"
+                  ? "🌾 Tarla Çiftçileri"
+                  : k === "kereste"
+                  ? "🌲 Orman Kâşif & Oduncuları"
+                  : "⛏️ Taş Ocağı Ustaları"}
               </h3>
             </div>
-            <span className="rounded-full bg-emerald-500/20 px-2.5 py-1 text-xs font-black text-emerald-300 ring-1 ring-emerald-500/40">
-              24 Saatte +{gunlukHiz} {t.ikon}
+            <span className="rounded-xl bg-emerald-500/20 px-2.5 py-1 text-xs font-black text-emerald-300 ring-1 ring-emerald-500/40">
+              {k === "kereste"
+                ? `Günlük ${buradakiIsci * 2} Keşif Seferi`
+                : `24 Saatte +${gunlukHiz} ${t.ikon}`}
             </span>
           </div>
 
-          <p className="my-2 text-xs text-amber-200/75">
+          <p className="my-2 text-xs leading-relaxed text-amber-200/80">
             {buradakiIsci === 0
-              ? "⚠️ Burada hiç çalışan yok! Dolum durmuş durumda, hemen en az 1 köylü görevlendir."
-              : `🔒 Görevlendirilen kişi burada kalıcı çalışır (başka alana kaydırılamaz). 1 işçi ile 24 saatte 15 birim dolar.`}
+              ? "⚠️ Burada hiç görevli işçi yok! Üretimi ve saha hazırlığını başlatmak için en az 1 kalıcı işçi görevlendir."
+              : k === "kereste"
+              ? `🔒 Görevlendirilen işçi buradan geri çıkarılamaz. Ormandaki her işçi sana günlük 2 keşif seferi hakkı (${buradakiIsci} × 2 = ${buradakiIsci * 2} hak) kazandırır!`
+              : "🔒 Görevlendirilen işçi buradan geri çıkarılamaz (başka alana kaydırılamaz). İşçi sayısı arttıkça parseller ve kayalar daha hızlı yenilenir!"}
           </p>
 
-          <div className="flex items-center justify-between rounded-2xl bg-stone-900 p-2.5 ring-1 ring-stone-800">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-stone-900 p-2.5 ring-1 ring-stone-800">
             <div className="text-xs">
-              <div className="font-black text-amber-100">Kalıcı Görevli Çalışan: {buradakiIsci} 👥</div>
+              <div className="font-black text-amber-100">Kalıcı Görevli İşçi: {buradakiIsci} 👥</div>
               <div className="text-[11px] text-amber-300/80">Köyde Boştaki İnsan: {bostakiInsan} 👥</div>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="rounded-lg bg-stone-800 px-2.5 py-1.5 text-xs font-black tabular-nums text-amber-200 ring-1 ring-stone-700">
-                🔒 {buradakiIsci} İşçi
+              <span
+                title="Görevlendirilen işçi kalıcıdır, geri çıkarılamaz"
+                className="rounded-xl bg-stone-800 px-2.5 py-1.5 text-xs font-black tabular-nums text-amber-200 ring-1 ring-stone-700"
+              >
+                🔒 {buradakiIsci} Kalıcı İşçi
               </span>
               <button
                 type="button"
                 disabled={oyun.bekliyor || bostakiInsan <= 0}
                 onClick={() => oyun.isciAta(k, 1)}
-                className="rounded-xl bg-amber-500 px-3 py-2 text-xs font-black text-stone-950 shadow hover:bg-amber-400 disabled:opacity-40"
+                className="rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-black text-stone-950 shadow hover:bg-amber-400 disabled:opacity-40"
               >
-                + İşçi Görevlendir
+                + Kalıcı İşçi Ata
               </button>
             </div>
           </div>
         </div>
 
-        {/* Sağ Kutu: 24 Saatlik Dolum Oranı ve Görsel Evre */}
-        <div className="flex flex-col justify-between rounded-3xl bg-stone-950/85 p-4 ring-1 ring-amber-500/30">
+        {/* Sağ Kutu: Bağımsız Saha Durumu Özeti */}
+        <div className="flex flex-col justify-between rounded-3xl bg-stone-950/90 p-4 ring-1 ring-amber-500/35">
           <div className="flex items-center gap-3">
             {id === "tarla" && (
               <img
                 src={tarlaDurumGorseli}
-                alt="Tarla Doluluk Görseli"
+                alt="Tarla Görseli"
                 className="h-16 w-24 shrink-0 rounded-2xl object-cover ring-2 ring-amber-400/60"
               />
             )}
             <div className="flex-1">
               <div className="flex items-center justify-between text-xs font-bold">
-                <span className="uppercase tracking-wider text-amber-300">⏳ 24 Saatlik Dolum Oranı</span>
-                <span className="tabular-nums text-sm font-black text-amber-100">
-                  %{doluluk} · ({bekleyen} / {kap} {t.ikon})
+                <span className="uppercase tracking-wider text-amber-300">
+                  {id === "tarla"
+                    ? "🌱 3 Bağımsız Sebze/Meyve Parseli"
+                    : id === "orman"
+                    ? "🧭 Günlük Orman Keşif Seferleri"
+                    : "⛰️ 6 Bağımsız 3D Kaya Kütlesi"}
+                </span>
+                <span className="tabular-nums text-sm font-black text-emerald-300">
+                  {id === "tarla"
+                    ? `${dBilgi.hazirAdet ?? 0}/${dBilgi.toplamAdet ?? 3} Parsel Hazır`
+                    : id === "orman"
+                    ? `${dBilgi.hazirAdet ?? 0}/${dBilgi.toplamAdet ?? 0} Sefer Hakkı`
+                    : `${dBilgi.hazirAdet ?? 0}/${dBilgi.toplamAdet ?? 6} Kaya Hazır`}
                 </span>
               </div>
-              <div className="mt-2 h-3.5 overflow-hidden rounded-full bg-stone-900 ring-1 ring-stone-800">
+
+              <div className="mt-2 h-3 overflow-hidden rounded-full bg-stone-900 ring-1 ring-stone-800">
                 <div
                   className={`h-full transition-all ${
-                    doluluk >= 100 ? "bg-emerald-400" : bekleyen > 0 ? "bg-amber-400" : "bg-sky-500"
+                    dBilgi.dolumOrani >= 100
+                      ? "bg-emerald-400"
+                      : (dBilgi.hazirAdet ?? 0) > 0
+                      ? "bg-amber-400"
+                      : "bg-sky-500"
                   }`}
-                  style={{ width: `${Math.max(doluluk, dBilgi.birimYuzdesi > 0 ? 4 : 0)}%` }}
+                  style={{ width: `${Math.max(4, dBilgi.dolumOrani ?? 0)}%` }}
                 />
               </div>
-              <p className="mt-1.5 text-[11px] text-amber-200/80">
-                {bekleyen <= 0
-                  ? `Henüz 1 birim bile dolmadı (Sıradaki 1 birim için %${dBilgi.birimYuzdesi} doldu · ~${dBilgi.sonrakiBirimDakika ?? 96} dk kaldı).`
-                  : bekleyen >= kap
-                  ? `🌟 Tamamen doldu (${kap}/${kap})! Sahadan sulayıp/kesip hemen toplayabilirsin.`
-                  : `Şu an toplanabilir ${bekleyen} ${t.ad} hazır! Sonraki +1 birim için ~${dBilgi.sonrakiBirimDakika} dk kaldı.`}
-              </p>
+
+              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                <p className="flex-1 text-xs leading-relaxed text-amber-200/80">
+                  {id === "tarla"
+                    ? "Her parsel bağımsız çalışır! Tek tek 3D sahnede sulayıp toplayabilir veya hazır parsellerin hepsini tek tıkla hasat edebilirsin."
+                    : id === "orman"
+                    ? "Haritadan keşfedilmemiş bir bölgeye tıkla: şansına kurumuş ağaç çıkarsa 3D baltayla devirip tahta kazanırsın!"
+                    : "Her kaya bağımsız çalışır! Sahadaki 3D kayalara tıklayıp kazmayla parçalayabilir veya hazır kayaları tek tıkla toplayabilirsin."}
+                </p>
+
+                {id !== "orman" && (dBilgi.hazirAdet ?? 0) > 0 && (
+                  <button
+                    type="button"
+                    disabled={oyun.bekliyor}
+                    onClick={() => oyun.sahaHepsiniTopla(k)}
+                    className="shrink-0 rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-black text-stone-950 shadow ring-1 ring-emerald-200 hover:bg-emerald-400 disabled:opacity-40"
+                  >
+                    {t.ikon} Hepsini Topla (+{dBilgi.biriken ?? 0})
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-
-          <button
-            type="button"
-            disabled={bekleyen <= 0 || oyun.bekliyor}
-            onClick={() => oyun.topla(k)}
-            className="mt-3 w-full rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 py-2.5 text-xs font-black text-stone-950 shadow-lg hover:brightness-110 disabled:from-stone-800 disabled:to-stone-800 disabled:text-stone-500 sm:text-sm"
-          >
-            {bekleyen > 0
-              ? `${t.ikon} Biriken +${bekleyen} ${t.ad} Topla (Dolum: %${doluluk})`
-              : `⏳ Henüz Birikmedi (Dolum: %${doluluk} · 0/${kap})`}
-          </button>
         </div>
       </div>
 
-      {sahneBildirim && (
-        <div className="rounded-2xl bg-amber-500/20 px-4 py-2.5 text-xs font-bold text-amber-100 ring-1 ring-amber-400">
-          {sahneBildirim}
-        </div>
-      )}
-
-      {/* 2D İNTERAKTİF ÜRETİM SAHNESİ */}
-      <div
-        onClick={sahneyeTikla}
-        className="relative aspect-[16/9] w-full cursor-pointer overflow-hidden rounded-3xl bg-stone-950 shadow-2xl ring-2 ring-amber-500/40 select-none"
-      >
-        {id === "tarla" && (
-          <img
-            src="/assets/mekanlar/tarla_sahne.webp"
-            alt="Tarla 2D Sulama Sahnesi"
-            draggable={false}
-            className="h-full w-full object-cover"
-          />
-        )}
-        {id === "orman" && (
-          <img
-            src="/assets/mekanlar/orman_sahne.webp"
-            alt="Orman 2D Ağaç Kesme Sahnesi"
-            draggable={false}
-            className="h-full w-full object-cover"
-          />
-        )}
-        {id === "maden" && (
-          <div className="h-full w-full bg-gradient-to-b from-stone-700 via-stone-800 to-stone-950">
-            <img
-              src="/assets/harita/koy.webp"
-              alt="Taş Ocağı Sahnesi"
-              draggable={false}
-              className="h-full w-full scale-150 object-cover object-left-top opacity-65"
-            />
-          </div>
-        )}
-
-        {/* Görevlendirilmiş Köylü İşçiler */}
-        {Array.from({ length: Math.min(5, buradakiIsci) }).map((_, idx) => (
-          <div
-            key={idx}
-            style={{ left: `${22 + idx * 14}%`, top: `${78 + (idx % 2) * 5}%` }}
-            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2"
-          >
-            <div className="flex flex-col items-center">
-              <div className="grid h-9 w-9 place-items-center rounded-full bg-stone-900/90 text-lg ring-1 ring-amber-400/60">
-                {k === "erzak" ? "👨‍🌾" : k === "kereste" ? "👷" : "⛏️"}
-              </div>
-              <span className="mt-0.5 rounded-full bg-stone-950/85 px-2 py-0.5 text-[9px] font-bold text-amber-200">
-                {idx + 1}. Çalışan
-              </span>
-            </div>
-          </div>
-        ))}
-
-        {/* 1. TARLA: BOŞ / YARI DOLU / TAM DOLU DURUMUNA GÖRE EKİNLER */}
-        {id === "tarla" &&
-          TARLA_EKINLERI.map((ekin) => (
-            <button
-              key={ekin.id}
-              type="button"
-              onClick={(e) => ekinSula(ekin, e)}
-              style={{ left: `${ekin.x}%`, top: `${ekin.y}%` }}
-              className="group absolute z-20 -translate-x-1/2 -translate-y-1/2 transition hover:scale-110"
-            >
-              <div
-                className={`flex flex-col items-center rounded-2xl px-3 py-1.5 shadow-xl ring-2 ${
-                  bekleyen <= 0
-                    ? "bg-stone-900/85 text-stone-400 ring-stone-700"
-                    : dBilgi.evre === "dolu"
-                    ? "animate-bounce bg-emerald-950/95 text-emerald-200 ring-emerald-400"
-                    : "animate-pulse bg-amber-950/95 text-amber-100 ring-amber-400"
-                }`}
-              >
-                <span className="text-xl sm:text-2xl">
-                  {bekleyen <= 0 ? "🟫⏳" : dBilgi.evre === "dolu" ? "🌾✨" : "🌱💧"}
-                </span>
-                <span className="text-[10px] font-black whitespace-nowrap">
-                  {bekleyen <= 0
-                    ? `Boş (%${doluluk})`
-                    : `Sula & +${bekleyen} Mahsul Al`}
-                </span>
-              </div>
-            </button>
-          ))}
-
-        {/* 2. ORMAN: KURUMUŞ KAHVERENGİ AĞAÇLAR VE CANLI YEŞİL AĞAÇLAR */}
-        {id === "orman" &&
-          ORMAN_AGACLARI.map((agac) => {
-            const vurus = agacVurus[agac.id] ?? 0;
-            return (
-              <button
-                key={agac.id}
-                type="button"
-                onClick={(e) => agacaTikla(agac, e)}
-                style={{ left: `${agac.x}%`, top: `${agac.y}%` }}
-                className="group absolute z-20 -translate-x-1/2 -translate-y-1/2 transition hover:scale-110"
-              >
-                <div
-                  className={`flex flex-col items-center rounded-2xl px-2.5 py-1.5 shadow-xl ring-2 ${
-                    !agac.kurumus
-                      ? "bg-emerald-950/85 text-emerald-200 ring-emerald-500/60"
-                      : bekleyen <= 0
-                      ? "bg-stone-900/85 text-stone-400 ring-stone-700"
-                      : "animate-pulse bg-amber-950/95 text-amber-100 ring-amber-400"
-                  }`}
-                >
-                  <span className="text-2xl sm:text-3xl">
-                    {!agac.kurumus ? "🌲" : vurus === 1 ? "🪓🍂" : "🍂"}
-                  </span>
-                  <span className="text-[10px] font-black whitespace-nowrap">
-                    {!agac.kurumus
-                      ? "Yaş Ağaç (Kesme)"
-                      : bekleyen <= 0
-                      ? `Bekliyor (%${doluluk})`
-                      : vurus === 1
-                      ? `1 Kez Daha Vur (+${bekleyen})`
-                      : `Kurumuş Ağaç (Kes 🪓)`}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-
-        {/* 3. TAŞ OCAĞI: KAYA DAMARLARI */}
-        {id === "maden" &&
-          MADEN_KAYALARI.map((kaya) => {
-            const vurus = kayaVurus[kaya.id] ?? 0;
-            return (
-              <button
-                key={kaya.id}
-                type="button"
-                onClick={(e) => kayayaTikla(kaya, e)}
-                style={{ left: `${kaya.x}%`, top: `${kaya.y}%` }}
-                className="group absolute z-20 -translate-x-1/2 -translate-y-1/2 transition hover:scale-110"
-              >
-                <div
-                  className={`flex flex-col items-center rounded-2xl px-3 py-2 shadow-xl ring-2 ${
-                    bekleyen <= 0
-                      ? "bg-stone-900/85 text-stone-400 ring-stone-700"
-                      : "animate-pulse bg-stone-900/95 text-amber-100 ring-amber-400"
-                  }`}
-                >
-                  <span className="text-2xl sm:text-3xl">⛰️⛏️</span>
-                  <span className="text-[10px] font-black whitespace-nowrap">
-                    {bekleyen <= 0
-                      ? `Bekliyor (%${doluluk})`
-                      : vurus === 1
-                      ? `1 Kez Daha Vur (+${bekleyen})`
-                      : `${kaya.ad} (Kır ⛏️)`}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-
-        {/* Öğrencinin Seçtiği Karakter */}
-        <div
-          style={{ left: `${oyuncu.x}%`, top: `${oyuncu.y}%` }}
-          className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ease-out"
-        >
-          <div className="flex flex-col items-center">
-            <img
-              src={karakter?.gorsel ?? "/assets/karakterler/erkek_alp.webp"}
-              alt={karakter?.ad ?? "Oyuncu"}
-              className="h-14 w-14 rounded-full object-cover shadow-2xl ring-3 ring-emerald-300 sm:h-16 sm:w-16"
-            />
-            <span className="mt-1 rounded-full bg-emerald-400 px-2.5 py-0.5 text-[10px] font-black text-stone-950 shadow">
-              {oyun.kullanici?.ad ?? karakter?.ad ?? "Sen"}
-            </span>
-          </div>
-        </div>
-      </div>
+      {/* THREE.JS 3D ÜRETİM MİNİ OYUN SAHNESİ */}
+      {id === "tarla" && <TarlaFPS3DSahnesi oyun={oyun} />}
+      {id === "orman" && <OrmanKesifVeKesimSahnesi oyun={oyun} />}
+      {id === "maden" && <TasOcagi3DSahnesi oyun={oyun} />}
     </div>
   );
 }

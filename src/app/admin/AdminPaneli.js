@@ -853,7 +853,7 @@ export default function AdminPaneli() {
             <section className="rounded-3xl bg-stone-900/90 p-5 ring-1 ring-stone-800 space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-black text-amber-300">
-                  🏇 Haberci Günlük İyilik Görevleri Havuzu ({veri.seyyahGorevleri.length})
+                  📜 Haberci Günlük İyilik Görevleri Havuzu ({veri.seyyahGorevleri.length})
                 </h2>
                 <button
                   type="button"

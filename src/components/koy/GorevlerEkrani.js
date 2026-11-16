@@ -1,6 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { BINALAR, DEPO_SAAT, EV_IDLERI, KARAKTERLER, KAYNAKLAR, toplamKonutKapasitesi } from "@/lib/oyun/sabitler";
+import {
+  BINALAR,
+  DEPO_SAAT,
+  EV_IDLERI,
+  KAYNAKLAR,
+  oyuncuKarakteriBul,
+  toplamKonutKapasitesi,
+} from "@/lib/oyun/sabitler";
 import { depoKapasitesi, kaynakAcikMi } from "@/lib/oyun/kurallar";
 import { NAMAZ_VAKITLERI, oyunGunu } from "@/lib/oyun/gorevler";
 import { koyDavalariListesi, turkuHikayeleriListesi, gocmenDurumu } from "@/lib/oyun/hikayeler";
@@ -574,7 +581,7 @@ export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
 
   // ÖĞRENCİ SOSYAL PROFİL SAYFASI GÖRÜNÜMÜ
   if (seciliProfil) {
-    const profilKarakter = KARAKTERLER[seciliProfil.yazar_karakter] ?? KARAKTERLER.alp;
+    const profilKarakter = oyuncuKarakteriBul(seciliProfil.yazar_karakter);
     const kullaniciPaylasimlari = paylasimlar.filter(
       (p) => p.yazar_kullanici === seciliProfil.yazar_kullanici
     );
@@ -595,7 +602,8 @@ export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
           <img
             src={profilKarakter.gorsel}
             alt={seciliProfil.yazar_ad}
-            className="h-24 w-24 rounded-full object-cover ring-4 ring-amber-400 shadow-xl"
+            referrerPolicy="no-referrer"
+            className="h-24 w-24 rounded-3xl bg-stone-950/90 p-1 object-contain ring-3 ring-amber-400 shadow-xl"
           />
           <div className="flex-1 space-y-1.5">
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
@@ -825,7 +833,7 @@ export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
           </div>
         ) : (
           filtrelenmisPaylasimlar.map((p) => {
-            const yazarKarakter = KARAKTERLER[p.yazar_karakter] ?? KARAKTERLER.alp;
+            const yazarKarakter = oyuncuKarakteriBul(p.yazar_karakter);
             const ytId = youtubeIdCikar(p.medyaUrl);
             const igEmbed = instagramEmbedUrlCikar(p.medyaUrl);
             const turBilgi = PAYLASIM_TURLERI.find((x) => x.id === p.altTur) ?? PAYLASIM_TURLERI[0];
@@ -845,7 +853,8 @@ export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
                     <img
                       src={yazarKarakter.gorsel}
                       alt={p.yazar_ad}
-                      className="h-11 w-11 rounded-full object-cover ring-2 ring-amber-400/70 transition group-hover:scale-105"
+                      referrerPolicy="no-referrer"
+                      className="h-12 w-12 rounded-2xl bg-stone-900 p-0.5 object-contain ring-2 ring-amber-400/70 transition group-hover:scale-105"
                     />
                     <div>
                       <div className="flex items-center gap-1.5">
@@ -1045,7 +1054,7 @@ export function SeyyahKutusu({ oyun, gorevKodu = "seyyah" }) {
       <div className="rounded-2xl bg-stone-950/75 p-4 text-left ring-1 ring-amber-500/30">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-            🏇 Günün Haberci İyilik Görevi
+            📜 Günün Haberci İyilik Görevi
           </span>
           {gorev && (
             <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-200">
@@ -1066,7 +1075,7 @@ export function SeyyahKutusu({ oyun, gorevKodu = "seyyah" }) {
             ? "✅ Haberci Görevleri Tamamlandı"
             : gorev.bugunYapildi
             ? "✅ Bugünkü İyilik Görevini Yaptın (Yarın Yeni Görev)"
-            : "🏇 Bugünkü İyilik Görevini Yaptım"}
+            : "🤝 Bugünkü İyilik Görevini Yaptım"}
         </button>
       )}
     </div>
@@ -1093,7 +1102,7 @@ export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup
           onClick={() => setSekme("iyilik")}
           className={`rounded-lg py-2 ${sekme === "iyilik" ? "bg-amber-500 text-stone-900" : "text-amber-200/70"}`}
         >
-          🏇 Günün İyiliği
+          🤝 Günün İyiliği
         </button>
       </div>
       {sekme === "mektup" ? (
@@ -1106,7 +1115,7 @@ export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup
             />
             <div className="flex-1 space-y-2 text-center sm:text-left">
               <span className="inline-block rounded-full bg-amber-500/20 px-3 py-0.5 text-xs font-black text-amber-300 ring-1 ring-amber-400/40">
-                🏇 Köy Habercisi · Level {durum.level} Aile Mektubu
+                📜 Köy Habercisi · Level {durum.level} Aile Mektubu
               </span>
               <h3 className="text-base font-black text-amber-100">
                 {aktifIcerik?.aile?.baslik ?? "Aile Meclisi Mektubu"}
@@ -1324,8 +1333,9 @@ export function ObaDavaKutusu({ oyun, onTamamKapat }) {
 // ---------------------------------------------------------------
 // 9. KIRAATHANE: OZAN DEDE (TÜRKÜ HİKÂYESİ) & YOLCULAR (İNSAN TOPLA)
 // ---------------------------------------------------------------
-export function KiraathaneKutusu({ oyun, varsayilanSekme = "ozan" }) {
+export function KiraathaneKutusu({ oyun, varsayilanSekme = "ozan", onKiraathaneAc = null }) {
   const { durum, ayarlar, simdi } = oyun;
+  const kiraathaneSeviye = durum.binalar?.kiraathane ?? 0;
   const [sekme, setSekme] = useState(varsayilanSekme); // 'ozan' | 'yolcular'
   const turkuler = turkuHikayeleriListesi(ayarlar);
   const [seciliIdx, setSeciliIdx] = useState(0);
@@ -1362,6 +1372,37 @@ export function KiraathaneKutusu({ oyun, varsayilanSekme = "ozan" }) {
     };
   }, [seciliIdx, sekme]);
 
+  // Kıraathane henüz inşa edilmediyse Ozan Dede dinlenemez!
+  if (kiraathaneSeviye < 1) {
+    return (
+      <div className="space-y-4 rounded-3xl bg-stone-950/90 p-6 text-center shadow-xl ring-2 ring-amber-400/50">
+        <div className="mx-auto grid h-20 w-20 place-items-center rounded-2xl bg-stone-900 text-4xl ring-1 ring-amber-500/40">
+          🍵
+        </div>
+        <div className="space-y-2">
+          <span className="inline-block rounded-full bg-amber-500/20 px-3 py-0.5 text-xs font-black text-amber-300 ring-1 ring-amber-400/40">
+            🔒 Önce Kıraathane İnşa Edilmeli
+          </span>
+          <h3 className="text-lg font-black text-amber-100 sm:text-xl">
+            Kıraathane Henüz İnşa Edilmedi!
+          </h3>
+          <p className="mx-auto max-w-lg text-xs leading-relaxed text-amber-100/85 sm:text-sm">
+            <b>Ozan Dede</b>&apos;den türkülerimizin hikâyesini dinlemek ve köye uğrayan yolcuları ağırlamak için önce meydanın sağındaki <b>Kıraathane</b> binasını inşa etmelisin.
+          </p>
+        </div>
+        {onKiraathaneAc && (
+          <button
+            type="button"
+            onClick={onKiraathaneAc}
+            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 px-6 py-3 text-sm font-black text-stone-950 shadow-xl ring-2 ring-amber-200 transition hover:brightness-110"
+          >
+            🔨 Kıraathane Arsasına Git ve İnşa Et →
+          </button>
+        )}
+      </div>
+    );
+  }
+
   const ozaniBaslatDurdur = () => {
     if (!turku) return;
     if (konusuyor) {
@@ -1382,7 +1423,7 @@ export function KiraathaneKutusu({ oyun, varsayilanSekme = "ozan" }) {
       return;
     }
 
-    // Ses dosyası girilmemişse tarayıcı Türkçe seslendirme + 10 sn ağız animasyonu
+    // Ses dosyası girilmemişse tarayıcı Türkçe seslendirme + ağız animasyonu
     setKonusuyor(true);
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
@@ -1726,8 +1767,10 @@ export function BinaIciGorunumu({ binaId, oyun, baslangicSekme = null }) {
             {["erzak", "kereste", "tas"].map((k) => {
               const t = KAYNAKLAR[k];
               const acik = kaynakAcikMi(k, durum.level);
-              const kap = depoKapasitesi(k, otagSeviye);
-              const bekleyen = acik ? oyun.bekleyen(k) : 0;
+              const dBilgi = acik ? oyun.dolum(k) : null;
+              const hazirAdet = dBilgi?.hazirAdet ?? 0;
+              const toplamAdet = dBilgi?.toplamAdet ?? 0;
+              const birikenMiktar = dBilgi?.biriken ?? 0;
               return (
                 <div key={k} className="rounded-xl bg-stone-900/90 p-3 ring-1 ring-stone-800">
                   <div className="flex items-center justify-between text-xs font-bold">
@@ -1735,18 +1778,27 @@ export function BinaIciGorunumu({ binaId, oyun, baslangicSekme = null }) {
                       {t.ikon} {t.ad}
                     </span>
                     <span className="tabular-nums text-amber-200">
-                      {acik ? `${bekleyen} / ${kap}` : `🔒 Lv.${t.acilisLevel}`}
+                      {acik
+                        ? k === "kereste"
+                          ? `${hazirAdet}/${toplamAdet} Sefer`
+                          : `${hazirAdet}/${toplamAdet} Hazır`
+                        : `🔒 Lv.${t.acilisLevel}`}
                     </span>
                   </div>
-                  {acik && (
+                  {acik && k !== "kereste" && (
                     <button
                       type="button"
-                      disabled={!bekleyen || oyun.bekliyor}
-                      onClick={() => oyun.topla(k)}
+                      disabled={hazirAdet <= 0 || oyun.bekliyor}
+                      onClick={() => oyun.sahaHepsiniTopla(k)}
                       className="mt-2 w-full rounded-lg bg-amber-400 py-1.5 text-xs font-black text-stone-950 disabled:bg-stone-800 disabled:text-stone-500"
                     >
-                      {bekleyen ? `+${bekleyen} ${t.ad} Topla` : "Henüz birikmedi"}
+                      {hazirAdet > 0 ? `Hepsini Topla (+${birikenMiktar} ${t.ad})` : "Yetişiyor…"}
                     </button>
+                  )}
+                  {acik && k === "kereste" && (
+                    <div className="mt-2 rounded-lg bg-stone-800/80 py-1.5 text-center text-[11px] font-bold text-amber-200/80">
+                      {hazirAdet > 0 ? "🌲 Orman haritasından keşfet" : "Bugünkü seferler tamam"}
+                    </div>
                   )}
                 </div>
               );

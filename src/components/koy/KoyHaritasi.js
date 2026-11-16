@@ -9,15 +9,113 @@ import {
   KAYNAKLAR,
   BIRLIK_ACILIS_LEVEL,
   ALAN_MUCADELESI_LEVEL,
+  toplamKonutKapasitesi,
 } from "@/lib/oyun/sabitler";
-import { depoKapasitesi, kaynakAcikMi } from "@/lib/oyun/kurallar";
+import { kaynakAcikMi } from "@/lib/oyun/kurallar";
 import { useOyun } from "@/lib/oyun/useOyun";
 import UstBar from "./UstBar";
 import Panel from "./Panel";
 import GelistiriciPaneli from "./GelistiriciPaneli";
 import RehberKarakter, { REHBER_ADIMLARI, ilkEksikRehberAdimi } from "./RehberKarakter";
+import CanliKoySahnesi from "./CanliKoySahnesi";
 
 const HARITA_ORAN = 1710 / 920;
+
+/**
+ * Bir köy binasında şu an oyuncunun yapabileceği görev veya hazır inşa/yükseltme sayısını döner.
+ * Kırmızı yuvarlak bildirim rozeti (1, 2...) için kullanılır.
+ */
+function binaBildirimSayisi(id, oyun) {
+  const { durum, gorevler, aktifIcerik } = oyun;
+  const seviye = durum.binalar?.[id] ?? 0;
+  const bilgi = oyun.binaBilgisi(id);
+  const mektepKurulu = (durum.binalar?.mektep ?? 0) >= 1;
+
+  // Henüz inşa edilmemiş arsa: Tüm inşa şartları ve kaynakları hazırsa kırmızı "1" göster!
+  if (seviye === 0) {
+    if (BINALAR[id]?.konut) {
+      // Ek konutlarda sadece köyde hiç boş yatak kalmadıysa ilk uygun konutu işaretle
+      const bosYatak = toplamKonutKapasitesi(durum.binalar) - (durum.envanter?.insan ?? 5);
+      if (bosYatak > 0) return 0;
+      const ilkBosEv = ["ev1", "ev2", "ev3", "ev4", "ev5"].find((e) => (durum.binalar?.[e] ?? 0) === 0);
+      return id === ilkBosEv && bilgi.yapilabilir ? 1 : 0;
+    }
+    return bilgi.yapilabilir ? 1 : 0;
+  }
+
+  let sayi = 0;
+
+  if (id === "mektep") {
+    for (const g of gorevler) {
+      if (g.tamam) continue;
+      if (g.tur === "hadis" && !g.bugunYapildi) sayi += 1;
+      else if (g.tur === "video") sayi += 1;
+      else if (g.tur === "sinav" && (aktifIcerik?.sinav?.length ?? 0) > 0) sayi += 1;
+    }
+    if (bilgi.yapilabilir) sayi += 1;
+    return sayi;
+  }
+
+  if (id === "kiraathane" && mektepKurulu) {
+    for (const g of gorevler) {
+      if (!g.tamam && g.tur === "turku") sayi += 1;
+    }
+    if (bilgi.yapilabilir) sayi += 1;
+    return sayi;
+  }
+
+  if (id === "kendi_evim" && mektepKurulu) {
+    const aileEksik = gorevler.some((g) => g.tur === "aile" && !g.tamam);
+    const mektupEvde = (durum.mektupAlindi ?? 0) >= durum.level;
+    if (aileEksik && mektupEvde) sayi += 1;
+    return sayi;
+  }
+
+  if (id === "sosyalmeydan" && mektepKurulu) {
+    for (const g of gorevler) {
+      if (g.tamam) continue;
+      if (g.tur === "dava" || g.tur === "meydan_paylasim" || g.tur === "meydan_yorum") {
+        sayi += 1;
+      }
+    }
+    if (bilgi.yapilabilir) sayi += 1;
+    return sayi;
+  }
+
+  if (id === "otag") {
+    return bilgi.yapilabilir ? 1 : 0;
+  }
+
+  return 0;
+}
+
+/**
+ * Sabit harita noktaları (Haberci, Pano) için sayısal görev rozeti (1, 2...).
+ */
+function noktaGorevSayisi(id, oyun) {
+  const { durum, gorevler } = oyun;
+  const mektepKurulu = (durum.binalar?.mektep ?? 0) >= 1;
+
+  if (id === "pano") {
+    const onayGorevi = mektepKurulu ? gorevler.filter((g) => g.tur === "onay" && !g.tamam && !g.bugunYapildi).length : 0;
+    return (oyun.levelAtlanabilir ? 1 : 0) + onayGorevi;
+  }
+
+  if (id === "haberci") {
+    let sayi = 0;
+    const aileGoreviVar = gorevler.some((g) => g.tur === "aile" && !g.tamam);
+    if (aileGoreviVar && (durum.mektupAlindi ?? 0) < durum.level) {
+      sayi += 1;
+    }
+    if (mektepKurulu) {
+      const seyyahHazir = gorevler.some((g) => g.tur === "seyyah" && !g.tamam && !g.bugunYapildi);
+      if (seyyahHazir) sayi += 1;
+    }
+    return sayi;
+  }
+
+  return 0;
+}
 
 export default function KoyHaritasi({ baslangic }) {
   const oyun = useOyun(baslangic);
@@ -49,7 +147,7 @@ export default function KoyHaritasi({ baslangic }) {
 
   const aktifRehberAdimi = REHBER_ADIMLARI[rehberAdimIndeks] ?? REHBER_ADIMLARI[0];
 
-  // Bina inşa edildiğinde (ör. Mektep kurulduğunda) veya görev/level ilerlediğinde rehber açıksa ve görev bölümündeyse sıradaki adıma otomatik geçsin
+  // Bina inşa edildiğinde (ör. Mektep kurulduğunda) veya görev/level ilerlediğinde rehber açıksa sıradaki adıma otomatik geçsin
   useEffect(() => {
     if (!oyun.hazir || !rehberAcik) return;
     const adim = REHBER_ADIMLARI[rehberAdimIndeks];
@@ -61,15 +159,15 @@ export default function KoyHaritasi({ baslangic }) {
       }
     }
   }, [oyun.hazir, oyun.durum, oyun.gorevler, rehberAcik, rehberAdimIndeks]);
+
   const rehberKameraHedefleri = rehberAcik && katman === "koy" ? aktifRehberAdimi?.hedefler ?? [] : [];
-  // Tanıtım turunda "Buraya Tıkla" oku çıkmaz; sadece 2. Bölüm (Yapılacak İşler) adımında çıkar
   const rehberHedefleri =
     rehberAcik && katman === "koy" && aktifRehberAdimi?.bolum === "gorev"
       ? aktifRehberAdimi?.hedefler ?? []
       : [];
   const ilkRehberHedefi = rehberKameraHedefleri[0] ?? null;
 
-  // Harita açılışta veya rehber adımı değiştiğinde hedefe hem yatay hem dikey olarak yumuşakça yaklaşır
+  // Harita açılışta veya rehber adımı değiştiğinde hedefe yumuşakça yaklaşır
   useEffect(() => {
     const el = kaydirRef.current;
     const haritaEl = el?.querySelector("[data-harita-tuval]");
@@ -88,7 +186,6 @@ export default function KoyHaritasi({ baslangic }) {
     }
     const haritaSol = haritaEl.offsetLeft + (hedefX / 100) * haritaEl.clientWidth;
     const haritaUst = haritaEl.offsetTop + (hedefY / 100) * haritaEl.clientHeight;
-    // Altta rehber açıkken hedef ekranın üst-orta kısmında kalsın ki rehber kutusunun altında kalmasın
     const dikeyOfset = rehberAcik ? el.clientHeight * 0.35 : el.clientHeight * 0.5;
     el.scrollTo({
       left: Math.max(0, haritaSol - el.clientWidth / 2),
@@ -139,7 +236,7 @@ export default function KoyHaritasi({ baslangic }) {
     setKatman(yeniKatman);
   };
 
-  // Web'de fareyle basılı tutarak haritayı sürükleme (Mouse Drag-to-Pan)
+  // Web'de fareyle basılı tutarak haritayı sürükleme
   const fareBas = (e) => {
     if (e.button !== 0) return;
     const el = kaydirRef.current;
@@ -185,7 +282,6 @@ export default function KoyHaritasi({ baslangic }) {
     }
   };
 
-  // Düzenleme modu: haritaya tıklanan noktanın % koordinatını göster
   const haritaTikla = (e) => {
     if (suruklemeRef.current.hareketEtti) return;
     if (!duzenle) return;
@@ -195,15 +291,24 @@ export default function KoyHaritasi({ baslangic }) {
     setKoordinat({ x, y });
   };
 
-  const arkaPlanGorseli =
+  const bolgeVerileri = birlikOzeti?.bolgeler ?? BOLGELER;
+  const birlikBinalari = birlikOzeti?.birlik?.binalar ?? {};
+  const tarlaDolumOzeti = oyun.dolum("erzak");
+  const tarlaGorseli =
+    tarlaDolumOzeti?.evre === "dolu"
+      ? "/assets/binalar/tarla_dolu.webp"
+      : tarlaDolumOzeti?.evre === "yari"
+      ? "/assets/binalar/tarla_yari.webp"
+      : "/assets/binalar/tarla_bos.webp";
+
+  const arkaPlanHarita =
     katman === "birlik"
       ? "/assets/harita/birlik_alani.webp"
       : katman === "harita"
       ? "/assets/harita/genel_harita.webp"
       : "/assets/harita/koy.webp";
 
-  const bolgeVerileri = birlikOzeti?.bolgeler ?? BOLGELER;
-  const birlikBinalari = birlikOzeti?.birlik?.binalar ?? {};
+  const mektupBekliyor = (durum.mektupAlindi ?? 0) < durum.level;
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-[#162413] select-none">
@@ -218,7 +323,6 @@ export default function KoyHaritasi({ baslangic }) {
           surukleniyor ? "cursor-grabbing" : "cursor-grab"
         }`}
       >
-        {/* Sisli Çerçeve Alanı: Haritanın etrafında sisli keşif boşluğu bırakır, en alttaki Haberci rahatça yukarı kaydırılır */}
         <div
           className="relative flex items-center justify-center px-[18vw] py-[28dvh]"
           style={{
@@ -228,7 +332,6 @@ export default function KoyHaritasi({ baslangic }) {
               "radial-gradient(circle at center, rgba(35,58,28,0.95) 0%, rgba(18,30,16,0.98) 70%, rgba(10,16,10,1) 100%)",
           }}
         >
-          {/* Harita Dışı Sis Bulutları Dokusu */}
           <div className="pointer-events-none absolute inset-0 opacity-60 bg-[radial-gradient(ellipse_at_top,_rgba(214,211,209,0.18),_transparent_55%),radial-gradient(ellipse_at_bottom,_rgba(214,211,209,0.22),_transparent_55%)]" />
 
           <div
@@ -237,14 +340,23 @@ export default function KoyHaritasi({ baslangic }) {
             style={{ width: `max(100vw, calc(100dvh * ${HARITA_ORAN}))`, aspectRatio: "1710 / 920" }}
             onClick={haritaTikla}
           >
+            {/* Orijinal Tam Çözünürlüklü Harita Zemini */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={arkaPlanGorseli}
-              alt={katman === "birlik" ? "Birlik Alanı" : katman === "harita" ? "Genel Harita" : "Köy"}
-              className="absolute inset-0 h-full w-full object-cover"
+              src={arkaPlanHarita}
+              alt="Seyrüsefer Haritası"
               draggable={false}
+              className="pointer-events-none block h-full w-full object-cover select-none"
             />
 
-            {/* Harita Kenarları Yumuşak Sis Geçişi (Fog of War Vignette) */}
+            {/* Akan Göksu Nehri (GLSL Shader), Salınan Ağaçlar ve 2 Yavaş Köylü (Y-Derinlik Sıralamalı) */}
+            <CanliKoySahnesi
+              katman={katman}
+              insanSayisi={durum.envanter?.insan ?? 5}
+              aktif={!secim}
+            />
+
+            {/* Harita Kenarları Yumuşak Sis Geçişi */}
             <div
               className="pointer-events-none absolute inset-0 z-[190]"
               style={{
@@ -252,258 +364,353 @@ export default function KoyHaritasi({ baslangic }) {
               }}
             />
 
-          {/* ================= 1. KATMAN: KENDİ KÖYÜM ================= */}
-          {katman === "koy" && (
-            <>
-              {/* Köy Binaları / Boş Arsalar */}
-              {Object.entries(ARSALAR).map(([id, a]) => {
-                const seviye = durum.binalar[id] ?? 0;
-                const bilgi = oyun.binaBilgisi(id);
-                const rehberVurgulu = rehberHedefleri.some((h) => h.tur === "bina" && h.id === id);
-                const kameraOdakli = rehberKameraHedefleri.some((h) => h.tur === "bina" && h.id === id);
-                return seviye > 0 ? (
-                  <button
-                    key={id}
-                    onClick={() => setSecim({ tur: "bina", id })}
-                    className={`group absolute ${rehberVurgulu || kameraOdakli ? "z-[240]" : ""}`}
-                    style={{
-                      left: `${a.x}%`,
-                      top: `${a.y}%`,
-                      width: `${a.genislik}%`,
-                      transform: "translate(-50%, -80%)",
-                      zIndex: rehberVurgulu || kameraOdakli ? 240 : Math.round(a.y),
-                    }}
-                  >
-                    {rehberVurgulu && (
-                      <span className="pointer-events-none absolute -top-11 left-1/2 z-30 -translate-x-1/2 animate-bounce whitespace-nowrap rounded-full bg-amber-400 px-3 py-1 text-xs font-black text-stone-950 shadow-xl ring-2 ring-white">
-                        👇 Buraya Tıkla!
-                      </span>
-                    )}
-                    <img
-                      src={BINALAR[id].gorsel(seviye)}
-                      alt={BINALAR[id].ad}
-                      className={`w-full drop-shadow-[0_8px_8px_rgba(0,0,0,0.45)] transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-110 ${
-                        rehberVurgulu || kameraOdakli ? "rounded-3xl ring-4 ring-amber-300" : ""
-                      }`}
-                      draggable={false}
-                    />
-                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-stone-900/90 px-2 py-0.5 text-[11px] font-bold text-amber-100 ring-1 ring-amber-500/60">
-                      {BINALAR[id].ad} · {BINALAR[id].konut ? `${seviye}. Kat` : `Lv.${seviye}`}
-                      {bilgi.yapilabilir && <span className="ml-1 text-emerald-300">▲</span>}
-                    </span>
-                  </button>
-                ) : (
-                  <BosArsa
-                    key={id}
-                    id={id}
-                    a={a}
-                    bilgi={bilgi}
-                    rehberVurgulu={rehberVurgulu}
-                    kameraOdakli={kameraOdakli}
-                    onClick={() => setSecim({ tur: "bina", id })}
-                  />
-                );
-              })}
-
-              {/* Sabit Noktalar: Pano, Tarla (3 Görsel Evreli), Orman, Maden, Haberci */}
-              {Object.entries(NOKTALAR).map(([id, n]) => {
-                const acik = n.kaynak ? kaynakAcikMi(n.kaynak, durum.level) : (n.acilisLevel ?? 1) <= durum.level;
-                const dBilgi = n.kaynak ? oyun.dolum(n.kaynak) : null;
-                const bekleyen = dBilgi?.biriken ?? 0;
-                const dolumOrani = dBilgi?.dolumOrani ?? 0;
-                const kapasite = dBilgi?.kapasite ?? 15;
-                const dolu = n.kaynak && acik && bekleyen >= kapasite;
-                const rehberVurgulu = rehberHedefleri.some((h) => h.tur === "nokta" && h.id === id);
-                const kameraOdakli = rehberKameraHedefleri.some((h) => h.tur === "nokta" && h.id === id);
-
-                const tarlaGorseli =
-                  id === "tarla"
-                    ? dBilgi?.evre === "dolu"
-                      ? "/assets/binalar/tarla_dolu.webp"
-                      : dBilgi?.evre === "yari"
-                      ? "/assets/binalar/tarla_yari.webp"
-                      : "/assets/binalar/tarla_bos.webp"
-                    : null;
-
-                return (
-                  <button
-                    key={id}
-                    onClick={() => setSecim({ tur: "nokta", id })}
-                    className="group absolute flex flex-col items-center transition-transform duration-200 hover:-translate-y-1.5 hover:scale-110"
-                    style={{
-                      left: `${n.x}%`,
-                      top: `${n.y}%`,
-                      transform: "translate(-50%, -50%)",
-                      zIndex: rehberVurgulu || kameraOdakli ? 245 : 205,
-                    }}
-                  >
-                    {rehberVurgulu && (
-                      <span className="mb-1 animate-bounce whitespace-nowrap rounded-full bg-amber-400 px-3 py-1 text-xs font-black text-stone-950 shadow-xl ring-2 ring-white">
-                        👇 Buraya Tıkla!
-                      </span>
-                    )}
-
-                    {/* Üretim Alanı Canlı Dolum Oranı Rozeti */}
-                    {n.kaynak && acik && (
-                      <div className="mb-1 flex flex-col items-center rounded-xl bg-stone-950/90 px-2 py-1 shadow-lg ring-1 ring-amber-400/50">
-                        <span
-                          className={`text-[10px] font-black tabular-nums ${
-                            dolu
-                              ? "animate-pulse text-red-400"
-                              : bekleyen > 0
-                              ? "text-emerald-300"
-                              : "text-amber-200/80"
-                          }`}
-                        >
-                          {KAYNAKLAR[n.kaynak].ikon} {bekleyen}/{kapasite} · %{dolumOrani}
+            {/* ================= 1. KATMAN: KENDİ KÖYÜM ================= */}
+            {katman === "koy" && (
+              <>
+                {/* Köy Binaları (Y-Derinliği: zIndex = Math.round(a.y * 2) -> Köylüler arkadan/önden doğru geçer) */}
+                {Object.entries(ARSALAR).map(([id, a]) => {
+                  const seviye = durum.binalar[id] ?? 0;
+                  const bilgi = oyun.binaBilgisi(id);
+                  const bildirimSayisi = binaBildirimSayisi(id, oyun);
+                  const rehberVurgulu = rehberHedefleri.some((h) => h.tur === "bina" && h.id === id);
+                  const kameraOdakli = rehberKameraHedefleri.some((h) => h.tur === "bina" && h.id === id);
+                  return seviye > 0 ? (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-label={BINALAR[id].ad}
+                      onClick={() => setSecim({ tur: "bina", id })}
+                      className="group absolute transition-transform duration-200 hover:scale-[1.04]"
+                      style={{
+                        left: `${a.x}%`,
+                        top: `${a.y}%`,
+                        width: `${a.genislik}%`,
+                        transform: "translate(-50%, -78%)",
+                        zIndex: rehberVurgulu || kameraOdakli ? 240 : Math.round(a.y * 2),
+                      }}
+                    >
+                      {rehberVurgulu && (
+                        <span className="pointer-events-none absolute -top-9 left-1/2 z-30 -translate-x-1/2 animate-bounce whitespace-nowrap rounded-full bg-amber-400 px-3 py-1 text-xs font-black text-stone-950 shadow-xl ring-2 ring-white">
+                          👇 Buraya Tıkla!
                         </span>
-                        <div className="mt-0.5 h-1.5 w-16 overflow-hidden rounded-full bg-stone-800">
-                          <div
-                            className={`h-full transition-all ${
-                              dolu ? "bg-red-500" : bekleyen > 0 ? "bg-emerald-400" : "bg-amber-400"
-                            }`}
-                            style={{ width: `${dolumOrani}%` }}
+                      )}
+                      {bildirimSayisi > 0 && (
+                        <span
+                          title={`${bildirimSayisi} yapılacak görev`}
+                          className="pointer-events-none absolute top-1 right-1 z-30 grid h-6 min-w-6 place-items-center rounded-full bg-red-600 px-1.5 text-xs font-black text-white shadow-[0_4px_12px_rgba(220,38,38,0.85)] ring-2 ring-white"
+                        >
+                          {bildirimSayisi}
+                        </span>
+                      )}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={BINALAR[id].gorsel(seviye)}
+                        alt={BINALAR[id].ad}
+                        draggable={false}
+                        className={`block h-auto w-full drop-shadow-[0_10px_10px_rgba(0,0,0,0.45)] select-none ${
+                          rehberVurgulu || kameraOdakli ? "brightness-110" : ""
+                        }`}
+                      />
+                      <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-stone-900/92 px-2.5 py-0.5 text-[11px] font-bold text-amber-100 shadow-md ring-1 ring-amber-500/60 transition-transform duration-150 group-hover:scale-105 group-hover:ring-amber-300">
+                        {BINALAR[id].ad} · {BINALAR[id].konut ? `${seviye}. Kat` : `Lv.${seviye}`}
+                        {bilgi.yapilabilir && <span className="ml-1 text-emerald-300">▲</span>}
+                      </span>
+                    </button>
+                  ) : (
+                    <BosArsa
+                      key={id}
+                      id={id}
+                      a={a}
+                      bilgi={bilgi}
+                      bildirimSayisi={bildirimSayisi}
+                      rehberVurgulu={rehberVurgulu}
+                      kameraOdakli={kameraOdakli}
+                      onClick={() => setSecim({ tur: "bina", id })}
+                    />
+                  );
+                })}
+
+                {/* Sabit Noktalar: Pano, Tarla, Orman, Taş Ocağı ve Atlı Haberci Görseli */}
+                {Object.entries(NOKTALAR).map(([id, n]) => {
+                  const acik = n.kaynak ? kaynakAcikMi(n.kaynak, durum.level) : (n.acilisLevel ?? 1) <= durum.level;
+                  const dBilgi = n.kaynak ? oyun.dolum(n.kaynak) : null;
+                  const bekleyen = dBilgi?.biriken ?? 0;
+                  const dolumOrani = dBilgi?.dolumOrani ?? 0;
+                  const kapasite = dBilgi?.kapasite ?? 24;
+                  const dolu = n.kaynak && acik && bekleyen >= kapasite;
+                  const uretimUnlem = Boolean(n.kaynak && acik && (dBilgi?.hazirAdet ?? 0) > 0);
+                  const noktaSayi = noktaGorevSayisi(id, oyun);
+                  const rehberVurgulu = rehberHedefleri.some((h) => h.tur === "nokta" && h.id === id);
+                  const kameraOdakli = rehberKameraHedefleri.some((h) => h.tur === "nokta" && h.id === id);
+
+                  // Haberci: projedeki kendi atlı haberci görseli (seyyaherkek.webp)
+                  if (id === "haberci") {
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-label={n.ad}
+                        onClick={() => setSecim({ tur: "nokta", id })}
+                        className="group absolute flex flex-col items-center transition-transform duration-200 hover:-translate-y-1 hover:scale-105"
+                        style={{
+                          left: `${n.x}%`,
+                          top: `${n.y}%`,
+                          width: "6.4%",
+                          minWidth: "74px",
+                          transform: "translate(-50%, -72%)",
+                          zIndex: rehberVurgulu || kameraOdakli ? 245 : Math.round(n.y * 2),
+                        }}
+                      >
+                        {rehberVurgulu ? (
+                          <span className="mb-1 animate-bounce whitespace-nowrap rounded-full bg-amber-400 px-3 py-1 text-xs font-black text-stone-950 shadow-xl ring-2 ring-white">
+                            👇 Buraya Tıkla!
+                          </span>
+                        ) : (
+                          mektupBekliyor && (
+                            <span className="mb-0.5 whitespace-nowrap rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-black text-stone-950 shadow-lg ring-1 ring-white">
+                              ✉️ Mektup Var
+                            </span>
+                          )
+                        )}
+                        <div className="relative w-full">
+                          {noktaSayi > 0 && (
+                            <span
+                              title={`${noktaSayi} yapılacak görev`}
+                              className="pointer-events-none absolute -top-1 -right-1 z-30 grid h-6 min-w-6 place-items-center rounded-full bg-red-600 px-1.5 text-xs font-black text-white shadow-[0_4px_12px_rgba(220,38,38,0.85)] ring-2 ring-white"
+                            >
+                              {noktaSayi}
+                            </span>
+                          )}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={n.gorsel || "/assets/binalar/seyyaherkek.webp"}
+                            alt="Köy Habercisi"
+                            draggable={false}
+                            className="block h-auto w-full drop-shadow-[0_10px_10px_rgba(0,0,0,0.55)] select-none"
                           />
                         </div>
-                      </div>
-                    )}
-
-                    {id === "pano" && oyun.levelAtlanabilir && (
-                      <span className="mb-1 animate-bounce rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-black text-white">
-                        Level Atla!
-                      </span>
-                    )}
-
-                    {/* Tarla için Boş / Yarı Dolu / Tam Dolu Görsel; Orman ve Diğerleri İçin Öne Gelme Efektli Görsel/Rozet */}
-                    {tarlaGorseli ? (
-                      <div
-                        className={`relative h-16 w-24 overflow-hidden rounded-2xl border-2 bg-stone-900 shadow-[0_10px_14px_rgba(0,0,0,0.6)] transition-transform duration-200 group-hover:scale-105 sm:h-20 sm:w-28 ${
-                          rehberVurgulu || kameraOdakli ? "border-amber-300 ring-4 ring-amber-300" : "border-amber-500/80"
-                        }`}
-                      >
-                        <img
-                          src={tarlaGorseli}
-                          alt="Tarla Durumu"
-                          draggable={false}
-                          className="h-full w-full object-cover"
-                        />
-                        <span className="absolute right-1 bottom-1 rounded bg-stone-950/85 px-1.5 py-0.5 text-[9px] font-black text-amber-200">
-                          {dBilgi?.evre === "dolu" ? "🌾 Tam Dolu" : dBilgi?.evre === "yari" ? "🌱 Yeşeriyor" : "🟫 Boş"}
+                        <span className="-mt-1 whitespace-nowrap rounded-full bg-stone-900/95 px-2.5 py-0.5 text-[11px] font-black text-amber-100 shadow ring-1 ring-amber-500/60">
+                          {n.ad}
                         </span>
-                      </div>
-                    ) : (
-                      <span
-                        className={`grid h-11 w-11 place-items-center rounded-2xl text-xl shadow-[0_8px_12px_rgba(0,0,0,0.55)] ring-2 transition-transform duration-200 group-hover:scale-110 sm:h-12 sm:w-12 sm:text-2xl ${
-                          rehberVurgulu || kameraOdakli
-                            ? "scale-125 bg-amber-400 text-stone-950 ring-4 ring-white"
-                            : acik
-                            ? "bg-stone-900/90 ring-amber-400 group-hover:bg-stone-800"
-                            : "bg-stone-700/80 ring-stone-500 grayscale"
-                        }`}
-                      >
-                        {acik ? n.ikon : "🔒"}
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-label={n.ad}
+                      onClick={() => setSecim({ tur: "nokta", id })}
+                      className="group absolute flex flex-col items-center transition-transform duration-150 hover:-translate-y-1"
+                      style={{
+                        left: `${n.x}%`,
+                        top: `${n.y}%`,
+                        transform: "translate(-50%, -50%)",
+                        zIndex: rehberVurgulu || kameraOdakli ? 245 : Math.round(n.y * 2) + 8,
+                      }}
+                    >
+                      {rehberVurgulu && (
+                        <span className="mb-1 animate-bounce whitespace-nowrap rounded-full bg-amber-400 px-3 py-1 text-xs font-black text-stone-950 shadow-xl ring-2 ring-white">
+                          👇 Buraya Tıkla!
+                        </span>
+                      )}
+
+                      {n.kaynak && acik && (
+                        <div className="mb-1 flex flex-col items-center rounded-xl bg-stone-950/95 px-2.5 py-1 shadow-lg ring-1 ring-amber-400/50">
+                          <span
+                            className={`text-[10px] font-black tabular-nums ${
+                              dolu
+                                ? "text-emerald-300"
+                                : bekleyen > 0
+                                ? "text-amber-200"
+                                : "text-stone-400"
+                            }`}
+                          >
+                            {n.kaynak === "erzak"
+                              ? `${KAYNAKLAR.erzak.ikon} ${dBilgi?.hazirAdet ?? 0}/${dBilgi?.toplamAdet ?? 3} Parsel`
+                              : n.kaynak === "kereste"
+                              ? `🧭 ${dBilgi?.hazirAdet ?? 0}/${dBilgi?.toplamAdet ?? 2} Sefer`
+                              : `${KAYNAKLAR.tas.ikon} ${dBilgi?.hazirAdet ?? 0}/${dBilgi?.toplamAdet ?? 6} Kaya`}
+                          </span>
+                          <div className="mt-0.5 h-1.5 w-16 overflow-hidden rounded-full bg-stone-800">
+                            <div
+                              className={`h-full transition-all ${
+                                dolu ? "bg-emerald-400" : bekleyen > 0 ? "bg-amber-400" : "bg-stone-600"
+                              }`}
+                              style={{ width: `${dolumOrani}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {id === "pano" && oyun.levelAtlanabilir && (
+                        <span className="mb-1 animate-bounce rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-black text-white">
+                          Level Atla!
+                        </span>
+                      )}
+
+                      {id === "tarla" ? (
+                        <div className="relative">
+                          {uretimUnlem && (
+                            <span
+                              title="Hasat edilmeye hazır mahsul var!"
+                              className="pointer-events-none absolute -top-2 -right-2 z-30 grid h-6 w-6 place-items-center rounded-full bg-red-600 text-xs font-black text-white shadow-[0_4px_12px_rgba(220,38,38,0.85)] ring-2 ring-white"
+                            >
+                              !
+                            </span>
+                          )}
+                          <div
+                            className={`relative h-16 w-24 overflow-hidden rounded-2xl shadow-xl ring-2 transition-transform duration-150 group-hover:scale-105 sm:h-20 sm:w-28 ${
+                              rehberVurgulu || kameraOdakli ? "ring-4 ring-amber-300" : "ring-amber-400/70"
+                            }`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={tarlaGorseli}
+                              alt="Tarla"
+                              draggable={false}
+                              className="h-full w-full object-cover"
+                            />
+                            <span className="absolute right-1 bottom-1 rounded bg-stone-950/90 px-1.5 py-0.5 text-[9px] font-black text-amber-200">
+                              {dBilgi?.evre === "dolu"
+                                ? "🌾 Tam Dolu"
+                                : dBilgi?.evre === "yari"
+                                ? "🌱 Yeşeriyor"
+                                : "🟫 Boş"}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          {(uretimUnlem || noktaSayi > 0) && (
+                            <span
+                              title={uretimUnlem ? "Üretim alanında işlem hazır!" : `${noktaSayi} yapılacak görev`}
+                              className="pointer-events-none absolute -top-2 -right-2 z-30 grid h-6 min-w-6 place-items-center rounded-full bg-red-600 px-1.5 text-xs font-black text-white shadow-[0_4px_12px_rgba(220,38,38,0.85)] ring-2 ring-white"
+                            >
+                              {uretimUnlem ? "!" : noktaSayi}
+                            </span>
+                          )}
+                          <span
+                            className={`grid h-11 w-11 place-items-center rounded-2xl text-xl shadow-[0_8px_12px_rgba(0,0,0,0.55)] ring-2 transition-transform duration-150 group-hover:scale-110 sm:h-12 sm:w-12 sm:text-2xl ${
+                              rehberVurgulu || kameraOdakli
+                                ? "scale-125 bg-amber-400 text-stone-950 ring-4 ring-white"
+                                : acik
+                                ? "bg-stone-900/90 ring-amber-400 group-hover:bg-stone-800"
+                                : "bg-stone-700/80 ring-stone-500 grayscale"
+                            }`}
+                          >
+                            {acik ? n.ikon : "🔒"}
+                          </span>
+                        </div>
+                      )}
+
+                      <span className="mt-1 rounded-full bg-stone-900/95 px-2.5 py-0.5 text-[11px] font-black text-amber-100 shadow ring-1 ring-amber-500/50">
+                        {n.ad}
                       </span>
-                    )}
+                    </button>
+                  );
+                })}
+              </>
+            )}
 
-                    <span className="mt-1 rounded-full bg-stone-900/95 px-2.5 py-0.5 text-[11px] font-black text-amber-100 shadow ring-1 ring-amber-500/50">
-                      {n.ad}
-                    </span>
-                  </button>
-                );
-              })}
-            </>
-          )}
-
-          {/* ================= 2. KATMAN: BİRLİK ALANI (KÜLLİYE) ================= */}
-          {katman === "birlik" && (
-            <>
-              {Object.entries(BIRLIK_BINALARI).map(([id, b]) => {
-                const seviye = birlikBinalari[id] ?? 1;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => setSecim({ tur: "birlikBina", id })}
-                    className="group absolute"
-                    style={{
-                      left: `${b.x}%`,
-                      top: `${b.y}%`,
-                      width: `${b.genislik}%`,
-                      transform: "translate(-50%, -65%)",
-                      zIndex: Math.round(b.y),
-                    }}
-                  >
-                    <img
-                      src={b.gorsel(seviye)}
-                      alt={b.ad}
-                      className="w-full drop-shadow-[0_10px_10px_rgba(0,0,0,0.55)] transition-transform group-hover:scale-105"
-                      draggable={false}
-                    />
-                    <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-stone-900/95 px-2.5 py-0.5 text-xs font-black text-amber-100 shadow-lg ring-1 ring-amber-400/70">
-                      {b.ad} · Lv.{seviye}
-                    </span>
-                  </button>
-                );
-              })}
-
-              {/* Birlik Külliye Bilgi Rozeti */}
-              <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-2xl bg-stone-950/90 px-4 py-2 text-center text-xs text-amber-100 shadow-xl ring-1 ring-amber-500/50">
-                {birlikOzeti?.birlik ? (
-                  <span>
-                    🚩 <b>{birlikOzeti.birlik.ad}</b> Külliyesi · 🕌 Bugün <b>{birlikOzeti.birlik.namazToplam ?? 0}</b> vakit namaz · ⚡ Disiplin{" "}
-                    <b>%{birlikOzeti.birlik.disiplinOrani}</b>
-                  </span>
-                ) : (
-                  <span>🏕️ Bir birliğe katılmak veya yeni birlik kurmak için ortadaki <b>Birlik Otağı</b>&apos;na tıkla!</span>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* ================= 3. KATMAN: GENEL SANCAK HARİTASI ================= */}
-          {katman === "harita" && (
-            <>
-              {bolgeVerileri.map((b) => {
-                const koordinatBilgisi = BOLGELER.find((x) => x.id === b.id) ?? b;
-                return (
-                  <button
-                    key={b.id}
-                    onClick={() => setSecim({ tur: "bolge", id: b.id })}
-                    className="group absolute flex flex-col items-center"
-                    style={{
-                      left: `${koordinatBilgisi.x}%`,
-                      top: `${koordinatBilgisi.y}%`,
-                      transform: "translate(-50%, -50%)",
-                      zIndex: 210,
-                    }}
-                  >
-                    {b.lider ? (
-                      <span
-                        className="mb-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-black text-white shadow-lg ring-1 ring-white/50"
-                        style={{ backgroundColor: b.lider.renk }}
-                      >
-                        🚩 {b.lider.ad} ({b.lider.guc})
+            {/* ================= 2. KATMAN: BİRLİK ALANI (KÜLLİYE) ================= */}
+            {katman === "birlik" && (
+              <>
+                {Object.entries(BIRLIK_BINALARI).map(([id, b]) => {
+                  const seviye = birlikBinalari[id] ?? 1;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-label={b.ad}
+                      onClick={() => setSecim({ tur: "birlikBina", id })}
+                      className="group absolute transition-transform duration-200 hover:scale-105"
+                      style={{
+                        left: `${b.x}%`,
+                        top: `${b.y}%`,
+                        width: `${b.genislik}%`,
+                        transform: "translate(-50%, -65%)",
+                        zIndex: Math.round(b.y * 2),
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={b.gorsel(seviye)}
+                        alt={b.ad}
+                        draggable={false}
+                        className="block h-auto w-full drop-shadow-[0_10px_12px_rgba(0,0,0,0.5)] select-none"
+                      />
+                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-stone-900/95 px-2.5 py-0.5 text-xs font-black text-amber-100 shadow-lg ring-1 ring-amber-400/70 transition-transform duration-150 group-hover:scale-105">
+                        {b.ad} · Lv.{seviye}
                       </span>
-                    ) : (
-                      <span className="mb-1 whitespace-nowrap rounded-full bg-stone-900/90 px-2 py-0.5 text-[10px] font-bold text-amber-200 ring-1 ring-amber-500/40">
-                        ⚔️ Sahipsiz Sancak
+                    </button>
+                  );
+                })}
+
+                <div className="pointer-events-none absolute bottom-4 left-1/2 z-[210] -translate-x-1/2 rounded-2xl bg-stone-950/90 px-4 py-2 text-center text-xs text-amber-100 shadow-xl ring-1 ring-amber-500/50">
+                  {birlikOzeti?.birlik ? (
+                    <span>
+                      🚩 <b>{birlikOzeti.birlik.ad}</b> Külliyesi · 🕌 Bugün{" "}
+                      <b>{birlikOzeti.birlik.namazToplam ?? 0}</b> vakit namaz · ⚡ Disiplin{" "}
+                      <b>%{birlikOzeti.birlik.disiplinOrani}</b>
+                    </span>
+                  ) : (
+                    <span>
+                      🏕️ Bir birliğe katılmak veya yeni birlik kurmak için ortadaki{" "}
+                      <b>Birlik Otağı</b>&apos;na tıkla!
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* ================= 3. KATMAN: GENEL SANCAK HARİTASI ================= */}
+            {katman === "harita" && (
+              <>
+                {bolgeVerileri.map((b) => {
+                  const koordinatBilgisi = BOLGELER.find((x) => x.id === b.id) ?? b;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => setSecim({ tur: "bolge", id: b.id })}
+                      className="group absolute flex flex-col items-center"
+                      style={{
+                        left: `${koordinatBilgisi.x}%`,
+                        top: `${koordinatBilgisi.y}%`,
+                        transform: "translate(-50%, -50%)",
+                        zIndex: 210,
+                      }}
+                    >
+                      {b.lider ? (
+                        <span
+                          className="mb-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-black text-white shadow-lg ring-1 ring-white/50"
+                          style={{ backgroundColor: b.lider.renk }}
+                        >
+                          🚩 {b.lider.ad} ({b.lider.guc})
+                        </span>
+                      ) : (
+                        <span className="mb-1 whitespace-nowrap rounded-full bg-stone-900/90 px-2 py-0.5 text-[10px] font-bold text-amber-200 ring-1 ring-amber-500/40">
+                          ⚔️ Sahipsiz Sancak
+                        </span>
+                      )}
+
+                      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-stone-900/90 text-2xl shadow-xl ring-2 ring-amber-400 transition-transform group-hover:scale-110">
+                        {b.ikon}
                       </span>
-                    )}
+                      <span className="mt-1 whitespace-nowrap rounded-lg bg-stone-950/90 px-2.5 py-0.5 text-xs font-black text-amber-100 shadow ring-1 ring-amber-500/50">
+                        {b.ad}
+                      </span>
+                    </button>
+                  );
+                })}
 
-                    <span className="grid h-12 w-12 place-items-center rounded-2xl bg-stone-900/90 text-2xl shadow-xl ring-2 ring-amber-400 transition-transform group-hover:scale-110">
-                      {b.ikon}
-                    </span>
-                    <span className="mt-1 whitespace-nowrap rounded-lg bg-stone-950/90 px-2.5 py-0.5 text-xs font-black text-amber-100 shadow ring-1 ring-amber-500/50">
-                      {b.ad}
-                    </span>
-                  </button>
-                );
-              })}
-
-              <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-2xl bg-stone-950/90 px-4 py-2 text-center text-xs text-amber-100 shadow-xl ring-1 ring-amber-500/50">
-                🗺️ <b>Genel Sancak Haritası:</b> Bir bölgeye tıklayarak birlik kasasındaki kaynaklar ve manevi disiplin gücünüzle hamle yapın!
-              </div>
-            </>
-          )}
+                <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-2xl bg-stone-950/90 px-4 py-2 text-center text-xs text-amber-100 shadow-xl ring-1 ring-amber-500/50">
+                  🗺️ <b>Genel Sancak Haritası:</b> Bir bölgeye tıklayarak birlik kasasındaki kaynaklar ve manevi disiplin gücünüzle hamle yapın!
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -542,7 +749,11 @@ export default function KoyHaritasi({ baslangic }) {
       {oyun.mesaj && (
         <div
           className={`fixed top-16 left-1/2 z-[450] -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold shadow-xl ${
-            oyun.mesaj.tur === "hata" ? "bg-red-700 text-white" : "bg-emerald-600 text-white"
+            oyun.mesaj.tur === "hata"
+              ? "bg-red-700 text-white"
+              : oyun.mesaj.tur === "bilgi"
+              ? "bg-amber-500 text-stone-950 ring-2 ring-amber-200"
+              : "bg-emerald-600 text-white"
           }`}
         >
           {oyun.mesaj.metin}
@@ -563,7 +774,19 @@ export default function KoyHaritasi({ baslangic }) {
         />
       )}
 
-      {oyun.gelistirici && <GelistiriciPaneli oyun={oyun} duzenle={duzenle} setDuzenle={setDuzenle} />}
+      {oyun.gelistirici && (
+        <GelistiriciPaneli
+          oyun={oyun}
+          duzenle={duzenle}
+          setDuzenle={setDuzenle}
+          onSifirlandi={() => {
+            setSecim(null);
+            setKatman("koy");
+            setRehberAcik(true);
+            setRehberAdimIndeks(0);
+          }}
+        />
+      )}
 
       {duzenle && koordinat && (
         <div className="fixed bottom-4 left-1/2 z-[300] -translate-x-1/2 rounded-lg bg-black/85 px-4 py-2 font-mono text-sm text-lime-300">
@@ -574,17 +797,18 @@ export default function KoyHaritasi({ baslangic }) {
   );
 }
 
-function BosArsa({ id, a, bilgi, rehberVurgulu = false, kameraOdakli = false, onClick }) {
+function BosArsa({ id, a, bilgi, bildirimSayisi = 0, rehberVurgulu = false, kameraOdakli = false, onClick }) {
   const insaEdilebilir = bilgi.levelYeterli;
   return (
     <button
+      type="button"
       onClick={onClick}
       className="group absolute flex flex-col items-center transition-transform duration-200 hover:-translate-y-1 hover:scale-110"
       style={{
         left: `${a.x}%`,
         top: `${a.y}%`,
         transform: "translate(-50%, -50%)",
-        zIndex: rehberVurgulu || kameraOdakli ? 245 : Math.round(a.y),
+        zIndex: rehberVurgulu || kameraOdakli ? 245 : Math.round(a.y * 2),
       }}
     >
       {rehberVurgulu && (
@@ -592,19 +816,29 @@ function BosArsa({ id, a, bilgi, rehberVurgulu = false, kameraOdakli = false, on
           👇 Buraya Tıkla!
         </span>
       )}
-      <span
-        className={`grid h-10 w-10 place-items-center rounded-full text-lg shadow-lg ring-2 ${
-          rehberVurgulu || kameraOdakli
-            ? "scale-125 bg-emerald-500 ring-4 ring-amber-300"
-            : bilgi.yapilabilir
-            ? "animate-pulse bg-emerald-600 ring-emerald-200"
-            : insaEdilebilir
-            ? "bg-amber-600/90 ring-amber-200"
-            : "bg-stone-800/70 ring-stone-400"
-        }`}
-      >
-        {insaEdilebilir ? "🔨" : "🔒"}
-      </span>
+      <div className="relative">
+        {bildirimSayisi > 0 && (
+          <span
+            title="İnşa edilmeye hazır!"
+            className="pointer-events-none absolute -top-2 -right-2 z-30 grid h-6 min-w-6 place-items-center rounded-full bg-red-600 px-1.5 text-xs font-black text-white shadow-[0_4px_12px_rgba(220,38,38,0.85)] ring-2 ring-white"
+          >
+            {bildirimSayisi}
+          </span>
+        )}
+        <span
+          className={`grid h-10 w-10 place-items-center rounded-full text-lg shadow-lg ring-2 ${
+            rehberVurgulu || kameraOdakli
+              ? "scale-125 bg-emerald-500 ring-4 ring-amber-300"
+              : bilgi.yapilabilir
+              ? "animate-pulse bg-emerald-600 ring-emerald-200"
+              : insaEdilebilir
+              ? "bg-amber-600/90 ring-amber-200"
+              : "bg-stone-800/70 ring-stone-400"
+          }`}
+        >
+          {insaEdilebilir ? "🔨" : "🔒"}
+        </span>
+      </div>
       <span className="mt-0.5 whitespace-nowrap rounded bg-stone-900/80 px-1.5 text-[10px] font-bold text-amber-100">
         {BINALAR[id].ad}
         {!insaEdilebilir && ` · Lv.${bilgi.gerekenLevel}`}

@@ -4,8 +4,7 @@ import { oyunAyarlariniGetir, tesvikOdulunuKontrolEt } from "@/lib/sunucu/ayarla
 import { govde, hata, oturumZorunlu, oyunYaniti } from "@/lib/sunucu/api";
 import { gorevIlerlet } from "@/lib/oyun/eylemler";
 import { oyunGunu } from "@/lib/oyun/gorevler";
-
-const KARAKTER_KODLARI = ["alp", "celebi", "bala", "elif"];
+import { KARAKTER_KODLARI } from "@/lib/oyun/sabitler";
 
 async function sosyalTablolariHazirla(d) {
   await d.batch([
