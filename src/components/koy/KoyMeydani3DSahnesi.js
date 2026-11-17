@@ -1,7 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 // =============================================================
 // SEYRÜSEFER v3 — 3D BİRİNCİ ŞAHIS (FIRST-PERSON) KÖY MEYDANI
@@ -12,6 +11,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 // =============================================================
 
 const GOZ_YUKSEKLIGI = 1.65;
+const GOK_YARICAP = 100;
 const MEYDAN_YARICAP = 11.2;
 
 // Render döngüsü içinde sıfır GC için önceden ayrılmış matematik nesneleri
@@ -94,6 +94,222 @@ function aciFarkiNormalize(hedef, mevcut) {
   return fark;
 }
 
+
+function dokunmatikMi() {
+  return Boolean(window.matchMedia?.("(pointer: coarse)")?.matches) || (navigator.maxTouchPoints ?? 0) > 0;
+}
+
+// THREE.Clock yerine THREE.Timer (sekme gizlenince dt sıçramaz)
+function zamanOlcerKur() {
+  const timer = new THREE.Timer();
+  timer.connect(document);
+  return {
+    guncelle() {
+      timer.update();
+      return THREE.MathUtils.clamp(timer.getDelta(), 0.001, 0.12);
+    },
+    gecen: () => timer.getElapsed(),
+    birak() {
+      timer.disconnect();
+      timer.dispose();
+    },
+  };
+}
+
+function tuvalYap(w, h) {
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  return [c, c.getContext("2d")];
+}
+
+function radyalDoku(rgb = "255,255,255", ic = 1, boyut = 64) {
+  const [c, ctx] = tuvalYap(boyut, boyut);
+  const g = ctx.createRadialGradient(boyut / 2, boyut / 2, 0, boyut / 2, boyut / 2, boyut / 2);
+  g.addColorStop(0, `rgba(${rgb},${ic})`);
+  g.addColorStop(0.55, `rgba(${rgb},${(ic * 0.45).toFixed(3)})`);
+  g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, boyut, boyut);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function bulutDokusuUret() {
+  const [c, ctx] = tuvalYap(256, 128);
+  for (const [x, y, r] of [[64, 78, 40], [100, 62, 46], [140, 58, 50], [182, 70, 44], [208, 84, 32], [120, 88, 44], [160, 90, 38]]) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, "rgba(255,250,240,0.95)");
+    g.addColorStop(0.6, "rgba(255,246,232,0.55)");
+    g.addColorStop(1, "rgba(255,246,232,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 256, 128);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function otDokusuUret() {
+  const [c, ctx] = tuvalYap(256, 256);
+  ctx.fillStyle = "#6a8f3d";
+  ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 1500; i++) {
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
+    const ton = Math.random();
+    ctx.strokeStyle = ton < 0.4 ? "rgba(44,82,28,0.32)" : ton < 0.8 ? "rgba(146,182,84,0.3)" : "rgba(204,190,104,0.22)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + (Math.random() - 0.5) * 5, y - 4 - Math.random() * 7);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(40, 40);
+  return tex;
+}
+
+function otTutamiDokusuUret() {
+  const [c, ctx] = tuvalYap(64, 64);
+  for (let i = 0; i < 9; i++) {
+    const x = 8 + i * 6 + (Math.random() - 0.5) * 4;
+    ctx.strokeStyle = i % 2 ? "#86ac52" : "#58822f";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x, 62);
+    ctx.quadraticCurveTo(x + (Math.random() - 0.5) * 14, 36, x + (Math.random() - 0.5) * 22, 6 + Math.random() * 18);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// Şadırvan suyu: halka dalgalı, yarı saydam doku (animasyonla kayar)
+function suDalgaDokusuUret() {
+  const [c, ctx] = tuvalYap(256, 256);
+  ctx.fillStyle = "#2b9fb0";
+  ctx.fillRect(0, 0, 256, 256);
+  for (let r = 14; r < 128; r += 14) {
+    ctx.strokeStyle = `rgba(215,248,252,${0.35 - r / 500})`;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(128 + Math.sin(r) * 6, 128 + Math.cos(r * 1.3) * 6, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.center.set(0.5, 0.5);
+  return tex;
+}
+
+// Gradyan gökyüzü kubbesi + yumuşak bulutlar; sis rengi ufukla aynı
+function gokKubbesiKur(scene, dokular) {
+  const geo = new THREE.SphereGeometry(GOK_YARICAP, 24, 16);
+  const pos = geo.attributes.position;
+  const renk = new Float32Array(pos.count * 3);
+  const cUst = new THREE.Color(0x4a82c4);
+  const cOrta = new THREE.Color(0x9cc4e8);
+  const cUfuk = new THREE.Color(0xeadfc6);
+  const g = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i) / GOK_YARICAP;
+    if (y <= 0.02) g.copy(cUfuk);
+    else if (y < 0.3) g.lerpColors(cUfuk, cOrta, THREE.MathUtils.smootherstep(y, 0.02, 0.3));
+    else g.lerpColors(cOrta, cUst, THREE.MathUtils.smootherstep(y, 0.3, 0.9));
+    renk.set([g.r, g.g, g.b], i * 3);
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(renk, 3));
+  const kubbe = new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false })
+  );
+  kubbe.renderOrder = -10;
+  kubbe.frustumCulled = false;
+  scene.add(kubbe);
+
+  const bulutDoku = bulutDokusuUret();
+  dokular.push(bulutDoku);
+  const bulutGrubu = new THREE.Group();
+  for (let i = 0; i < 9; i++) {
+    const s = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: bulutDoku, transparent: true, opacity: 0.55 + (i % 3) * 0.12, depthWrite: false, fog: false })
+    );
+    const aci = (i / 9) * Math.PI * 2 + 0.4;
+    const yuk = 0.14 + (((i * 37) % 11) / 11) * 0.3;
+    const r = GOK_YARICAP * 0.9;
+    s.position.set(Math.cos(aci) * r * Math.cos(yuk), r * Math.sin(yuk) + 4, Math.sin(aci) * r * Math.cos(yuk));
+    const olcek = 34 + (i % 4) * 8;
+    s.scale.set(olcek, olcek * 0.42, 1);
+    bulutGrubu.add(s);
+  }
+  scene.add(bulutGrubu);
+  scene.background = new THREE.Color(0xeadfc6);
+  scene.fog = new THREE.FogExp2(0xeadfc6, 0.015);
+  return { kubbe, bulutGrubu };
+}
+
+// Ortam yansıması gökyüzü kubbesinden üretilir (bakır/pirinç sıcak gökten yansır)
+function ortamHaritasiKur(renderer, scene, kubbe, siddet = 0.6) {
+  const env = new THREE.Scene();
+  env.add(new THREE.Mesh(kubbe.geometry, kubbe.material));
+  const zemin = new THREE.Mesh(new THREE.CircleGeometry(90, 16), new THREE.MeshBasicMaterial({ color: 0x8c7650 }));
+  zemin.rotation.x = -Math.PI / 2;
+  zemin.position.y = -1.5;
+  const gunesTopu = new THREE.Mesh(
+    new THREE.SphereGeometry(6, 12, 8),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color().setRGB(7, 5.2, 3.2) })
+  );
+  gunesTopu.position.set(40, 42, 28);
+  env.add(zemin, gunesTopu);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(env, 0.03).texture;
+  scene.environmentIntensity = siddet;
+  zemin.geometry.dispose();
+  zemin.material.dispose();
+  gunesTopu.geometry.dispose();
+  gunesTopu.material.dispose();
+  pmrem.dispose();
+}
+
+// Havada süzülen toz zerrecikleri
+function tozZerreleriKur(scene, dokular, adet = 70) {
+  const doku = radyalDoku("255,240,205", 1, 32);
+  dokular.push(doku);
+  const geo = new THREE.BufferGeometry();
+  const konum = new Float32Array(adet * 3);
+  const faz = new Float32Array(adet);
+  for (let i = 0; i < adet; i++) {
+    konum[i * 3] = (Math.random() - 0.5) * 24;
+    konum[i * 3 + 1] = 0.4 + Math.random() * 4.5;
+    konum[i * 3 + 2] = (Math.random() - 0.5) * 24;
+    faz[i] = Math.random() * Math.PI * 2;
+  }
+  geo.setAttribute("position", new THREE.BufferAttribute(konum, 3));
+  const nokta = new THREE.Points(
+    geo,
+    new THREE.PointsMaterial({ map: doku, size: 0.12, transparent: true, opacity: 0.45, depthWrite: false, color: 0xfff0cc })
+  );
+  nokta.frustumCulled = false;
+  scene.add(nokta);
+  return (t, dt) => {
+    for (let i = 0; i < adet; i++) {
+      konum[i * 3] += Math.sin(t * 0.3 + faz[i]) * 0.12 * dt + 0.06 * dt;
+      konum[i * 3 + 1] += Math.cos(t * 0.5 + faz[i]) * 0.1 * dt;
+      konum[i * 3 + 2] += Math.cos(t * 0.25 + faz[i] * 1.3) * 0.1 * dt;
+      if (konum[i * 3] > 12) konum[i * 3] = -12;
+    }
+    geo.attributes.position.needsUpdate = true;
+  };
+}
+
 // ---------- PROSEDÜREL MEYDAN TAŞ DÖŞEME DOKUSU ----------
 function meydanTasDokusuUret(renderer, dokuListesi) {
   const c = document.createElement("canvas");
@@ -170,7 +386,7 @@ function duyuruMetniDokusuUret(renderer, dokuListesi) {
     ctx.fillStyle = "#451a03";
     ctx.font = "bold 30px Georgia, serif";
     ctx.textAlign = "center";
-    ctx.fillText("KÖY MEYDANI DİVANI", 256, 68);
+    ctx.fillText("Köy Meydanı Divanı", 256, 68);
 
     ctx.font = "20px Georgia, serif";
     ctx.fillStyle = "#573016";
@@ -196,12 +412,15 @@ function sadirvanOlustur(etkilesimListesi) {
   const ahsapMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.72, metalness: 0.08 });
   const kursunKubbeMat = new THREE.MeshStandardMaterial({ color: 0x3b5259, roughness: 0.42, metalness: 0.45 });
   const pirincMat = new THREE.MeshStandardMaterial({ color: 0xd4a437, roughness: 0.22, metalness: 0.88 });
+  const suDoku = suDalgaDokusuUret();
   const suMat = new THREE.MeshStandardMaterial({
-    color: 0x22a6b3,
-    roughness: 0.14,
-    metalness: 0.25,
+    map: suDoku,
+    color: 0xcfeff2,
+    roughness: 0.08,
+    metalness: 0.1,
     transparent: true,
-    opacity: 0.88,
+    opacity: 0.78,
+    depthWrite: false,
   });
 
   // 1. Basamaklı sekizgen kaide
@@ -267,11 +486,12 @@ function sadirvanOlustur(etkilesimListesi) {
   // 8. Akan su şeritleri (animasyonlu)
   const suDamlalari = [];
   const damlaMat = new THREE.MeshBasicMaterial({ color: 0xcffafe, transparent: true, opacity: 0.8 });
-  for (let i = 0; i < 12; i++) {
-    const aci = (i % 4) * (Math.PI / 2);
-    const damla = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 6), damlaMat);
+  const damlaGeo = new THREE.SphereGeometry(0.045, 6, 6);
+  for (let i = 0; i < 24; i++) {
+    const aci = (i % 4) * (Math.PI / 2) + (i > 11 ? 0.18 : 0);
+    const damla = new THREE.Mesh(damlaGeo, damlaMat);
     grup.add(damla);
-    suDamlalari.push({ mesh: damla, aci, faz: (i / 12) * Math.PI * 2 });
+    suDamlalari.push({ mesh: damla, aci, faz: (i / 24) * Math.PI * 2 });
   }
 
   // Tıklama vekil kutusu
@@ -284,7 +504,7 @@ function sadirvanOlustur(etkilesimListesi) {
   grup.add(vurguKutu);
   etkilesimListesi.push(vurguKutu);
 
-  return { grup, suDamlalari };
+  return { grup, suDamlalari, suDoku, suYuzeyi };
 }
 
 function uluCinarVeSedirOlustur(etkilesimListesi) {
@@ -589,6 +809,11 @@ export default function KoyMeydani3DSahnesi({
   const [joyTopuz, setJoyTopuz] = useState({ x: 0, y: 0, aktif: false });
   const [yakinHedef, setYakinHedef] = useState(null); // "misafir" | "cinar" | "cesme" | null
   const [otoYuruyusBilgi, setOtoYuruyusBilgi] = useState(null);
+  const [ipucuAcik, setIpucuAcik] = useState(true);
+  useEffect(() => {
+    const t = window.setTimeout(() => setIpucuAcik(false), 9000);
+    return () => window.clearTimeout(t);
+  }, []);
 
   // Dış callback'leri ref içinde tutalım ki WebGL sahnesi yeniden kurulmasın
   const geriCagrilarRef = useRef({
@@ -640,13 +865,14 @@ export default function KoyMeydani3DSahnesi({
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
-    renderer.setPixelRatio(yazilimGl ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+    const dokunmatik = dokunmatikMi();
+    renderer.setPixelRatio(yazilimGl ? 1 : Math.min(window.devicePixelRatio || 1, dokunmatik ? 1.5 : 2));
     renderer.shadowMap.enabled = !yazilimGl;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     const ilkGenislik = Math.max(320, kapsayici.clientWidth || 960);
     const ilkYukseklik = Math.max(240, kapsayici.clientHeight || 540);
-    renderer.setSize(ilkGenislik, ilkYukseklik);
+    renderer.setSize(ilkGenislik, ilkYukseklik, false);
     renderer.domElement.style.width = "100%";
     renderer.domElement.style.height = "100%";
     renderer.domElement.style.display = "block";
@@ -656,39 +882,39 @@ export default function KoyMeydani3DSahnesi({
     kapsayici.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xd5e6f2);
-    scene.fog = new THREE.FogExp2(0xd5e6f2, 0.017);
+    const { kubbe, bulutGrubu } = gokKubbesiKur(scene, dokular);
+    ortamHaritasiKur(renderer, scene, kubbe, 0.6);
 
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    const odaEnv = new RoomEnvironment();
-    scene.environment = pmrem.fromScene(odaEnv, 0.04).texture;
-    scene.environmentIntensity = 0.42;
-    odaEnv.dispose?.();
-    pmrem.dispose();
-
-    const camera = new THREE.PerspectiveCamera(62, ilkGenislik / ilkYukseklik, 0.1, 140);
+    const camera = new THREE.PerspectiveCamera(62, ilkGenislik / ilkYukseklik, 0.1, 150);
     camera.position.set(0, GOZ_YUKSEKLIGI, 6.8);
 
     // Işıklandırma (Sıcak ikindi güneşi + serin gökyüzü dolgusu)
-    const gunes = new THREE.DirectionalLight(0xfff1d0, 2.3);
+    const gunes = new THREE.DirectionalLight(0xffe2b4, 2.6);
     gunes.position.set(12, 18, 10);
-    if (!yazilimGl) {
+    if (renderer.shadowMap.enabled) {
       gunes.castShadow = true;
-      gunes.shadow.mapSize.set(1024, 1024);
-      gunes.shadow.camera.left = -16;
-      gunes.shadow.camera.right = 16;
-      gunes.shadow.camera.top = 16;
-      gunes.shadow.camera.bottom = -16;
-      gunes.shadow.bias = -0.0005;
+      const golgeBoyut = dokunmatik ? 1024 : 2048;
+      gunes.shadow.mapSize.set(golgeBoyut, golgeBoyut);
+      // Dar kamera: yalnız meydan ve çevre evler (±15) gölge haritasına girer
+      gunes.shadow.camera.left = -15;
+      gunes.shadow.camera.right = 15;
+      gunes.shadow.camera.top = 15;
+      gunes.shadow.camera.bottom = -15;
+      gunes.shadow.camera.near = 8;
+      gunes.shadow.camera.far = 52;
+      gunes.shadow.bias = -0.0004;
+      gunes.shadow.normalBias = 0.035;
     }
     scene.add(gunes);
 
-    const gokIsigi = new THREE.HemisphereLight(0xdbeafe, 0x6b5b45, 0.92);
+    const gokIsigi = new THREE.HemisphereLight(0xb8d2ee, 0x74603f, 0.85);
     scene.add(gokIsigi);
 
     // 1. Çayır zemin + Uzak Anadolu tepeleri (Doğal dış çevre — iç mekan kutusu yok!)
-    const cayirMat = new THREE.MeshStandardMaterial({ color: 0x567d3b, roughness: 0.95 });
-    const cayirZemin = new THREE.Mesh(new THREE.CircleGeometry(65, 40), cayirMat);
+    const otDoku = otDokusuUret();
+    dokular.push(otDoku);
+    const cayirMat = new THREE.MeshStandardMaterial({ map: otDoku, color: 0xdfe8b8, roughness: 0.95 });
+    const cayirZemin = new THREE.Mesh(new THREE.CircleGeometry(70, 40), cayirMat);
     cayirZemin.rotation.x = -Math.PI / 2;
     cayirZemin.position.y = -0.02;
     scene.add(cayirZemin);
@@ -727,7 +953,8 @@ export default function KoyMeydani3DSahnesi({
     scene.add(bordurHalka);
 
     // 3. Merkez Taş Şadırvan / Meydan Çeşmesi (Sol)
-    const { grup: sadirvanGrup, suDamlalari } = sadirvanOlustur(etkilesimNesneleri);
+    const { grup: sadirvanGrup, suDamlalari, suDoku, suYuzeyi } = sadirvanOlustur(etkilesimNesneleri);
+    dokular.push(suDoku);
     scene.add(sadirvanGrup);
 
     // 4. Ulu Çınar & Çınar Altı Sohbet Sediri + Sohbet Ehli (Sağ)
@@ -906,6 +1133,40 @@ export default function KoyMeydani3DSahnesi({
     }
     scene.add(misafirGrup);
 
+    // Meydan çevresinde rüzgârda sallanan çim tutamları
+    const otTutamDoku = otTutamiDokusuUret();
+    dokular.push(otTutamDoku);
+    const tutamGeo = new THREE.PlaneGeometry(0.8, 0.62);
+    const tutamMat = new THREE.MeshStandardMaterial({ map: otTutamDoku, transparent: true, alphaTest: 0.35, side: THREE.DoubleSide, roughness: 1 });
+    const tutamlar = [];
+    for (let i = 0; i < 64; i++) {
+      const g = new THREE.Group();
+      const a = new THREE.Mesh(tutamGeo, tutamMat);
+      const b = new THREE.Mesh(tutamGeo, tutamMat);
+      a.position.y = b.position.y = 0.3;
+      b.rotation.y = Math.PI / 2;
+      g.add(a, b);
+      const aci = Math.random() * Math.PI * 2;
+      const r = 12.3 + Math.random() * 6;
+      g.position.set(Math.sin(aci) * r, 0, Math.cos(aci) * r);
+      g.scale.setScalar(0.8 + Math.random() * 0.9);
+      scene.add(g);
+      tutamlar.push({ g, faz: Math.random() * 6 });
+    }
+    const tozGuncelle = tozZerreleriKur(scene, dokular);
+
+    // Gölge: yakın çevredeki nesneler gölge atar/alır (zemin ve tepeler hariç)
+    if (renderer.shadowMap.enabled) {
+      scene.traverse((n) => {
+        if (!n.isMesh || n.material?.visible === false || n.isSprite) return;
+        if (n === kubbe || n === cayirZemin || n.geometry.type === "SphereGeometry" && n.scale.x > 1.4) return;
+        if (n.material?.transparent && n.material?.alphaTest > 0) return; // çim tutamları
+        const uzak = Math.hypot(n.getWorldPosition(_projMisafir).x, _projMisafir.z) > 19;
+        n.castShadow = !uzak && n !== meydanZemin;
+        n.receiveShadow = true;
+      });
+    }
+
     // 8. Dokunarak Yürüme Altın Hedef Halkası (Zemin üzerinde parlar)
     const hedefHalka = new THREE.Mesh(
       new THREE.RingGeometry(0.32, 0.48, 28),
@@ -1047,12 +1308,17 @@ export default function KoyMeydani3DSahnesi({
 
     const boyutGuncelle = () => {
       if (!kapsayici) return;
-      const w = Math.max(320, kapsayici.clientWidth);
-      const h = Math.max(240, kapsayici.clientHeight);
+      const w = Math.max(200, kapsayici.clientWidth);
+      const h = Math.max(200, kapsayici.clientHeight);
       camera.aspect = w / h;
+      // Dar (dik) ekranda görüş alanını genişlet: meydan kadrajdan taşmasın
+      camera.fov = camera.aspect < 1 ? Math.min(82, 62 / Math.max(0.62, camera.aspect) ** 0.55) : 62;
       camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
+      renderer.setSize(w, h, false);
     };
+    boyutGuncelle();
+    const boyutGozlem = new ResizeObserver(boyutGuncelle);
+    boyutGozlem.observe(kapsayici);
 
     const tuvalEl = renderer.domElement;
     tuvalEl.addEventListener("pointerdown", tuvalPointerDown);
@@ -1062,6 +1328,7 @@ export default function KoyMeydani3DSahnesi({
     window.addEventListener("keydown", tusBas);
     window.addEventListener("keyup", tusBirak);
     window.addEventListener("resize", boyutGuncelle);
+    window.addEventListener("orientationchange", boyutGuncelle);
 
     if (!yazilimGl) {
       renderer.compile(scene, camera);
@@ -1085,12 +1352,12 @@ export default function KoyMeydani3DSahnesi({
     };
 
     let oncekiYakin = null;
-    const saat = new THREE.Clock();
+    const olcer = zamanOlcerKur();
     const zamanlayici = kareZamanlayiciOlustur(renderer.getContext(), yazilimGl);
 
     const kareCiz = () => {
-      const dt = Math.min(0.12, Math.max(0.001, saat.getDelta()));
-      const gecen = saat.elapsedTime;
+      const dt = olcer.guncelle();
+      const gecen = olcer.gecen();
 
       const joy = joystickRef.current;
       let ileriGiris = 0;
@@ -1262,6 +1529,21 @@ export default function KoyMeydani3DSahnesi({
         }
       });
       sohbetEhli.sagKol.rotation.x = -0.35 + Math.sin(gecen * 2.0) * 0.12;
+      // Nefes alma / ağırlık verme: kişiler hafifçe salınır
+      sohbetEhli.grup.rotation.z = Math.sin(gecen * 1.3) * 0.01;
+      misafirKarakterler.forEach((mk, idx) => {
+        mk.grup.rotation.z = Math.sin(gecen * 1.2 + idx * 2.1) * 0.012;
+        mk.grup.position.y = 0.03 + Math.max(0, Math.sin(gecen * 1.7 + idx)) * 0.006;
+      });
+
+      // Şadırvan suyu: halka dalgaları yavaşça döner ve kayar
+      suDoku.rotation = gecen * 0.06;
+      suDoku.offset.set(Math.sin(gecen * 0.7) * 0.02, Math.cos(gecen * 0.5) * 0.02);
+      suYuzeyi.position.y = 0.93 + Math.sin(gecen * 2.2) * 0.008;
+
+      for (const o of tutamlar) o.g.rotation.z = Math.sin(gecen * 1.4 + o.faz) * 0.1;
+      tozGuncelle(gecen, dt);
+      bulutGrubu.rotation.y += dt * 0.004;
 
       renderer.render(scene, camera);
 
@@ -1293,17 +1575,26 @@ export default function KoyMeydani3DSahnesi({
       window.removeEventListener("keydown", tusBas);
       window.removeEventListener("keyup", tusBirak);
       window.removeEventListener("resize", boyutGuncelle);
+      window.removeEventListener("orientationchange", boyutGuncelle);
+      boyutGozlem.disconnect();
+      olcer.birak();
 
+      const dokuKumesi = new Set(dokular);
       scene.traverse((nesne) => {
-        if (nesne.geometry) nesne.geometry.dispose();
+        nesne.geometry?.dispose?.();
         if (nesne.material) {
           const mList = Array.isArray(nesne.material) ? nesne.material : [nesne.material];
-          for (const m of mList) m.dispose();
+          for (const m of mList) {
+            for (const v of Object.values(m)) if (v?.isTexture) dokuKumesi.add(v);
+            m.dispose();
+          }
         }
       });
-      for (const t of dokular) t?.dispose?.();
-      if (scene.environment) scene.environment.dispose();
+      for (const t of dokuKumesi) t?.dispose?.();
+      scene.environment?.dispose?.();
       renderer.dispose();
+      renderer.forceContextLoss?.();
+      renderer.domElement.remove();
     };
   }, [gunlukOlayHazir, aktifOlayTuru]);
 
@@ -1351,20 +1642,22 @@ export default function KoyMeydani3DSahnesi({
   };
 
   return (
-    <div className="relative h-[64vh] min-h-[420px] max-h-[680px] w-full overflow-hidden rounded-3xl bg-stone-950 shadow-2xl ring-2 ring-amber-500/40 select-none">
+    <div className="relative h-[64vh] min-h-[420px] max-h-[680px] kisa:h-[calc(100dvh-4.5rem)]! kisa:min-h-0! w-full overflow-hidden rounded-3xl bg-stone-950 shadow-2xl ring-2 ring-amber-500/40 select-none">
       {/* Three.js WebGL 3D Birinci Şahıs Sahnesi */}
       <div ref={tuvalKapsayiciRef} className="absolute inset-0 h-full w-full cursor-grab active:cursor-grabbing" />
 
       {/* Üst Bilgi Şeridi (Görüş Alanını Kapatmayan İnce HUD) */}
       <div className="pointer-events-none absolute inset-x-3 top-3 z-20 flex flex-wrap items-center justify-between gap-2">
-        <div className="rounded-xl bg-stone-950/82 px-3 py-1.5 text-[11px] font-semibold text-amber-100 ring-1 ring-amber-400/35">
-          👁️ <b>Birinci Şahıs (FPS) Köy Meydanı:</b> Sol alttaki joystick ile yürü, ekranı sürükleyerek etrafa bak veya karakterlere dokunarak yanlarına git!
+        <div
+          className={`ust-levha max-w-[34rem] rounded-xl px-3 py-1.5 text-[11px] font-semibold text-amber-100 transition-opacity duration-700 ${
+            ipucuAcik ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          👁️ <b>Köy Meydanı:</b> Sol alttaki çubukla yürü, ekranı sürükleyerek etrafa bak, kişilere dokunup yanlarına git.
         </div>
 
         {otoYuruyusBilgi && (
-          <div className="rounded-xl bg-amber-400 px-3 py-1 text-[11px] font-black text-stone-950 shadow-lg">
-            👣 {otoYuruyusBilgi}
-          </div>
+          <div className="varak-dugme rounded-xl px-3 py-1 text-[11px] font-black">👣 {otoYuruyusBilgi}</div>
         )}
       </div>
 
@@ -1380,15 +1673,15 @@ export default function KoyMeydani3DSahnesi({
         >
           {gunlukOlayHazir ? (
             <>
-              <span className="max-w-[220px] rounded-2xl bg-stone-950/92 px-3 py-1.5 text-[11px] font-bold text-amber-100 shadow-xl ring-2 ring-amber-400">
+              <span className="ust-levha max-w-[220px] rounded-2xl px-3 py-1.5 text-[11px] font-bold text-amber-100">
                 {diyalogAcik ? "💬 Seni dinliyorlar…" : misafirBaslik}
               </span>
-              <span className="mt-1 max-w-[210px] truncate rounded-lg bg-amber-400 px-2.5 py-0.5 text-[10px] font-black text-stone-950 shadow">
+              <span className="varak-dugme mt-1 max-w-[210px] truncate rounded-lg px-2.5 py-0.5 text-[10px]">
                 👣 {misafirAltYazi}
               </span>
             </>
           ) : (
-            <span className="max-w-[220px] rounded-2xl bg-stone-950/88 px-3 py-1.5 text-[11px] font-semibold text-emerald-200 ring-1 ring-emerald-400/40">
+            <span className="ust-levha max-w-[220px] rounded-2xl px-3 py-1.5 text-[11px] font-semibold text-emerald-200">
               🔒 Bugünkü meydan görevi tamamlandı ({kalanSaat} sa sonra yeni görev açılır)
             </span>
           )}
@@ -1400,7 +1693,7 @@ export default function KoyMeydani3DSahnesi({
           type="button"
           onClick={cinaraYuru}
           style={{ left: 0, top: 0, opacity: 0 }}
-          className="absolute rounded-xl bg-stone-950/90 px-3 py-1.5 text-[11px] font-black text-amber-200 shadow-xl ring-1 ring-amber-400/60 hover:bg-stone-900"
+          className="ust-levha absolute rounded-xl px-3 py-1.5 text-[11px] font-black text-amber-200 hover:brightness-125"
         >
           🌳 Ulu Çınar &amp; Sohbet Sediri (Yanına Yürü)
         </button>
@@ -1411,7 +1704,7 @@ export default function KoyMeydani3DSahnesi({
           type="button"
           onClick={cesmeyeYuru}
           style={{ left: 0, top: 0, opacity: 0 }}
-          className="absolute rounded-xl bg-stone-950/88 px-2.5 py-1 text-[11px] font-bold text-sky-200 shadow-lg ring-1 ring-sky-400/50 hover:bg-stone-900"
+          className="ust-levha absolute rounded-xl px-2.5 py-1 text-[11px] font-bold text-sky-200 hover:brightness-125"
         >
           ⛲ Meydan Şadırvanı
         </button>
@@ -1429,7 +1722,7 @@ export default function KoyMeydani3DSahnesi({
           onPointerUp={joyBirak}
           onPointerCancel={joyBirak}
           style={{ touchAction: "none" }}
-          className="relative grid h-28 w-28 cursor-pointer place-items-center rounded-full bg-stone-950/80 shadow-2xl ring-2 ring-amber-400/60"
+          className="ust-levha relative grid h-28 w-28 cursor-pointer place-items-center rounded-full ring-2 ring-amber-400/60"
         >
           <span className="pointer-events-none absolute top-1.5 text-[10px] font-black text-amber-300/75">▲</span>
           <span className="pointer-events-none absolute bottom-1.5 text-[10px] font-black text-amber-300/75">▼</span>
@@ -1459,7 +1752,7 @@ export default function KoyMeydani3DSahnesi({
           <button
             type="button"
             onClick={onMisafirEtkilesim}
-            className="rounded-2xl bg-amber-400 px-4 py-2.5 text-xs font-black text-stone-950 shadow-xl ring-2 ring-white hover:bg-amber-300 sm:text-sm"
+            className="varak-dugme rounded-2xl px-4 py-2.5 text-xs sm:text-sm"
           >
             💬 Misafirlerle Konuş
           </button>
@@ -1469,7 +1762,7 @@ export default function KoyMeydani3DSahnesi({
           <button
             type="button"
             onClick={onCinarSohbetAc}
-            className="rounded-2xl bg-emerald-400 px-4 py-2.5 text-xs font-black text-stone-950 shadow-xl ring-2 ring-white hover:bg-emerald-300 sm:text-sm"
+            className="varak-dugme rounded-2xl px-4 py-2.5 text-xs sm:text-sm"
           >
             🌳 Çınar Altı Sohbeti&apos;ne Katıl →
           </button>
@@ -1480,7 +1773,7 @@ export default function KoyMeydani3DSahnesi({
             <button
               type="button"
               onClick={misafirlereYuru}
-              className="rounded-xl bg-stone-950/88 px-3 py-2 text-xs font-bold text-amber-200 shadow-lg ring-1 ring-amber-400/50 hover:bg-stone-900"
+              className="ust-levha rounded-xl px-3 py-2 text-xs font-bold text-amber-200 hover:brightness-125"
             >
               👣 Misafirlerin Yanına Git
             </button>
@@ -1488,7 +1781,7 @@ export default function KoyMeydani3DSahnesi({
           <button
             type="button"
             onClick={cinaraYuru}
-            className="rounded-xl bg-stone-950/88 px-3 py-2 text-xs font-bold text-emerald-200 shadow-lg ring-1 ring-emerald-400/45 hover:bg-stone-900"
+            className="ust-levha rounded-xl px-3 py-2 text-xs font-bold text-emerald-200 hover:brightness-125"
           >
             🌳 Çınar&apos;a Yürü
           </button>

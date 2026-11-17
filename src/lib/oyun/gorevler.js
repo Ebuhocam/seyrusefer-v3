@@ -30,15 +30,24 @@ export const GOREV_TURLERI = {
 export const LEVEL_GOREVLERI = {
   1: [
     { kod: "hadis", tur: "hadis", ad: "Mektep'te 3 Günlük Hadis Oku", hedef: 3, gunluk: true, bina: "mektep" },
-    { kod: "video", tur: "video", ad: "Niyet ve İhlas Videosunu İzle", hedef: 1, gunluk: false, bina: "mektep" },
-    { kod: "aile", tur: "aile", ad: "Haberci'nin Aile Mektubunu Oku", hedef: 1, gunluk: false, bina: "kiraathane" },
+    {
+      kod: "video",
+      tur: "video",
+      ad: "Niyet ve İhlas Videosunu İzle",
+      hedef: 1,
+      gunluk: false,
+      bina: "mektep",
+      // Video, 2. günün hadisiyle birlikte açılır
+      onKosul: { kod: "hadis", enAz: 2, metin: "Bu video, Mektep'te 2. günün hadisini okuyunca açılır." },
+    },
+    { kod: "aile", tur: "aile", ad: "Haberci'nin Aile Mektuplarını 3 Gün Oku", hedef: 3, gunluk: true, bina: "kiraathane" },
     { kod: "turku", tur: "turku", ad: "Kıraathane'de Ozan Dede'yi Dinle", hedef: 1, gunluk: false, bina: null },
   ],
   2: [
     { kod: "namaz", tur: "namaz", ad: "5 Gün Namaz Çetelesi Doldur", hedef: 5, gunluk: true, bina: "sosyalmeydan" },
     { kod: "hadis", tur: "hadis", ad: "Mektep'te 5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "sosyalmeydan" },
     { kod: "dava", tur: "dava", ad: "Köy Meydanı'nda 1 Halk Sorununu Hikmetle Çöz", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
-    { kod: "aile", tur: "aile", ad: "Haberci'nin Namaz Sohbeti Mektubunu Oku", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
+    { kod: "aile", tur: "aile", ad: "Haberci'nin Mektuplarını 3 Gün Ailece Oku", hedef: 3, gunluk: true, bina: "sosyalmeydan" },
   ],
   3: [
     { kod: "sinav", tur: "sinav", ad: "Mektep Hadis ve İlim Sınavı", hedef: 1, gunluk: false, bina: "otag" },
@@ -63,19 +72,19 @@ export const LEVEL_GOREVLERI = {
     { kod: "seyyah", tur: "seyyah", ad: "Haberci'nin 3 Yardım Görevini Yap", hedef: 3, gunluk: true, bina: "mektep" },
     { kod: "namaz", tur: "namaz", ad: "Ulu Cami'de 5 Gün Namaz Çetelesi Doldur", hedef: 5, gunluk: true, bina: "mektep" },
     { kod: "video", tur: "video", ad: "İnfak ve Yardımseverlik Videosu", hedef: 1, gunluk: false, bina: "otag" },
-    { kod: "aile", tur: "aile", ad: "Haberci Mektubu: Paylaşmanın Bereketi", hedef: 1, gunluk: false, bina: "otag" },
+    { kod: "aile", tur: "aile", ad: "Haberci Mektupları: Paylaşmanın Bereketi (3 Gün)", hedef: 3, gunluk: true, bina: "otag" },
   ],
   7: [
     { kod: "hadis", tur: "hadis", ad: "5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "kiraathane" },
     { kod: "turku", tur: "turku", ad: "Ozan Dede Sıla-i Rahim Türküsü", hedef: 1, gunluk: false, bina: "kiraathane" },
-    { kod: "aile", tur: "aile", ad: "Aile Büyükleriyle Okuma ve Dua", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
+    { kod: "aile", tur: "aile", ad: "Aile Büyükleriyle 3 Gün Mektup Okuma", hedef: 3, gunluk: true, bina: "sosyalmeydan" },
     { kod: "meydan_paylasim", tur: "meydan_paylasim", ad: "Aile Gündemine Paylaşım Yap", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
   ],
   8: [
     { kod: "namaz", tur: "namaz", ad: "7 Gün Namaz Çetelesi Doldur", hedef: 7, gunluk: true, bina: "mektep" },
     { kod: "hadis", tur: "hadis", ad: "5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "mektep" },
     { kod: "dava", tur: "dava", ad: "Köy Meydanı'nda Sabır ve Kanaat Davasını Çöz", hedef: 1, gunluk: false, bina: "mektep" },
-    { kod: "aile", tur: "aile", ad: "Haberci Mektubu: Sabır ve Şükür", hedef: 1, gunluk: false, bina: "mektep" },
+    { kod: "aile", tur: "aile", ad: "Haberci Mektupları: Sabır ve Şükür (3 Gün)", hedef: 3, gunluk: true, bina: "mektep" },
   ],
   9: [
     { kod: "sinav", tur: "sinav", ad: "Adalet ve Emanet İlim Sınavı", hedef: 1, gunluk: false, bina: "kiraathane" },
@@ -87,7 +96,7 @@ export const LEVEL_GOREVLERI = {
     { kod: "namaz", tur: "namaz", ad: "7 Gün Namaz Çetelesi Doldur", hedef: 7, gunluk: true, bina: "otag" },
     { kod: "hadis", tur: "hadis", ad: "5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "otag" },
     { kod: "sinav", tur: "sinav", ad: "Büyük İhsan ve Mezuniyet Sınavı", hedef: 1, gunluk: false, bina: "otag" },
-    { kod: "aile", tur: "aile", ad: "Haberci Mektubu: İhsan ve Ahit", hedef: 1, gunluk: false, bina: "otag" },
+    { kod: "aile", tur: "aile", ad: "Haberci Mektupları: İhsan ve Ahit (3 Gün)", hedef: 3, gunluk: true, bina: "otag" },
     { kod: "meydan_paylasim", tur: "meydan_paylasim", ad: "Mezuniyet Tefekkürünü Paylaş", hedef: 1, gunluk: false, bina: "otag" },
   ],
 };
@@ -358,8 +367,19 @@ export const SEYYAH_GOREVLERI = [
   "Bugün bir aile büyüğünü (dede, nine, amca, teyze) telefonla arayıp hayır duasını al.",
 ];
 
-/** Oyun saatine (ms) göre YYYY-MM-DD gün dizgesi */
-export const oyunGunu = (simdiMs) => new Date(simdiMs).toISOString().slice(0, 10);
+/** Oyun saatine (ms) göre Türkiye saatiyle (UTC+3) YYYY-AA-GG gün dizgesi. Günlük görevler TSİ gece yarısı yenilenir. */
+export const oyunGunu = (simdiMs) => new Date(simdiMs + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+/** Görevin ön koşulu (ör. "önce 2 gün hadis oku") sağlanmadıysa { kilitli: true, kilitNotu } döner */
+export function onKosulDurumu(tanim, ilerlemeHaritasi = {}, gorevlerTamamBayragi = false) {
+  const k = tanim?.onKosul;
+  if (!k || gorevlerTamamBayragi) return { kilitli: false };
+  const ilerleme = Number(ilerlemeHaritasi?.[k.kod]?.ilerleme ?? 0);
+  return ilerleme >= (Number(k.enAz) || 1) ? { kilitli: false } : { kilitli: true, kilitNotu: k.metin ?? "Bu görev henüz açılmadı." };
+}
+
+/** Öğrencinin kendi beyanıyla (tek dokunuşla) ilerletebileceği görev türleri. Diğerleri sunucuda kendi eylemiyle ilerler. */
+export const BEYAN_GOREV_TURLERI = ["hadis", "video", "aile", "turku", "seyyah", "onay"];
 
 /** Bir levelın aktif görev tanımlarını döner (yönetici panelinden özelleştirilmişse onu kullanır) */
 export function levelGorevTanimlari(level, ayarlar = null) {
@@ -410,7 +430,7 @@ export function levelGorevListesi(
     const yapilan = gorevlerTamamBayragi ? t.hedef : Math.min(t.hedef, kayit?.ilerleme ?? 0);
     const tamam = yapilan >= t.hedef;
     const bugunYapildi = !gorevlerTamamBayragi && t.gunluk && kayit?.sonGun === bugun;
-    return { ...t, yapilan, tamam, bugunYapildi };
+    return { ...t, yapilan, tamam, bugunYapildi, ...onKosulDurumu(t, ilerlemeHaritasi, gorevlerTamamBayragi) };
   });
 }
 
@@ -435,4 +455,92 @@ export function binaGorevleriTamamMi(
 export function tumLevelGorevleriTamamMi(level, ilerlemeHaritasi = {}, gorevlerTamamBayragi = false, ayarlar = null) {
   if (gorevlerTamamBayragi) return true;
   return levelGorevListesi(level, ilerlemeHaritasi, false, Date.now(), ayarlar).every((g) => g.tamam);
+}
+
+// =============================================================
+// GÜNÜN MEKTUBU — Haberci her gün yeni bir mektup getirir.
+// Bir levelın ilk mektubu o levelın kendi aile mektubudur (admin panelinden düzenlenir);
+// sonraki günlerde bu havuzdan sırayla gelir. Her mektupta ailece konuşulacak bir soru vardır.
+// =============================================================
+export const GUNLUK_MEKTUPLAR = [
+  {
+    baslik: "Günün Mektubu: Sofradaki Bereket",
+    metin:
+      "Sevgili ev halkım, bugün sofraya hep birlikte oturalım. Yemeğe besmeleyle başlayıp şükürle kalkmak, ekmeğin kırıntısını bile israf etmemek sofrayı bereketlendirir. Sofrayı kuran ve toplayan eller ne güzel ellerdir.",
+    soru: "Bu akşam sofrayı kurarken ve toplarken kim hangi işi üstlenebilir?",
+  },
+  {
+    baslik: "Günün Mektubu: Güler Yüz",
+    metin:
+      "Güler yüz, hiç para harcamadan verilebilen en güzel hediyedir. Kapıda karşılanan bir misafire, yorgun gelen bir babaya, işten dönen bir anneye gülümsemek evin havasını değiştirir.",
+    soru: "Bugün evde kimin yüzünü güldürdünüz? Yarın kimi sevindirmek istersiniz?",
+  },
+  {
+    baslik: "Günün Mektubu: Büyüklerimizin Hatıraları",
+    metin:
+      "Dedelerimizin ve ninelerimizin çocukluğu nasıldı? Hangi oyunları oynarlardı, bayramları nasıl geçerdi? Büyüklerimizin hatıraları ailemizin hazinesidir; dinledikçe çoğalır.",
+    soru: "Evin büyüklerinden biri, çocukluğundan bir bayram hatırasını anlatabilir mi?",
+  },
+  {
+    baslik: "Günün Mektubu: Komşu Hakkı",
+    metin:
+      "Atalarımız 'Ev alma, komşu al' demiş. Komşumuzun derdine ortak olmak, sevincini paylaşmak, kapısını çalıp hâlini sormak köyümüzü de mahallemizi de güzelleştirir.",
+    soru: "Bu hafta bir komşumuzu sevindirmek için ailece ne yapabiliriz?",
+  },
+  {
+    baslik: "Günün Mektubu: Teşekkür Etmek",
+    metin:
+      "Bize iyilik edene teşekkür etmek, iyiliği büyütür. Evde yemeği yapana, çamaşırı katlayana, ödevimize yardım edene 'Elinize sağlık, Allah razı olsun' demek kalpleri birbirine bağlar.",
+    soru: "Bugün evde kime, hangi iyiliği için teşekkür etmeyi unuttuk?",
+  },
+  {
+    baslik: "Günün Mektubu: Sözünde Durmak",
+    metin:
+      "Verdiğimiz sözü tutmak güvenin temelidir. 'Yarın yaparım' dediğimiz bir işi yapmak, küçük bir söz bile olsa, karakterimizi güçlendirir.",
+    soru: "Ailece birbirimize bu hafta tutacağımız küçük bir söz verelim mi?",
+  },
+  {
+    baslik: "Günün Mektubu: Temizlik",
+    metin:
+      "Temiz bir oda, temiz bir beden ve temiz bir kalp birbirine yakışır. Odamızı toplamak, ortak alanları temiz tutmak evdeki herkese saygıdır.",
+    soru: "Evde herkesin birlikte yapabileceği küçük bir temizlik işi seçelim: hangisi olsun?",
+  },
+  {
+    baslik: "Günün Mektubu: Kardeşlik",
+    metin:
+      "Kardeş, zor günde ilk koşan kişidir. Paylaşmayı, beklemeyi ve affetmeyi en çok kardeşlerimizle öğreniriz. Küslük üç günü geçmemeli, bir tatlı sözle bitmelidir.",
+    soru: "Kardeşlerinle (ya da kuzenlerinle) en son birlikte güldüğünüz anı hatırlıyor musunuz?",
+  },
+  {
+    baslik: "Günün Mektubu: Kitap Saati",
+    metin:
+      "Bir kitabın sayfaları arasında başka diyarlara yolculuk yapılır. Ailece okunan bir sayfa, tek başına okunan bir kitaptan daha çok hatırlanır.",
+    soru: "Bu akşam ailece 10 dakika kitap okumaya ne dersiniz? Hangi kitapla başlayalım?",
+  },
+  {
+    baslik: "Günün Mektubu: Dua",
+    metin:
+      "Dua, kalbimizin Rabbimizle konuşmasıdır. Sevdiklerimiz için, hastalar için, yolda olanlar için dua etmek bizi birbirimize de yaklaştırır.",
+    soru: "Bugün ailece kimler için dua etmek istersiniz?",
+  },
+  {
+    baslik: "Günün Mektubu: Emek ve Sabır",
+    metin:
+      "Tarlaya ekilen tohum bir günde yetişmez; sulanır, beklenir, emek verilir. Derslerimiz, hayallerimiz ve dostluklarımız da böyledir: sabırla büyür.",
+    soru: "Şu sıralar sabırla emek verdiğin bir şey var mı? Ailen sana nasıl destek olabilir?",
+  },
+  {
+    baslik: "Günün Mektubu: Hayvanlara Merhamet",
+    metin:
+      "Sokaktaki bir kedinin suyunu, bir kuşun yemini düşünmek merhametin işaretidir. Allah, yarattıklarına merhamet edenlere merhamet eder.",
+    soru: "Yaşadığımız yerdeki hayvanlar için ailece yapabileceğimiz küçük bir iyilik ne olabilir?",
+  },
+];
+
+/** Bu levelda kaçıncı mektup okunuyorsa ona göre mektubu verir (0: levelın kendi mektubu) */
+export function gununMektubu(level, mektupNo, levelAileMektubu) {
+  const no = Math.max(0, Number(mektupNo) || 0);
+  if (no === 0 && levelAileMektubu?.metin) return levelAileMektubu;
+  const sira = (Number(level) * 5 + no - 1 + GUNLUK_MEKTUPLAR.length * 4) % GUNLUK_MEKTUPLAR.length;
+  return GUNLUK_MEKTUPLAR[sira];
 }

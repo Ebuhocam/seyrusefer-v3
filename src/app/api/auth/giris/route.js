@@ -1,9 +1,11 @@
 import { db } from "@/lib/sunucu/db";
 import { sifreDogrula } from "@/lib/sunucu/sifre";
 import { oturumAc } from "@/lib/sunucu/oturum";
-import { govde, hata } from "@/lib/sunucu/api";
+import { govde, hata, onizlemeKontrol } from "@/lib/sunucu/api";
 
 export async function POST(request) {
+  const kapali = await onizlemeKontrol();
+  if (kapali) return kapali;
   const { kullaniciAdi, sifre } = await govde(request);
   const kAdi = String(kullaniciAdi ?? "").trim().toLowerCase();
   if (!kAdi || typeof sifre !== "string") return hata("Kullanıcı adı ve şifre gerekli.");

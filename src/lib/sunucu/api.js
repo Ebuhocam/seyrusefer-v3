@@ -2,6 +2,7 @@ import "server-only";
 import { aktifKullanici, gelistiriciIzni } from "./oturum";
 import { oyunSaati } from "./oyunDeposu";
 import { oyunAyarlariniGetir } from "./ayarlarDeposu";
+import { onizlemeIzniVar } from "./onizleme";
 
 export const hata = (mesaj, status = 400) => Response.json({ hata: mesaj }, { status });
 
@@ -16,6 +17,7 @@ export async function govde(request) {
 
 /** Oturum yoksa 401 yanıtı, varsa kullanıcıyı döner */
 export async function oturumZorunlu() {
+  if (!(await onizlemeIzniVar())) return { yanit: hata("Site hazırlanıyor.", 403) };
   const kullanici = await aktifKullanici();
   return kullanici ? { kullanici } : { yanit: hata("Oturum bulunamadı", 401) };
 }
@@ -31,4 +33,9 @@ export async function oyunYaniti(kullanici, durum, ek = {}, hazirAyarlar = null)
     gelistirici: gelistiriciIzni(kullanici),
     ...ek,
   });
+}
+
+/** Kayıt / giriş gibi oturumsuz uçlar için ön izleme kapısı kontrolü (kapalıysa 403 yanıtı döner) */
+export async function onizlemeKontrol() {
+  return (await onizlemeIzniVar()) ? null : hata("Site hazırlanıyor.", 403);
 }

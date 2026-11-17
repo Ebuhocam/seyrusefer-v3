@@ -9,8 +9,9 @@ import {
   BIRLIK_ACILIS_LEVEL,
   LEVELLAR,
   toplamKonutKapasitesi,
+  sayiyaEk,
 } from "@/lib/oyun/sabitler";
-import { kaynakAcikMi } from "@/lib/oyun/kurallar";
+import { kaynakAcikMi, mektupBugunAlindi } from "@/lib/oyun/kurallar";
 import { GOREV_TURLERI } from "@/lib/oyun/gorevler";
 import {
   HadisKutusu,
@@ -90,14 +91,14 @@ export default function Panel({ secim, oyun, kapat, onSecimDegistir }) {
   const konutKapasite = toplamKonutKapasitesi(durum.binalar);
 
   return (
-    <div className="fixed inset-0 z-[400] flex flex-col overflow-hidden bg-gradient-to-b from-stone-900 via-stone-900 to-stone-950 text-amber-50">
+    <div className="fixed inset-0 z-[400] flex flex-col overflow-hidden bg-stone-950 text-amber-50" style={{ backgroundImage: "var(--orgu), radial-gradient(120% 70% at 50% 0%, rgba(52,178,163,0.10), transparent 60%), linear-gradient(180deg, #16223a, #0d1628)" }}>
       {/* Üst Tam Ekran Mekan Çubuğu */}
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/30 bg-stone-950/95 px-3 py-2.5 shadow-lg sm:px-6 sm:py-3">
+      <header className="relative flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/40 bg-stone-950/90 px-3 py-2.5 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)] backdrop-blur sm:px-6 sm:py-3 kisa:flex-nowrap kisa:px-2! kisa:py-1!">
         <div className="flex items-center gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={kapat}
-            className="inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 px-3.5 py-2 text-xs font-black text-stone-950 shadow-md transition hover:brightness-110 sm:text-sm"
+            className="inline-flex items-center gap-1.5 rounded-2xl varak-dugme px-3.5 py-2 text-xs font-black text-stone-950 shadow-md transition hover:brightness-110 sm:text-sm kisa:px-2.5! kisa:py-1.5!"
           >
             <span>←</span>
             <span>Köy Haritasına Dön</span>
@@ -112,9 +113,9 @@ export default function Panel({ secim, oyun, kapat, onSecimDegistir }) {
               )}
             </span>
             <div>
-              <h1 className="text-sm font-black leading-tight text-amber-100 sm:text-lg">{baslikBilgi.baslik}</h1>
+              <h1 className="text-lg leading-tight font-black text-amber-100 sm:text-xl kisa:text-base!">{baslikBilgi.baslik}</h1>
               {baslikBilgi.alt && (
-                <p className="text-[11px] font-semibold text-amber-300/80 sm:text-xs">{baslikBilgi.alt}</p>
+                <p className="text-[11px] font-semibold text-amber-300/80 sm:text-xs kisa:hidden">{baslikBilgi.alt}</p>
               )}
             </div>
           </div>
@@ -217,8 +218,22 @@ function BirlikBinaIcerik({ id, oyun }) {
 // ---------------------------------------------------------------
 function Sart({ tamam, children, eylem }) {
   return (
-    <li className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm ${tamam ? "bg-emerald-900/40" : "bg-red-950/40"}`}>
-      <span>{tamam ? "✅" : "❌"}</span>
+    <li
+      className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm ring-1 transition-colors ${
+        tamam ? "bg-emerald-900/35 text-emerald-50 ring-emerald-400/25" : "bg-stone-950/55 ring-white/5"
+      }`}
+    >
+      {tamam ? (
+        <span
+          aria-label="Tamamlandı"
+          className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-black text-amber-950"
+          style={{ background: "radial-gradient(circle at 35% 30%, #fbeaa6, #e7b93b 60%, #946511)" }}
+        >
+          ✓
+        </span>
+      ) : (
+        <span aria-label="Yapılacak" className="h-6 w-6 shrink-0 rounded-full ring-2 ring-amber-400/45 ring-inset" />
+      )}
       <span className="flex-1">{children}</span>
       {eylem}
     </li>
@@ -228,7 +243,7 @@ function Sart({ tamam, children, eylem }) {
 function GorevEkrani({ gorevKodu, oyun, geri, onSecimDegistir }) {
   const gorev = oyun.gorevler.find((g) => g.kod === gorevKodu);
   const tur = gorev?.tur ?? gorevKodu;
-  const mektupAlindiMi = (oyun.durum.mektupAlindi ?? 0) >= oyun.durum.level || Boolean(gorev?.tamam);
+  const mektupAlindiMi = mektupBugunAlindi(oyun.durum, oyun.simdi);
 
   return (
     <div className="space-y-3">
@@ -252,12 +267,12 @@ function GorevEkrani({ gorevKodu, oyun, geri, onSecimDegistir }) {
             </span>
             <h3 className="text-lg font-black text-amber-100 sm:text-xl">
               {mektupAlindiMi
-                ? "Mektubu Evinde Aileni Çağırarak Açabilirsin!"
+                ? "Mektubu Evinde Ailenle Bir Araya Gelerek Açabilirsin!"
                 : "Önce Haberci'den Mühürlü Mektubu Teslim Almalısın!"}
             </h3>
             <p className="mx-auto max-w-lg text-xs leading-relaxed text-amber-100/85 sm:text-sm">
               {mektupAlindiMi
-                ? "Haberci'nin mektubu sadece Kendi Evim odasında, aileni/büyüklerini yanına çağırdıktan (“📣 Yanıma Çağır” → “✅ Çağırdım”) sonra açılıp okunabilir."
+                ? "Haberci'nin mektubu sadece Kendi Evim odasında, ailenle bir araya geldikten (“🤝 Ailemin Yanına Gidiyorum” → “✅ Ailemle Birlikteyim”) sonra açılıp okunabilir."
                 : "Güney yolunda bekleyen Köy Habercisi'ne gidip mühürlü aile mektubunu teslim al, ardından Kendi Evine geçerek ailenle birlikte oku!"}
             </p>
           </div>
@@ -271,7 +286,7 @@ function GorevEkrani({ gorevKodu, oyun, geri, onSecimDegistir }) {
                     : { tur: "nokta", id: "haberci" }
                 )
               }
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 px-6 py-3 text-sm font-black text-stone-950 shadow-xl ring-2 ring-amber-200 transition hover:brightness-110"
+              className="inline-flex items-center gap-2 rounded-2xl varak-dugme px-6 py-3 text-sm font-black text-stone-950 shadow-xl ring-2 ring-amber-200 transition hover:brightness-110"
             >
               {mektupAlindiMi
                 ? "🏡 Kendi Evime Git ve Ailemle Oku →"
@@ -364,7 +379,7 @@ function BinaIcerik({ id, oyun, onSecimDegistir, kapat }) {
               onClick={() => setGorunum("icerde")}
               className={`rounded-xl px-3.5 py-2 text-xs font-black transition ${
                 gorunum === "icerde"
-                  ? "bg-amber-500 text-stone-950 shadow"
+                  ? "varak-dugme"
                   : "text-amber-100 hover:bg-stone-800"
               }`}
             >
@@ -375,7 +390,7 @@ function BinaIcerik({ id, oyun, onSecimDegistir, kapat }) {
               onClick={() => setGorunum("insa")}
               className={`rounded-xl px-3.5 py-2 text-xs font-black transition ${
                 gorunum === "insa"
-                  ? "bg-amber-500 text-stone-950 shadow"
+                  ? "varak-dugme"
                   : "text-amber-100 hover:bg-stone-800"
               }`}
             >
@@ -478,13 +493,13 @@ function BinaIcerik({ id, oyun, onSecimDegistir, kapat }) {
               </div>
             ) : (
               <>
-                <h3 className="text-sm font-black uppercase tracking-wider text-amber-300">
+                <h3 className="text-sm font-black text-amber-300">
                   {tanim.konut
                     ? b.seviye
                       ? `⬆️ ${b.hedef}. Kata Çıkma Şartları (+5 👥 Kapasite)`
                       : "🔨 1. Kat İnşa Şartları (+5 👥 Kapasite)"
                     : b.seviye
-                    ? `⬆️ Seviye ${b.hedef}'e Yükseltme Şartları`
+                    ? `⬆️ Seviye ${sayiyaEk(b.hedef)} yükseltme şartları`
                     : `🔨 ${tanim.ad} İnşa Şartları`}
                 </h3>
 
@@ -527,7 +542,19 @@ function BinaIcerik({ id, oyun, onSecimDegistir, kapat }) {
                     if (tutar <= 0) return null;
                     return (
                       <Sart key={k} tamam={(env[k] ?? 0) >= tutar}>
-                        🔑 {KAYNAKLAR[k].ikon} {KAYNAKLAR[k].ad}: <b className="tabular-nums">{env[k] ?? 0}</b> / {tutar}
+                        {k === "insan" ? (
+                          <>
+                            👥 Köy nüfusu en az <b className="tabular-nums">{tutar}</b> kişi olmalı (şu an{" "}
+                            <b className="tabular-nums">{env[k] ?? 0}</b>)
+                            <span className="block text-[11px] font-semibold text-amber-200/70">
+                              İnsanlar harcanmaz; köyünde yaşamaya devam eder.
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            🔑 {KAYNAKLAR[k].ikon} {KAYNAKLAR[k].ad}: <b className="tabular-nums">{env[k] ?? 0}</b> / {tutar}
+                          </>
+                        )}
                       </Sart>
                     );
                   })}
@@ -548,7 +575,7 @@ function BinaIcerik({ id, oyun, onSecimDegistir, kapat }) {
                       ? `⬆️ ${b.hedef}. Katı Çık (+5 👥 Kapasite)`
                       : "🔨 1. Katı İnşa Et (+5 👥 Kapasite)"
                     : b.seviye
-                    ? `⬆️ Seviye ${b.hedef}'e Yükselt`
+                    ? `⬆️ Seviye ${sayiyaEk(b.hedef)} yükselt`
                     : `🔨 ${tanim.ad} Binamızı İnşa Et`}
                 </button>
               </>
@@ -557,7 +584,7 @@ function BinaIcerik({ id, oyun, onSecimDegistir, kapat }) {
             {/* Konut ise tüm 5+1 mahallenin özetini de altında göster */}
             {tanim.konut && (
               <div className="border-t border-stone-800 pt-4">
-                <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-300/80">
+                <h4 className="mb-2 text-xs font-bold text-amber-300/80">
                   🏘️ 5+1 Konut Mahallesi Genel Durumu
                 </h4>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -612,7 +639,7 @@ function PanoIcerik({ oyun, kapat, onSecimDegistir }) {
   return (
     <div className="space-y-5">
       <div className="rounded-3xl bg-stone-950/80 p-5 ring-1 ring-amber-500/30">
-        <p className="text-xs font-bold uppercase tracking-wider text-amber-300/80">
+        <p className="text-xs font-bold text-amber-300/80">
           📜 Görev Panosu · Level {level.no}
         </p>
         <h2 className="mt-1 text-2xl font-black text-amber-100">{level.gundem}</h2>
@@ -639,7 +666,7 @@ function PanoIcerik({ oyun, kapat, onSecimDegistir }) {
 
       <div className="grid gap-5 md:grid-cols-2">
         <div className="rounded-3xl bg-stone-950/80 p-5 ring-1 ring-amber-500/30">
-          <h3 className="mb-3 text-sm font-black uppercase tracking-wider text-amber-300">
+          <h3 className="mb-3 text-sm font-black text-amber-300">
             1. Gündem Görevleri (Bina Anahtarları)
           </h3>
           {gorevler.length === 0 ? (
@@ -684,6 +711,7 @@ function PanoIcerik({ oyun, kapat, onSecimDegistir }) {
                       {g.bina && BINALAR[g.bina] && ` · 🔑 ${BINALAR[g.bina].ad}`}
                       {kiraathaneBekliyor && " · 🔒 Kıraathane inşa edilince açılır"}
                       {g.bugunYapildi && !g.tamam && " · Bugün yapıldı"}
+                      {g.kilitli && !g.tamam && ` · 🔒 ${g.kilitNotu}`}
                     </span>
                   </Sart>
                 );
@@ -694,7 +722,7 @@ function PanoIcerik({ oyun, kapat, onSecimDegistir }) {
 
         <div className="flex flex-col justify-between rounded-3xl bg-stone-950/80 p-5 ring-1 ring-amber-500/30">
           <div>
-            <h3 className="mb-3 text-sm font-black uppercase tracking-wider text-amber-300">
+            <h3 className="mb-3 text-sm font-black text-amber-300">
               2. Level Bina Hedefleri
             </h3>
             <ul className="space-y-2">
@@ -718,9 +746,9 @@ function PanoIcerik({ oyun, kapat, onSecimDegistir }) {
               const r = await oyun.levelAtla();
               if (r) kapat();
             }}
-            className="mt-5 w-full rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 py-3.5 text-sm font-black text-stone-900 shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
+            className="mt-5 w-full rounded-2xl varak-dugme py-3.5 text-sm font-black text-stone-900 shadow-lg disabled:from-stone-700 disabled:to-stone-800 disabled:text-stone-400"
           >
-            {sonLevel ? "🎓 Son Level (Mezuniyet için Oba'ya gir)" : `⭐ Level ${durum.level + 1}'e Geç`}
+            {sonLevel ? "🎓 Son Level (Mezuniyet için Oba'ya gir)" : `⭐ Level ${sayiyaEk(durum.level + 1)} geç`}
           </button>
         </div>
       </div>

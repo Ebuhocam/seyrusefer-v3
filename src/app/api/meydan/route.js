@@ -1,31 +1,77 @@
 import { db } from "@/lib/sunucu/db";
 import { durumGetir, durumYaz, oyunSaati } from "@/lib/sunucu/oyunDeposu";
-import { oyunAyarlariniGetir, tesvikOdulunuKontrolEt } from "@/lib/sunucu/ayarlarDeposu";
+import { oyunAyarlariniGetir, tesvikOdulunuKontrolEt, turkiyeGunBasi } from "@/lib/sunucu/ayarlarDeposu";
 import { govde, hata, oturumZorunlu, oyunYaniti } from "@/lib/sunucu/api";
 import { gorevIlerlet } from "@/lib/oyun/eylemler";
 import { oyunGunu } from "@/lib/oyun/gorevler";
 import { KARAKTER_KODLARI } from "@/lib/oyun/sabitler";
 
-async function sosyalTablolariHazirla(d) {
-  await d.batch([
-    d.prepare(
-      `CREATE TABLE IF NOT EXISTS meydan_begeniler (
-         paylasim_id  INTEGER NOT NULL,
-         kullanici_id INTEGER NOT NULL,
-         olusturma    INTEGER NOT NULL,
-         PRIMARY KEY (paylasim_id, kullanici_id)
-       )`
-    ),
-    d.prepare(
-      `CREATE TABLE IF NOT EXISTS meydan_sikayetler (
-         id           INTEGER PRIMARY KEY AUTOINCREMENT,
-         paylasim_id  INTEGER NOT NULL,
-         kullanici_id INTEGER NOT NULL,
-         sebep        TEXT    NOT NULL,
-         olusturma    INTEGER NOT NULL
-       )`
-    ),
-  ]);
+// Çınar Altı kuralları (kötüye kullanımı ve ödül avcılığını önlemek için)
+const PAYLASIM_ODUL_GUNLUK = 3; // günde ilk 3 paylaşım Huzur ve görev ilerlemesi kazandırır
+const PAYLASIM_TAVAN_GUNLUK = 10; // bundan fazlası hiç kabul edilmez
+const YORUM_ODUL_GUNLUK = 6;
+const YORUM_TAVAN_GUNLUK = 30;
+const BEGENI_ODUL_GUNLUK = 10; // bir öğrencinin günde en fazla 10 beğenisi Huzur kazandırır
+const BEGENI_ALINAN_ODUL_GUNLUK = 10; // bir öğrenci beğeniden günde en fazla +10 Huzur kazanır
+const PAYLASIM_ARALIK_MS = 20_000;
+const YORUM_ARALIK_MS = 5_000;
+const GIZLEME_SIKAYET_SAYISI = 3; // 3 ayrı öğrencinin şikâyeti paylaşımı akıştan kaldırır
+
+function temizMetin(v) {
+  const s = String(v ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g, "");
+  return s.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+const degisen = (sonuc) => Number(sonuc?.meta?.changes ?? 0);
+const KIMLIK = /^[A-Za-z0-9_-]+$/;
+
+/**
+ * Yalnızca gerçek YouTube / Instagram bağlantılarını kabul eder ve standart biçime çevirir.
+ * Gömme (embed) adresi istemciden değil, burada sunucuda üretilir.
+ * @returns {{tur:string, url:string, embed:string}|null}
+ */
+function medyaCoz(ham) {
+  const metin = String(ham ?? "").trim();
+  if (!metin || metin.length > 300) return null;
+  let u;
+  try {
+    u = new URL(metin);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+  if (u.username || u.password) return null;
+  const host = u.hostname.toLowerCase().replace(/^(www|m)\./, "");
+  const parcalar = u.pathname.split("/").filter(Boolean);
+
+  let ytId = null;
+  if (host === "youtu.be") ytId = parcalar[0] ?? null;
+  else if (host === "youtube.com") {
+    if (parcalar[0] === "watch") ytId = u.searchParams.get("v");
+    else if (["shorts", "embed", "live"].includes(parcalar[0])) ytId = parcalar[1] ?? null;
+  }
+  if (ytId !== null) {
+    if (!/^[A-Za-z0-9_-]{11}$/.test(ytId)) return null;
+    return {
+      tur: "youtube",
+      url: `https://www.youtube.com/watch?v=${ytId}`,
+      embed: `https://www.youtube.com/embed/${ytId}`,
+    };
+  }
+
+  if (host === "instagram.com") {
+    const i = parcalar.findIndex((x) => ["p", "reel", "reels", "tv"].includes(x));
+    const kod = i >= 0 ? parcalar[i + 1] : null;
+    if (kod && i <= 1 && /^[A-Za-z0-9_-]{5,30}$/.test(kod) && KIMLIK.test(kod)) {
+      const tip = parcalar[i] === "reels" ? "reel" : parcalar[i];
+      return {
+        tur: "instagram",
+        url: `https://www.instagram.com/${tip}/${kod}/`,
+        embed: `https://www.instagram.com/${tip}/${kod}/embed`,
+      };
+    }
+  }
+  return null;
 }
 
 function icerikCoz(hamIcerik) {
@@ -38,7 +84,7 @@ function icerikCoz(hamIcerik) {
           metin: veri.metin,
           kategori: veri.kategori === "serbest" ? "serbest" : "gundem",
           altTur: veri.altTur || "soz",
-          medyaUrl: veri.medyaUrl || "",
+          medyaUrl: medyaCoz(veri.medyaUrl)?.url ?? "",
         };
       }
     } catch {
@@ -53,11 +99,10 @@ function icerikCoz(hamIcerik) {
   };
 }
 
-async function paylasimlariGetir(level, aktifKullaniciId) {
+async function paylasimlariGetir(aktifKullaniciId) {
   const d = await db();
-  await sosyalTablolariHazirla(d);
 
-  // Hem bu levelın hem de serbest paylaşımların son 35 kaydını getir
+  // Öğretmenin ya da şikâyetlerin gizlediği paylaşımlar akışa hiç girmez
   const paylasimlar = await d
     .prepare(
       `SELECT p.id, p.kullanici_id AS yazar_id, p.level, p.icerik, p.olusturma,
@@ -69,6 +114,7 @@ async function paylasimlariGetir(level, aktifKullaniciId) {
          JOIN kullanicilar k ON k.id = p.kullanici_id
          LEFT JOIN oyuncu_durumu od ON od.kullanici_id = p.kullanici_id
          LEFT JOIN kaynaklar kr ON kr.kullanici_id = p.kullanici_id AND kr.kaynak = 'oyuncu_karakter'
+        WHERE p.gizli = 0
         ORDER BY p.olusturma DESC
         LIMIT 35`
     )
@@ -79,7 +125,7 @@ async function paylasimlariGetir(level, aktifKullaniciId) {
   const idler = paylasimlar.results.map((p) => p.id);
   const yerTutucular = idler.map(() => "?").join(",");
 
-  const [yorumlar, begeniler] = await d.batch([
+  const [yorumlar, begeniler, benSikayet] = await d.batch([
     d
       .prepare(
         `SELECT y.id, y.paylasim_id, y.kullanici_id AS yazar_id, y.icerik, y.olusturma,
@@ -96,9 +142,12 @@ async function paylasimlariGetir(level, aktifKullaniciId) {
       .prepare(
         `SELECT paylasim_id, kullanici_id
            FROM meydan_begeniler
-          WHERE paylasim_id IN (${yerTutucular})`
+          WHERE aktif = 1 AND paylasim_id IN (${yerTutucular})`
       )
       .bind(...idler),
+    d
+      .prepare(`SELECT paylasim_id FROM meydan_sikayetler WHERE kullanici_id = ? AND paylasim_id IN (${yerTutucular})`)
+      .bind(aktifKullaniciId, ...idler),
   ]);
 
   const yorumHaritasi = {};
@@ -117,9 +166,11 @@ async function paylasimlariGetir(level, aktifKullaniciId) {
       benBegendimHaritasi[b.paylasim_id] = true;
     }
   }
+  const bildirdiklerim = new Set(benSikayet.results.map((x) => x.paylasim_id));
 
   return paylasimlar.results.map((p) => {
     const cozulmus = icerikCoz(p.icerik);
+    const medya = medyaCoz(cozulmus.medyaUrl);
     return {
       id: p.id,
       level: p.level,
@@ -133,20 +184,21 @@ async function paylasimlariGetir(level, aktifKullaniciId) {
       icerik: cozulmus.metin,
       kategori: cozulmus.kategori,
       altTur: cozulmus.altTur,
-      medyaUrl: cozulmus.medyaUrl,
+      medyaUrl: medya?.url ?? "",
+      medyaTur: medya?.tur ?? null,
+      medyaEmbed: medya?.embed ?? null, // sunucuda üretilmiş güvenli gömme adresi
       begeniSayisi: begeniSayiHaritasi[p.id] ?? 0,
       benBegendim: Boolean(benBegendimHaritasi[p.id]),
+      benBildirdim: bildirdiklerim.has(p.id),
       yorumlar: yorumHaritasi[p.id] ?? [],
     };
   });
 }
 
-export async function GET(request) {
+export async function GET() {
   const { kullanici, yanit } = await oturumZorunlu();
   if (yanit) return yanit;
-  const durum = await durumGetir(kullanici.id);
-  const istenenLevel = Number(request.nextUrl.searchParams.get("level")) || durum.level;
-  return Response.json({ paylasimlar: await paylasimlariGetir(istenenLevel, kullanici.id) });
+  return Response.json({ paylasimlar: await paylasimlariGetir(kullanici.id) });
 }
 
 export async function POST(request) {
@@ -155,136 +207,202 @@ export async function POST(request) {
 
   const { tur, icerik, paylasimId, kategori, altTur, medyaUrl, sebep } = await govde(request);
   const d = await db();
-  await sosyalTablolariHazirla(d);
 
   let [durum, ayarlar] = await Promise.all([durumGetir(kullanici.id), oyunAyarlariniGetir()]);
   const simdi = oyunSaati(durum);
+  const an = Date.now();
+  const gunBasi = turkiyeGunBasi(an); // günlük sınırlar gerçek Türkiye gününe göre
 
-  // 1. BEĞENİ İŞLEMİ (+1 Köy Huzuru paylaşım sahibine!)
+  // Köy Meydanı'nı kurmamış öğrenci Çınar Altı'nda işlem yapamaz (arayüzü atlayıp API'yi çağırsa da)
+  if ((durum.binalar?.sosyalmeydan ?? 0) < 1) {
+    return hata("Çınar Altı'na katılmak için önce köyüne Köy Meydanı'nı inşa etmelisin.", 403);
+  }
+
+  const cevap = async (ek = {}) =>
+    oyunYaniti(kullanici, durum, { paylasimlar: await paylasimlariGetir(kullanici.id), ...ek }, ayarlar);
+
+  // 1. BEĞENİ (aç/kapat). Huzur ödülü yalnızca bir paylaşımın İLK beğenisinde, kendi paylaşımı değilse ve günlük sınırlar içindeyse verilir.
   if (tur === "begeni") {
     const p = await d
-      .prepare("SELECT id, kullanici_id FROM meydan_paylasimlari WHERE id = ?")
+      .prepare("SELECT id, kullanici_id FROM meydan_paylasimlari WHERE id = ? AND gizli = 0")
       .bind(Number(paylasimId))
       .first();
-    if (!p) return hata("Paylaşım bulunamadı", 404);
+    if (!p) return hata("Bu paylaşım artık yok.", 404);
 
-    const mevcutBegeni = await d
-      .prepare("SELECT 1 FROM meydan_begeniler WHERE paylasim_id = ? AND kullanici_id = ?")
+    const mevcut = await d
+      .prepare("SELECT aktif FROM meydan_begeniler WHERE paylasim_id = ? AND kullanici_id = ?")
       .bind(p.id, kullanici.id)
       .first();
 
-    if (mevcutBegeni) {
+    let bildirim = null;
+    if (mevcut) {
+      // Satır silinmez: beğeniyi geri alıp yeniden beğenerek tekrar ödül toplanamaz
       await d
-        .prepare("DELETE FROM meydan_begeniler WHERE paylasim_id = ? AND kullanici_id = ?")
-        .bind(p.id, kullanici.id)
+        .prepare("UPDATE meydan_begeniler SET aktif = ? WHERE paylasim_id = ? AND kullanici_id = ?")
+        .bind(mevcut.aktif ? 0 : 1, p.id, kullanici.id)
         .run();
     } else {
-      await d
-        .prepare("INSERT INTO meydan_begeniler (paylasim_id, kullanici_id, olusturma) VALUES (?, ?, ?)")
-        .bind(p.id, kullanici.id, Date.now())
-        .run();
-
-      // Beğeni alan öğrencinin Köy Huzuru +1 artar!
-      if (p.kullanici_id === kullanici.id) {
-        durum = { ...durum, mutluluk: Math.min(100, (durum.mutluluk ?? 60) + 1) };
-        await durumYaz(kullanici.id, durum);
-      } else {
-        await d
-          .prepare("UPDATE oyuncu_durumu SET mutluluk = MIN(100, COALESCE(mutluluk, 60) + 1) WHERE kullanici_id = ?")
-          .bind(p.kullanici_id)
-          .run();
-      }
+      const kendisi = p.kullanici_id === kullanici.id ? 1 : 0;
+      const [ekle, huzur] = await d.batch([
+        d
+          .prepare("INSERT OR IGNORE INTO meydan_begeniler (paylasim_id, kullanici_id, olusturma, aktif) VALUES (?, ?, ?, 1)")
+          .bind(p.id, kullanici.id, an),
+        d
+          .prepare(
+            `UPDATE oyuncu_durumu SET mutluluk = MIN(100, COALESCE(mutluluk, 60) + 1)
+              WHERE changes() = 1 AND ?4 = 0 AND kullanici_id = ?1
+                AND (SELECT COUNT(*) FROM meydan_begeniler WHERE kullanici_id = ?2 AND olusturma >= ?3) <= ?5
+                AND (SELECT COUNT(*) FROM meydan_begeniler b JOIN meydan_paylasimlari mp ON mp.id = b.paylasim_id
+                      WHERE mp.kullanici_id = ?1 AND b.kullanici_id <> ?1 AND b.olusturma >= ?3) <= ?6`
+          )
+          .bind(p.kullanici_id, kullanici.id, gunBasi, kendisi, BEGENI_ODUL_GUNLUK, BEGENI_ALINAN_ODUL_GUNLUK),
+      ]);
+      if (degisen(ekle) && degisen(huzur)) bildirim = "💛 Beğendin! Yazarın köy huzuru arttı.";
     }
-
-    return oyunYaniti(
-      kullanici,
-      durum,
-      { paylasimlar: await paylasimlariGetir(durum.level, kullanici.id) },
-      ayarlar
-    );
+    return cevap(bildirim ? { bildirim } : {});
   }
 
-  // 2. YÖNETİCİYE ŞİKAYET İŞLEMİ
+  // 2. ŞİKÂYET: her öğrenci bir paylaşımı bir kez bildirebilir; 3 ayrı bildirim paylaşımı akıştan kaldırır
   if (tur === "sikayet") {
-    const p = await d.prepare("SELECT id FROM meydan_paylasimlari WHERE id = ?").bind(Number(paylasimId)).first();
-    if (!p) return hata("Paylaşım bulunamadı", 404);
-    const temizSebep = String(sebep ?? "Uygunsuz içerik").trim().slice(0, 200);
+    const p = await d
+      .prepare("SELECT id, kullanici_id FROM meydan_paylasimlari WHERE id = ? AND gizli = 0")
+      .bind(Number(paylasimId))
+      .first();
+    if (!p) return hata("Bu paylaşım artık yok.", 404);
+    if (p.kullanici_id === kullanici.id) return hata("Kendi paylaşımını bildiremezsin; istersen silmesi için öğretmenine söyleyebilirsin.");
+
+    const temizSebep = temizMetin(sebep || "Uygunsuz içerik").slice(0, 200) || "Uygunsuz içerik";
+    const s = await d
+      .prepare("INSERT OR IGNORE INTO meydan_sikayetler (paylasim_id, kullanici_id, sebep, olusturma, durum) VALUES (?, ?, ?, ?, 'bekliyor')")
+      .bind(p.id, kullanici.id, temizSebep, an)
+      .run();
+    if (!degisen(s)) return hata("Bu paylaşımı zaten bildirdin. Öğretmenin inceleyecek, teşekkürler!");
+
     await d
-      .prepare("INSERT INTO meydan_sikayetler (paylasim_id, kullanici_id, sebep, olusturma) VALUES (?, ?, ?, ?)")
-      .bind(p.id, kullanici.id, temizSebep, Date.now())
+      .prepare(
+        `UPDATE meydan_paylasimlari SET gizli = 1
+          WHERE id = ?1 AND (SELECT COUNT(*) FROM meydan_sikayetler WHERE paylasim_id = ?1 AND durum = 'bekliyor') >= ?2`
+      )
+      .bind(p.id, GIZLEME_SIKAYET_SAYISI)
       .run();
 
-    return oyunYaniti(
-      kullanici,
-      durum,
-      {
-        bildirim: "🚩 Bildirimin köy yönetimine (Admin) iletildi. Köyümüzün huzurunu koruduğun için teşekkürler!",
-        paylasimlar: await paylasimlariGetir(durum.level, kullanici.id),
-      },
-      ayarlar
-    );
+    return cevap({ bildirim: "🚩 Bildirimin öğretmenine iletildi. Köyümüzün huzurunu koruduğun için teşekkürler!" });
   }
 
-  const metin = String(icerik ?? "").trim();
-  const temizMedya = String(medyaUrl ?? "").trim().slice(0, 300);
+  if (tur !== "paylasim" && tur !== "yorum") return hata("Geçersiz işlem türü");
 
-  if (metin.length < 3 || metin.length > 600) {
-    return hata("Mesaj 3 ile 600 karakter arasında olmalı.");
+  const metin = temizMetin(icerik);
+  const enAz = tur === "paylasim" ? 3 : 2;
+  const enCok = tur === "paylasim" ? 600 : 300;
+  if (metin.length < enAz || metin.length > enCok) {
+    return hata(`Yazın ${enAz} ile ${enCok} karakter arasında olmalı (şu an ${metin.length}).`);
   }
 
-  // 3. YENİ PAYLAŞIM (Gündem İçi veya Gündem Harici / Söz / Hikaye / Video)
+  // 3. YENİ PAYLAŞIM
   if (tur === "paylasim") {
     const secilenKategori = kategori === "serbest" ? "serbest" : "gundem";
     const secilenAltTur = ["soz", "hikaye", "ani", "dua", "video"].includes(altTur) ? altTur : "soz";
+
+    let medya = null;
+    if (String(medyaUrl ?? "").trim()) {
+      medya = medyaCoz(medyaUrl);
+      if (!medya) return hata("Yalnızca youtube.com, youtu.be veya instagram.com bağlantıları paylaşılabilir.");
+    }
+    if (secilenAltTur === "video" && !medya) {
+      return hata("Video paylaşmak için geçerli bir YouTube veya Instagram bağlantısı eklemelisin.");
+    }
+
+    const son = await d
+      .prepare("SELECT icerik, olusturma FROM meydan_paylasimlari WHERE kullanici_id = ? ORDER BY olusturma DESC LIMIT 1")
+      .bind(kullanici.id)
+      .first();
+    if (son && an - son.olusturma < PAYLASIM_ARALIK_MS) {
+      return hata("Biraz yavaş 🙂 Yeni paylaşım için birkaç saniye bekle.", 429);
+    }
+    if (son && an - son.olusturma < 10 * 60_000 && icerikCoz(son.icerik).metin === metin) {
+      return hata("Aynı paylaşımı az önce yaptın.", 429);
+    }
+
     const zarf = JSON.stringify({
       v: 1,
       metin,
       kategori: secilenKategori,
       altTur: secilenAltTur,
-      medyaUrl: temizMedya,
+      medyaUrl: medya?.url ?? "",
     });
-
-    await d
+    const eklenen = await d
       .prepare("INSERT INTO meydan_paylasimlari (kullanici_id, level, icerik, olusturma) VALUES (?, ?, ?, ?)")
-      .bind(kullanici.id, durum.level, zarf, Date.now())
+      .bind(kullanici.id, durum.level, zarf, an)
       .run();
+    const yeniId = Number(eklenen?.meta?.last_row_id ?? 0);
 
-    // Gündem içi paylaşım yapıldığında Köy Huzuru +3 artar! Serbest paylaşımda +1 artar.
+    // Bugünkü kaçıncı paylaşımım? (kendi id'm dahil, paralel isteklerde de sıra benzersizdir)
+    const sira = (
+      await d
+        .prepare("SELECT COUNT(*) AS n FROM meydan_paylasimlari WHERE kullanici_id = ? AND olusturma >= ? AND id <= ?")
+        .bind(kullanici.id, gunBasi, yeniId)
+        .first()
+    )?.n ?? 1;
+    if (sira > PAYLASIM_TAVAN_GUNLUK) {
+      await d.prepare("DELETE FROM meydan_paylasimlari WHERE id = ?").bind(yeniId).run();
+      return hata(`Bugün en fazla ${PAYLASIM_TAVAN_GUNLUK} paylaşım yapabilirsin. Yarın yine buradayız!`, 429);
+    }
+
+    if (sira > PAYLASIM_ODUL_GUNLUK) {
+      return cevap({
+        bildirim: `Paylaşımın yayında! (Günde ilk ${PAYLASIM_ODUL_GUNLUK} paylaşım Huzur kazandırır; yarın yenisi başlar.)`,
+      });
+    }
+
+    // Gündem içi paylaşım Köy Huzuru +3, serbest paylaşım +1
     const huzurArtisi = secilenKategori === "gundem" ? 3 : 1;
-    durum = {
-      ...durum,
-      mutluluk: Math.min(100, (durum.mutluluk ?? 60) + huzurArtisi),
-    };
-
+    durum = { ...durum, mutluluk: Math.min(100, (durum.mutluluk ?? 60) + huzurArtisi) };
     const ilerlet = gorevIlerlet(durum, "meydan_paylasim", simdi, ayarlar);
-    if (ilerlet.durum) {
-      durum = ilerlet.durum;
-    }
+    if (ilerlet.durum) durum = ilerlet.durum;
     await durumYaz(kullanici.id, durum);
     await tesvikOdulunuKontrolEt(kullanici.id, oyunGunu(simdi));
-  } else if (tur === "yorum") {
-    const p = await d.prepare("SELECT id FROM meydan_paylasimlari WHERE id = ?").bind(Number(paylasimId)).first();
-    if (!p) return hata("Paylaşım bulunamadı", 404);
-
-    await d
-      .prepare("INSERT INTO meydan_yorumlar (paylasim_id, kullanici_id, icerik, olusturma) VALUES (?, ?, ?, ?)")
-      .bind(p.id, kullanici.id, metin, Date.now())
-      .run();
-
-    const ilerlet = gorevIlerlet(durum, "meydan_yorum", simdi, ayarlar);
-    if (ilerlet.durum) {
-      durum = ilerlet.durum;
-    }
-    await durumYaz(kullanici.id, durum);
-    await tesvikOdulunuKontrolEt(kullanici.id, oyunGunu(simdi));
-  } else {
-    return hata("Geçersiz işlem türü");
+    return cevap({ bildirim: `Paylaşımın yayında! Köy huzuru +${huzurArtisi} 🌿` });
   }
 
-  return oyunYaniti(
-    kullanici,
-    durum,
-    { paylasimlar: await paylasimlariGetir(durum.level, kullanici.id) },
-    ayarlar
-  );
+  // 4. YORUM
+  const p = await d.prepare("SELECT id FROM meydan_paylasimlari WHERE id = ? AND gizli = 0").bind(Number(paylasimId)).first();
+  if (!p) return hata("Bu paylaşım artık yok.", 404);
+
+  const sonYorum = await d
+    .prepare("SELECT paylasim_id, icerik, olusturma FROM meydan_yorumlar WHERE kullanici_id = ? ORDER BY olusturma DESC LIMIT 1")
+    .bind(kullanici.id)
+    .first();
+  if (sonYorum && an - sonYorum.olusturma < YORUM_ARALIK_MS) {
+    return hata("Biraz yavaş 🙂 Yeni yorum için birkaç saniye bekle.", 429);
+  }
+  if (sonYorum && sonYorum.paylasim_id === p.id && sonYorum.icerik === metin && an - sonYorum.olusturma < 10 * 60_000) {
+    return hata("Aynı yorumu az önce yazdın.", 429);
+  }
+
+  const eklenen = await d
+    .prepare("INSERT INTO meydan_yorumlar (paylasim_id, kullanici_id, icerik, olusturma) VALUES (?, ?, ?, ?)")
+    .bind(p.id, kullanici.id, metin, an)
+    .run();
+  const yeniId = Number(eklenen?.meta?.last_row_id ?? 0);
+  const sira = (
+    await d
+      .prepare("SELECT COUNT(*) AS n FROM meydan_yorumlar WHERE kullanici_id = ? AND olusturma >= ? AND id <= ?")
+      .bind(kullanici.id, gunBasi, yeniId)
+      .first()
+  )?.n ?? 1;
+  if (sira > YORUM_TAVAN_GUNLUK) {
+    await d.prepare("DELETE FROM meydan_yorumlar WHERE id = ?").bind(yeniId).run();
+    return hata(`Bugün en fazla ${YORUM_TAVAN_GUNLUK} yorum yazabilirsin. Yarın devam!`, 429);
+  }
+  if (sira > YORUM_ODUL_GUNLUK) {
+    return cevap({ bildirim: "Yorumun eklendi! (Bugünkü yorum ödül sınırına ulaştın.)" });
+  }
+
+  const ilerlet = gorevIlerlet(durum, "meydan_yorum", simdi, ayarlar);
+  if (ilerlet.durum) {
+    durum = ilerlet.durum;
+    await durumYaz(kullanici.id, durum);
+  }
+  await tesvikOdulunuKontrolEt(kullanici.id, oyunGunu(simdi));
+  return cevap();
 }

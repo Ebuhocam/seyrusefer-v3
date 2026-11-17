@@ -2,11 +2,13 @@ import { db } from "@/lib/sunucu/db";
 import { sifreOzetle } from "@/lib/sunucu/sifre";
 import { oturumAc } from "@/lib/sunucu/oturum";
 import { durumGetir } from "@/lib/sunucu/oyunDeposu";
-import { govde, hata } from "@/lib/sunucu/api";
+import { govde, hata, onizlemeKontrol } from "@/lib/sunucu/api";
 
 const AD_DESENI = /^[a-z0-9_.]{3,20}$/;
 
 export async function POST(request) {
+  const kapali = await onizlemeKontrol();
+  if (kapali) return kapali;
   const { kullaniciAdi, sifre, ad, cinsiyet, karakter } = await govde(request);
   const kAdi = String(kullaniciAdi ?? "").trim().toLowerCase();
   const gorunenAd = String(ad ?? "").trim().replace(/\s+/g, " ");

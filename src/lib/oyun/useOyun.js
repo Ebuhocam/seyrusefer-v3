@@ -4,7 +4,8 @@
 // Durumun ve ayarların asıl sahibi sunucudur (D1).
 // =============================================================
 import { useCallback, useEffect, useState } from "react";
-import { BINALAR, oyuncuKarakteriBul } from "./sabitler";
+import { BINALAR, oyuncuKarakteriBul, sayiyaEk } from "./sabitler";
+import { sesCal } from "@/components/koy/ses";
 import {
   biriken,
   dolumBilgisi,
@@ -67,10 +68,12 @@ export function useOyun(baslangic) {
         const j = await r.json();
         if (!r.ok) {
           setMesaj({ tur: "hata", metin: j.hata ?? "Bir hata oluştu" });
+          sesCal("hata");
           return null;
         }
         veriUygula(j);
         if (basariMesaji) setMesaj({ tur: "tamam", metin: basariMesaji });
+        if (["topla", "sahaHasat", "sahaHepsiniTopla", "ormanAgacKes"].includes(govde?.eylem)) sesCal("toplama");
         return j;
       } catch {
         setMesaj({ tur: "hata", metin: "Sunucuya ulaşılamadı" });
@@ -168,8 +171,8 @@ export function useOyun(baslangic) {
     return j?.sonuc ?? null;
   };
 
-  const yukselt = (binaId) => gonder({ eylem: "yukselt", binaId }, "Bina yükseltildi!");
-  const levelAtla = () => gonder({ eylem: "levelAtla" }, `Level ${durum.level + 1}'e geçildi!`);
+  const yukselt = (binaId) => gonder({ eylem: "yukselt", binaId });
+  const levelAtla = () => gonder({ eylem: "levelAtla" }, `Level ${sayiyaEk(durum.level + 1)} geçildi!`);
 
   const gorevTamamla = (gorevKodu) => gonder({ eylem: "gorevTamamla", gorevKodu }, "Görev ilerlemesi kaydedildi!");
   const namazIsaretle = (vakit, deger) => gonder({ eylem: "namazIsaretle", vakit, deger });

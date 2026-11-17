@@ -46,3 +46,7 @@ next-env.d.ts
 # cloudflare / opennext
 /.wrangler/
 /.open-next/
+
+# elle yayın paketi ve eski bun kilit dosyası (Cloudflare otomatik derlemesi npm kullanır)
+/open-next-paketi.zip
+/bun.lock.eski

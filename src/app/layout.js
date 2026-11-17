@@ -1,10 +1,6 @@
-import { Geist } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin", "latin-ext"],
-});
+import Hazirlaniyor from "./Hazirlaniyor";
+import { onizlemeIzniVar } from "@/lib/sunucu/onizleme";
 
 export const metadata = {
   title: "Seyrüsefer",
@@ -19,13 +15,15 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#1f3315",
+  themeColor: "#0d1628",
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  // Gizli ön izleme kapısı: şifre girilmemişse herkes "hazırlanıyor" sayfasını görür
+  const izinli = await onizlemeIzniVar();
   return (
-    <html lang="tr" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="min-h-full font-sans">{children}</body>
+    <html lang="tr" className="h-full antialiased">
+      <body className="min-h-full font-sans">{izinli ? children : <Hazirlaniyor />}</body>
     </html>
   );
 }

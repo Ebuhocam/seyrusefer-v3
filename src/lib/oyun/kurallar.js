@@ -10,10 +10,29 @@ import {
   LEVELLAR,
   TARLA_PARSELLERI,
   MADEN_KAYALARI_TANIM,
+  SART_KAYNAKLARI,
+  NOKTA_DOLUM_SAAT,
+  AGAC_TEMEL_ODUL,
 } from "./sabitler";
 
 const SAAT_MS = 60 * 60 * 1000;
 const GUN_MS = 24 * SAAT_MS;
+const TR_KAYMA_MS = 3 * SAAT_MS;
+
+/** Türkiye saatine (UTC+3) göre gün numarası. "Günde bir" kuralları gece yarısı (TSİ) yenilenir. */
+export const trGunNo = (simdiMs) => Math.floor((simdiMs + TR_KAYMA_MS) / GUN_MS);
+
+/**
+ * Köy Meydanı'nda günde 1 olay (dava veya yeni insan daveti) yaşanır.
+ * Takvim gününe bağlıdır: dün akşam 20.00'de oynayan öğrenci bugün 16.00'da da oynayabilir.
+ */
+export function meydanOlayDurumu(durum, simdi) {
+  const son = Number(durum?.sonMeydanOlayZamani ?? 0);
+  const hazir = son <= 0 || trGunNo(son) < trGunNo(simdi);
+  const geceYarisi = (trGunNo(simdi) + 1) * GUN_MS - TR_KAYMA_MS;
+  const kalanSaat = hazir ? 0 : Math.max(1, Math.ceil((geceYarisi - simdi) / SAAT_MS));
+  return { hazir, kalanSaat };
+}
 
 /** Bir kaynağın saatlik üretimi (1 işçide 24 saatte 15 birim = her 96 dakikada 1 birim; 0 işçide üretim durur) */
 export function saatlikUretim(kaynak, isciSayisi = 1) {
@@ -23,12 +42,12 @@ export function saatlikUretim(kaynak, isciSayisi = 1) {
   return temel * (1 + (isci - 1) * 0.25);
 }
 
-/** İşçi sayısına göre bir parsel/kaya noktasının yeniden dolma süresi (ms). 1 işçide 24 saat, işçi arttıkça hızlanır. */
+/** İşçi sayısına göre bir parsel/kaya noktasının yeniden dolma süresi (ms). her zaman 20 saat; işçi verimi artırır. */
 export function noktaDolumSuresiMs(isciSayisi = 1) {
   const isci = Math.max(0, Number(isciSayisi ?? 1));
   if (isci <= 0) return Infinity;
-  const carpan = 1 + (isci - 1) * 0.25;
-  return Math.round(GUN_MS / carpan);
+  // Dolum süresi işçiden bağımsızdır; işçi, bir sonraki ekimin VERİMİNİ artırır (bkz. sahaNoktalariDurumu)
+  return NOKTA_DOLUM_SAAT * SAAT_MS;
 }
 
 /**
@@ -41,7 +60,8 @@ export function sahaNoktalariDurumu(kaynak, durum, simdi) {
   const sureMs = noktaDolumSuresiMs(isci);
   const kayitHaritasi =
     kaynak === "erzak" ? durum?.sahaDurumu?.tarla ?? {} : durum?.sahaDurumu?.maden ?? {};
-  const isciHizCarpani = isci > 0 ? 1 + (isci - 1) * 0.25 : 0;
+  const ekimIsciHaritasi =
+    kaynak === "erzak" ? durum?.sahaDurumu?.tarlaIsci ?? {} : durum?.sahaDurumu?.madenIsci ?? {};
 
   return liste.map((oge) => {
     const sonHasat = Number(kayitHaritasi[oge.id] ?? 0);
@@ -58,7 +78,11 @@ export function sahaNoktalariDurumu(kaynak, durum, simdi) {
     const hazir = sonHasat <= 0 || gecen >= sureMs;
     const oran = hazir ? 100 : Math.min(99, Math.floor((gecen / sureMs) * 100));
     const kalanDakika = hazir ? 0 : Math.max(1, Math.ceil((sureMs - gecen) / 60000));
-    const miktar = Math.max(1, Math.round(oge.temelMiktar * isciHizCarpani));
+    // Verim, ürün EKİLDİĞİ andaki işçi sayısına göredir: yeni atanan işçi, tarlada hazır bekleyen ürünü
+    // büyütmez; bir sonraki ekimden itibaren fazla ürün getirir. (Hiç hasat edilmemiş nokta 1 işçiyle sayılır.)
+    const ekimIsci = sonHasat > 0 ? Number(ekimIsciHaritasi[oge.id] ?? 1) : 1;
+    const ekimCarpani = 1 + (Math.max(1, Math.min(isci, ekimIsci)) - 1) * 0.25;
+    const miktar = Math.max(1, Math.round(oge.temelMiktar * ekimCarpani));
     return {
       ...oge,
       hazir,
@@ -75,7 +99,7 @@ export function sahaNoktalariDurumu(kaynak, durum, simdi) {
 export function ormanSeferBilgisi(durum, simdi) {
   const isci = Math.max(0, Number(durum?.isciler?.kereste ?? 1));
   const maksSefer = isci * 2;
-  const bugunKod = Math.floor((simdi + 3 * SAAT_MS) / GUN_MS); // UTC+3 gün kodu
+  const bugunKod = trGunNo(simdi);
   const ham = durum?.ormanSefer ?? { gun: bugunKod, kullanilan: 0, maske: 0, sonSonuc: 0, aktifBolge: -1 };
   const ayniGun = Number(ham.gun) === bugunKod;
 
@@ -83,7 +107,7 @@ export function ormanSeferBilgisi(durum, simdi) {
   const maske = ayniGun ? Number(ham.maske || 0) : 0;
   const aktifBolge = ayniGun && Number.isInteger(ham.aktifBolge) ? ham.aktifBolge : -1;
   const kalanSefer = Math.max(0, maksSefer - kullanilan);
-  const agacOdulu = Math.max(8, Math.round(12 * (1 + Math.max(0, isci - 1) * 0.25)));
+  const agacOdulu = Math.max(8, Math.round(AGAC_TEMEL_ODUL * (1 + Math.max(0, isci - 1) * 0.25)));
 
   return {
     gun: bugunKod,
@@ -232,6 +256,9 @@ export function binaDurumu(binaId, durum, ozelBinalar = null) {
   const levelYeterli = durum.level >= gerekenLevel;
   const bedel = tanim.bedel[hedef] ?? {};
   const kaynak = bedelKontrol(bedel, durum.envanter);
+  // 👥 İnsan gibi "şart" kaynakları harcanmaz; yalnızca en az bu kadar olması aranır
+  const harcanan = Object.fromEntries(Object.entries(bedel).filter(([k]) => !SART_KAYNAKLARI.includes(k)));
+  const nufusSarti = Number(bedel.insan) || 0;
   const gorevGerekmez = !!tanim.gorevSartsiz || (!!tanim.ilkKurulumGorevsiz && hedef === 1);
   const gorevTamam = levelYeterli && (gorevGerekmez || durum.gorevlerTamam(binaId, hedef));
 
@@ -245,6 +272,8 @@ export function binaDurumu(binaId, durum, ozelBinalar = null) {
     gorevGerekmez,
     gorevTamam,
     bedel,
+    harcanan,
+    nufusSarti,
     kaynakYeterli: kaynak.yeterli,
     eksik: kaynak.eksik,
     yapilabilir: levelYeterli && gorevTamam && kaynak.yeterli,
@@ -264,4 +293,10 @@ export function levelDurumu(level, binalar, ozelLevellar = null) {
     tamam: (binalar[binaId] ?? 0) >= Number(seviye),
   }));
   return { ...tanim, hedefler, binalarTamam: hedefler.every((h) => h.tamam) };
+}
+
+/** Haberci her gün yeni mektup getirir: bugünün mektubu teslim alındı mı? (oyun saatine göre, TSİ) */
+export function mektupBugunAlindi(durum, simdi) {
+  const g = Number(durum?.mektupGunu ?? 0);
+  return g > 0 && trGunNo(g) === trGunNo(simdi);
 }

@@ -42,32 +42,43 @@ export default function GirisFormu() {
   const cinsiyetKarakterleri = Object.values(KARAKTERLER).filter((k) => k.cinsiyet === cinsiyet);
 
   return (
-    <main className="relative fixed inset-0 grid place-items-center overflow-auto bg-[#1f3315] p-4 text-amber-50">
+    <main className="fixed inset-0 grid place-items-center overflow-auto bg-stone-950 p-4 text-amber-50">
+      {/* Arka planda köy haritası yavaşça süzülür */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/assets/harita/koy.webp"
         alt=""
-        className="pointer-events-none fixed inset-0 h-full w-full object-cover opacity-25 blur-[2px]"
+        className="giris-harita pointer-events-none fixed inset-0 h-full w-full object-cover opacity-60"
+      />
+      <div
+        className="pointer-events-none fixed inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 60% at 50% 45%, rgba(13,22,40,0.35), rgba(13,22,40,0.92) 75%), linear-gradient(180deg, rgba(13,22,40,0.6), transparent 30%, transparent 70%, rgba(13,22,40,0.85))",
+        }}
       />
 
       <div
-        className={`relative w-full rounded-3xl bg-gradient-to-b from-stone-800/95 to-stone-900/95 p-6 shadow-2xl ring-1 ring-amber-500/40 transition-all ${
+        className={`tezhip levha-ac relative my-6 w-full rounded-[1.75rem] p-6 transition-all sm:p-8 ${
           kip === "kayit" ? "max-w-xl" : "max-w-sm"
         }`}
       >
         <div className="mb-5 text-center">
-          <img src="/assets/binalar/otag1.webp" alt="Otağ" className="mx-auto mb-2 h-20 object-contain drop-shadow-lg" />
-          <h1 className="text-2xl font-black tracking-tight text-amber-200">Seyrüsefer</h1>
-          <p className="text-xs text-amber-200/70">Köyünü kur, gündemini yaşa, birliğinle yüksel</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/assets/binalar/otag1.webp" alt="" className="mx-auto -mt-2 mb-1 h-24 object-contain drop-shadow-[0_12px_14px_rgba(0,0,0,0.6)]" />
+          <h1 className="giris-baslik text-5xl leading-none font-black sm:text-6xl">Seyrüsefer</h1>
+          <div className="cetvel mx-auto my-3 w-3/4" />
+          <p className="font-display text-base text-amber-100/85 italic">Köyünü kur, gündemini yaşa, birliğinle yüksel</p>
         </div>
 
-        <div className="mb-4 grid grid-cols-2 rounded-xl bg-stone-950/60 p-1 text-sm font-bold">
+        <div className="mb-5 grid grid-cols-2 gap-1 rounded-2xl bg-stone-950/70 p-1 text-sm font-bold ring-1 ring-amber-500/20">
           <button
             type="button"
             onClick={() => {
               setKip("giris");
               setHata(null);
             }}
-            className={`rounded-lg py-2 transition ${kip === "giris" ? "bg-amber-500 text-stone-900" : "text-amber-200/70"}`}
+            className={`rounded-xl py-2.5 transition ${kip === "giris" ? "varak-dugme" : "text-amber-200/75 hover:text-amber-100"}`}
           >
             Giriş Yap
           </button>
@@ -77,7 +88,7 @@ export default function GirisFormu() {
               setKip("kayit");
               setHata(null);
             }}
-            className={`rounded-lg py-2 transition ${kip === "kayit" ? "bg-amber-500 text-stone-900" : "text-amber-200/70"}`}
+            className={`rounded-xl py-2.5 transition ${kip === "kayit" ? "varak-dugme" : "text-amber-200/75 hover:text-amber-100"}`}
           >
             Yeni Köy Kur
           </button>
@@ -94,7 +105,7 @@ export default function GirisFormu() {
                   onChange={(e) => setAd(e.target.value)}
                   placeholder="Örn: Ahmet Yılmaz / Elif Kaya"
                   autoComplete="name"
-                  className="w-full rounded-xl bg-stone-950/80 px-3.5 py-2.5 text-sm text-amber-50 ring-1 ring-stone-700 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                  className="w-full rounded-xl bg-stone-950/80 px-3.5 py-2.5 text-sm text-amber-50 ring-1 ring-amber-500/25 placeholder:text-stone-400 focus:ring-2 focus:ring-amber-400 focus:outline-none"
                 />
               </label>
 
@@ -110,12 +121,12 @@ export default function GirisFormu() {
                     }}
                     className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black ring-1 transition ${
                       cinsiyet === "erkek"
-                        ? "bg-amber-400 text-stone-950 ring-amber-200 shadow"
+                        ? "varak-dugme ring-0"
                         : "bg-stone-950/70 text-amber-100 ring-stone-700 hover:bg-stone-900"
                     }`}
                   >
                     <span>👦</span>
-                    <span>Erkek Öğrenci (5 Karakter)</span>
+                    <span>Erkek</span>
                   </button>
                   <button
                     type="button"
@@ -125,12 +136,12 @@ export default function GirisFormu() {
                     }}
                     className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black ring-1 transition ${
                       cinsiyet === "kiz"
-                        ? "bg-amber-400 text-stone-950 ring-amber-200 shadow"
+                        ? "varak-dugme ring-0"
                         : "bg-stone-950/70 text-amber-100 ring-stone-700 hover:bg-stone-900"
                     }`}
                   >
                     <span>👧</span>
-                    <span>Kız Öğrenci (5 Karakter)</span>
+                    <span>Kız</span>
                   </button>
                 </div>
               </div>
@@ -139,7 +150,7 @@ export default function GirisFormu() {
               <div>
                 <div className="mb-1.5 flex items-center justify-between gap-2">
                   <span className="text-xs font-bold text-amber-200/90">
-                    Oyun Karakterini Seç (Sonradan oyun içinde de değiştirebilirsin)
+                    Karakterini seç (sonra da değiştirebilirsin)
                   </span>
                   <span className="text-[10px] font-semibold text-amber-300/75">
                     {cinsiyet === "kiz" ? "3 Başörtülü · 2 Açık Saçlı" : "5 Özgün Ortaokul Karakteri"}
@@ -188,7 +199,7 @@ export default function GirisFormu() {
               placeholder="ahmet_12"
               autoComplete="username"
               autoCapitalize="none"
-              className="w-full rounded-xl bg-stone-950/80 px-3.5 py-2.5 text-sm text-amber-50 ring-1 ring-stone-700 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+              className="w-full rounded-xl bg-stone-950/80 px-3.5 py-2.5 text-sm text-amber-50 ring-1 ring-amber-500/25 placeholder:text-stone-400 focus:ring-2 focus:ring-amber-400 focus:outline-none"
             />
           </label>
 
@@ -201,7 +212,7 @@ export default function GirisFormu() {
               onChange={(e) => setSifre(e.target.value)}
               placeholder="En az 6 karakter"
               autoComplete={kip === "kayit" ? "new-password" : "current-password"}
-              className="w-full rounded-xl bg-stone-950/80 px-3.5 py-2.5 text-sm text-amber-50 ring-1 ring-stone-700 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+              className="w-full rounded-xl bg-stone-950/80 px-3.5 py-2.5 text-sm text-amber-50 ring-1 ring-amber-500/25 placeholder:text-stone-400 focus:ring-2 focus:ring-amber-400 focus:outline-none"
             />
           </label>
 
@@ -210,7 +221,7 @@ export default function GirisFormu() {
           <button
             type="submit"
             disabled={yukleniyor}
-            className="w-full rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 py-3 font-black text-stone-900 shadow-lg disabled:opacity-50"
+            className="varak-dugme varak-isilti w-full rounded-2xl py-3.5 text-base"
           >
             {yukleniyor ? "Bekleyin…" : kip === "kayit" ? "🏕️ Köyümü Kur" : "🚪 Köyüme Gir"}
           </button>

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { BINALAR, KAYNAKLAR, NOKTALAR, toplamKonutKapasitesi } from "@/lib/oyun/sabitler";
-import { kaynakAcikMi, saatlikUretim } from "@/lib/oyun/kurallar";
+import { kaynakAcikMi, saatlikUretim, meydanOlayDurumu, mektupBugunAlindi } from "@/lib/oyun/kurallar";
 import { koyDavalariListesi, gocmenDurumu } from "@/lib/oyun/hikayeler";
 import { AileOkumasiKutusu, ObaDavaKutusu, SosyalMeydanKutusu } from "./GorevlerEkrani";
 import {
@@ -10,13 +10,13 @@ import {
   TarlaFPS3DSahnesi,
 } from "./UretimOyunlari3D";
 import KoyMeydani3DSahnesi from "./KoyMeydani3DSahnesi";
+import AileOyunlari from "./AileOyunlari";
 
-const YIRMI_DORT_SAAT_MS = 24 * 60 * 60 * 1000;
 
 // =============================================================
-// 1. EV İÇİ 2D ODA SAHNESİ (Haberci Mektup Kontrolü + "Çağırdım" Butonu)
+// 1. EV İÇİ 2D ODA SAHNESİ (Haberci Mektup Kontrolü + "Ailemle Birlikteyim" Butonu)
 // Not: Anne/babası olmayan çocukların üzülmemesi için odaya NPC aile
-// karakterleri gelmez; sadece "Çağırdım" butonu ile okuma başlatılır.
+// karakterleri gelmez; sadece "Ailemle Birlikteyim" butonu ile okuma başlatılır.
 // =============================================================
 export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
   const { durum, karakter } = oyun;
@@ -24,14 +24,16 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
   const kendiEvimMi = binaId === "kendi_evim";
 
   const aileGorevi = oyun.gorevler.find((g) => g.tur === "aile" || g.kod === "aile");
-  const mektupAlindiMi = (durum.mektupAlindi ?? 0) >= durum.level || Boolean(aileGorevi?.tamam);
+  // Haberci her gün yeni mektup getirir: bugünün mektubu alındı mı, bugün okundu mu?
+  const mektupAlindiMi = mektupBugunAlindi(durum, oyun.simdi);
+  const bugunOkundu = Boolean(aileGorevi?.bugunYapildi);
 
   // Oyuncunun oda içindeki konumu
   const [oyuncuKonum, setOyuncuKonum] = useState({ x: 42, y: 72 });
-  //1. aşama: "Ev halkını / büyüklerimi çağır" tıklandı mı?
-  const [cagriBasladi, setCagriBasladi] = useState(Boolean(aileGorevi?.tamam));
-  // 2. aşama: "Çağırdım" butonuna tıklandı mı?
-  const [cagrildiOnay, setCagrildiOnay] = useState(Boolean(aileGorevi?.tamam));
+  // 1. aşama: "Ailemin yanına gidiyorum" tıklandı mı?
+  const [cagriBasladi, setCagriBasladi] = useState(bugunOkundu);
+  // 2. aşama: "Ailemle birlikteyim" butonuna tıklandı mı?
+  const [cagrildiOnay, setCagrildiOnay] = useState(bugunOkundu);
   const [mektupAcik, setMektupAcik] = useState(false);
 
   const zemineTikla = (e) => {
@@ -75,7 +77,7 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
       {/* İNTERAKTİF EV İÇİ ODA SAHNESİ (Tüm çağrı ve mektup pencereleri oyun ekranı içinde açılır) */}
       <div
         onClick={zemineTikla}
-        className="relative min-h-[430px] w-full cursor-pointer overflow-hidden rounded-3xl bg-stone-950 shadow-2xl ring-2 ring-amber-500/40 select-none sm:aspect-[16/9]"
+        className="relative min-h-[430px] kisa:min-h-0 kisa:aspect-auto kisa:h-[calc(100dvh-4.5rem)] w-full cursor-pointer overflow-hidden rounded-3xl bg-stone-950 shadow-2xl ring-2 ring-amber-500/40 select-none sm:aspect-[16/9] kisa:aspect-auto"
       >
         <img
           src="/assets/mekanlar/ev_ici.webp"
@@ -123,7 +125,7 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
                     <button
                       type="button"
                       onClick={() => onSecimDegistir({ tur: "nokta", id: "haberci" })}
-                      className="rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 px-3 py-2 text-xs font-black text-stone-950 shadow-lg hover:brightness-110"
+                      className="rounded-xl varak-dugme px-3 py-2 text-xs font-black text-stone-950 shadow-lg hover:brightness-110"
                     >
                       📜 Haberci&apos;ye Git →
                     </button>
@@ -145,18 +147,18 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
                     ✉️ Mektup Rahlede Hazır!
                   </div>
                   <h4 className="text-xs font-black text-sky-100 sm:text-sm">
-                    Ev Halkını veya Sevdiklerini Yanına Davet Et
+                    Ailenle Bir Araya Gel
                   </h4>
                   <p className="text-[11px] leading-snug text-sky-100/85">
-                    Haberci&apos;den aldığın mektubu birlikte okumak için önce yanına evdeki büyüklerini/aileni çağır.
+                    Haberci&apos;den aldığın mektubu birlikte okumak için önce ailenin ya da büyüklerinin yanına git; hep beraber oturun.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setCagriBasladi(true)}
-                  className="shrink-0 animate-bounce rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 px-4 py-2.5 text-xs font-black text-stone-950 shadow-xl ring-2 ring-amber-200 hover:brightness-110"
+                  className="shrink-0 animate-bounce rounded-xl varak-dugme px-4 py-2.5 text-xs font-black text-stone-950 shadow-xl ring-2 ring-amber-200 hover:brightness-110"
                 >
-                  📣 Yanıma Çağır
+                  🤝 Ailemin Yanına Gidiyorum
                 </button>
               </div>
             ) : !cagrildiOnay ? (
@@ -166,10 +168,10 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
                     🏠 Okumaya Hazırlık
                   </div>
                   <h4 className="text-xs font-black text-amber-100 sm:text-sm">
-                    Yanına Çağırdıysan Mektubu Açalım!
+                    Ailenle Bir Aradaysanız Mektubu Açalım!
                   </h4>
                   <p className="text-[11px] leading-snug text-amber-100/90">
-                    Hazır olduğunda <b>&ldquo;✅ Çağırdım&rdquo;</b> butonuna basarak mektubu oyun ekranında açabilirsin.
+                    Hazır olduğunda <b>&ldquo;✅ Ailemle Birlikteyim&rdquo;</b> butonuna basarak mektubu oyun ekranında açabilirsin.
                   </p>
                 </div>
                 <button
@@ -180,7 +182,7 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
                   }}
                   className="shrink-0 animate-bounce rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-600 px-5 py-2.5 text-xs font-black text-stone-950 shadow-xl ring-2 ring-emerald-200 hover:brightness-110 sm:text-sm"
                 >
-                  ✅ Çağırdım (Mektubu Aç)
+                  ✅ Ailemle Birlikteyim (Mektubu Aç)
                 </button>
               </div>
             ) : (
@@ -190,13 +192,13 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
                     📖 Aile Mektubu Hazır
                   </div>
                   <h4 className="text-xs font-black text-emerald-100 sm:text-sm">
-                    {aileGorevi?.tamam ? "Bu Günün Mektubu Okundu!" : "Rahlenin Üzerindeki Mektubu Açıp Oku"}
+                    {bugunOkundu ? "Bugünün Mektubu Okundu!" : "Rahlenin Üzerindeki Mektubu Açıp Oku"}
                   </h4>
                 </div>
                 <button
                   type="button"
                   onClick={() => setMektupAcik(true)}
-                  className="shrink-0 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 px-4 py-2 text-xs font-black text-stone-950 shadow-xl ring-2 ring-amber-200 hover:brightness-110"
+                  className="shrink-0 rounded-xl varak-dugme px-4 py-2 text-xs font-black text-stone-950 shadow-xl ring-2 ring-amber-200 hover:brightness-110"
                 >
                   📖 Mektubu Aç ve Oku
                 </button>
@@ -239,19 +241,40 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
             }`}
           >
             <span className="text-xl sm:text-2xl">
-              {!mektupAlindiMi ? "📭" : aileGorevi?.tamam ? "📖" : "✉️"}
+              {!mektupAlindiMi ? "📭" : bugunOkundu ? "📖" : "✉️"}
             </span>
             <span className="text-[10px] font-black whitespace-nowrap sm:text-xs">
               {!mektupAlindiMi
                 ? "Mektup Yok (Haberci'de)"
                 : !cagriBasladi
-                ? "Yanıma Çağır"
+                ? "Ailemin Yanına Git"
                 : !cagrildiOnay
-                ? "✅ Çağırdım (Tıkla)"
+                ? "✅ Ailemle Birlikteyim"
                 : "Mektubu Oku"}
             </span>
           </div>
         </button>
+
+        {/* Aile Oyunları: karakter sedire yürür, ardından sayfa aşağıdaki oyunlara kayar */}
+        {kendiEvimMi && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOyuncuKonum({ x: 30, y: 60 });
+              window.setTimeout(() => {
+                document.getElementById("aile-oyunlari")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 650);
+            }}
+            style={{ left: "27%", top: "41%" }}
+            className="group absolute z-20 -translate-x-1/2 -translate-y-1/2 transition hover:scale-110"
+          >
+            <div className="flex flex-col items-center rounded-2xl bg-stone-900/90 px-3 py-1.5 text-amber-100 shadow-xl ring-2 ring-amber-400/80">
+              <span className="text-2xl sm:text-3xl" aria-hidden="true">🏮</span>
+              <span className="text-[10px] font-black whitespace-nowrap sm:text-xs">Aile Oyunları</span>
+            </div>
+          </button>
+        )}
 
         {/* Oda İçinde Yürüyen Karakter ve İsim Etiketi */}
         <div
@@ -303,6 +326,9 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
           </div>
         )}
       </div>
+
+      {/* Ailecek oyunlar yalnızca öğrencinin kendi evinde */}
+      {kendiEvimMi && <AileOyunlari />}
     </div>
   );
 }
@@ -326,11 +352,7 @@ export function KoyMeydaniSahnesi({ oyun }) {
   const [gorunum, setGorunum] = useState("meydan");
 
   // Günde 1 Meydan Olayı Kontrolü: Son olaydan bu yana 24 saat geçmediyse meydanda kimse beklemez
-  const sonOlayZamani = durum.sonMeydanOlayZamani ?? 0;
-  const gecenMs = sonOlayZamani > 0 ? Math.max(0, simdi - sonOlayZamani) : YIRMI_DORT_SAAT_MS;
-  const gunlukOlayHazir = gecenMs >= YIRMI_DORT_SAAT_MS;
-  const kalanSaat = gunlukOlayHazir ? 0 : Math.max(1, Math.ceil((YIRMI_DORT_SAAT_MS - gecenMs) / (60 * 60 * 1000)));
-
+  const { hazir: gunlukOlayHazir, kalanSaat } = meydanOlayDurumu(durum, simdi);
   // Köy meydanında ilk görev kesinlikle Dava çözmek olur; ilk dava çözüldükten sonra sırayla köye yerleşmek isteyen yeni insanlar (2+ kişi) gelir!
   const davaGoreviEksik = oyun.gorevler.some((g) => g.tur === "dava" && !g.tamam);
   const ilkDavaZorunlu = (cozulenler.length === 0 || davaGoreviEksik) && Boolean(siradakiDava);
@@ -424,7 +446,7 @@ export function KoyMeydaniSahnesi({ oyun }) {
           <button
             type="button"
             onClick={() => setGorunum("cinar_sohbet")}
-            className="rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 px-4 py-2 text-xs font-black text-stone-950 shadow-lg hover:brightness-110"
+            className="rounded-2xl varak-dugme px-4 py-2 text-xs font-black text-stone-950 shadow-lg hover:brightness-110"
           >
             🌳 Çınar Altı Sohbeti (Sosyal Medya Sayfası) →
           </button>
@@ -448,16 +470,16 @@ export function KoyMeydaniSahnesi({ oyun }) {
           <div
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
-            className="pointer-events-auto absolute inset-x-3 bottom-3 z-40 mx-auto max-w-2xl rounded-3xl bg-stone-950/95 p-4 shadow-2xl ring-2 ring-amber-400 backdrop-blur-md sm:bottom-5 sm:p-5"
+            className="pointer-events-auto absolute inset-x-2 bottom-2 z-40 mx-auto max-w-2xl rounded-2xl bg-stone-950/92 p-2.5 shadow-2xl ring-1 ring-amber-400/80 backdrop-blur-md sm:bottom-4 sm:p-4"
           >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-3xl ring-2 ring-amber-400">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-2xl ring-2 ring-amber-400 sm:flex">
                 {aktifOlayTuru === "dava" ? "⚖️" : "🏡"}
               </div>
 
-              <div className="flex-1 space-y-2">
+              <div className="min-w-0 flex-1 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-amber-300">
+                  <span className="min-w-0 truncate text-xs font-black text-amber-300">
                     {aktifOlayTuru === "dava" && siradakiDava
                       ? `📢 Köylülerin Anlaşmazlığı: ${siradakiDava.baslik}`
                       : `📢 Köye Yerleşmek İsteyen Misafirler: ${gocmen.aday.ad}`}
@@ -465,15 +487,16 @@ export function KoyMeydaniSahnesi({ oyun }) {
                   <button
                     type="button"
                     onClick={() => setDiyalogAcik(false)}
-                    className="rounded-lg bg-stone-800 px-2.5 py-1 text-xs font-bold text-stone-300 hover:bg-stone-700 hover:text-white"
+                    aria-label="Konuşmayı kapat"
+                    className="shrink-0 rounded-lg bg-stone-800 px-2 py-0.5 text-xs font-bold text-stone-300 hover:bg-stone-700 hover:text-white"
                   >
-                    ✕ Kapat
+                    ✕
                   </button>
                 </div>
 
                 <div
                   onClick={() => setHarfSayisi(diyalogMetni.length)}
-                  className="min-h-[3.5rem] cursor-pointer rounded-2xl bg-stone-900/95 p-3.5 text-xs leading-relaxed text-amber-50 ring-1 ring-stone-700 sm:text-sm"
+                  className="max-h-[5.4rem] cursor-pointer overflow-y-auto rounded-xl bg-stone-900/95 px-3 py-2 text-[13px] leading-relaxed text-amber-50 ring-1 ring-stone-700 sm:max-h-32 sm:text-sm"
                 >
                   {diyalogMetni.slice(0, harfSayisi)}
                   {yaziliyor && (
@@ -481,24 +504,22 @@ export function KoyMeydaniSahnesi({ oyun }) {
                   )}
                 </div>
 
-                <div className="flex justify-end gap-2 pt-1">
+                <div className="flex justify-end gap-2">
                   {yaziliyor ? (
                     <button
                       type="button"
                       onClick={() => setHarfSayisi(diyalogMetni.length)}
-                      className="rounded-xl bg-stone-800 px-4 py-2 text-xs font-black text-amber-200 hover:bg-stone-700"
+                      className="rounded-xl bg-stone-800 px-3 py-1.5 text-xs font-black text-amber-200 hover:bg-stone-700"
                     >
-                      ⏩ Konuşmayı Tamamla
+                      ⏩ Tamamla
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={() => setGorunum("karar_ekrani")}
-                      className="animate-bounce rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 px-5 py-2.5 text-xs font-black text-stone-950 shadow-xl ring-2 ring-amber-200 hover:brightness-110 sm:text-sm"
+                      className="varak-dugme varak-isilti rounded-xl px-4 py-2 text-xs sm:text-sm"
                     >
-                      {aktifOlayTuru === "dava"
-                        ? "⚖️ Konuşma Bitti → Karar Verme Ekranını Aç"
-                        : "🏡 Konuşma Bitti → Köye Davet Ekranını Aç"}
+                      {aktifOlayTuru === "dava" ? "⚖️ Karar ver →" : "🏡 Davet kararını ver →"}
                     </button>
                   )}
                 </div>
@@ -572,7 +593,7 @@ export function KoyMeydaniSahnesi({ oyun }) {
                       setDiyalogAcik(false);
                       setGorunum("meydan");
                     }}
-                    className="w-full max-w-md rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 py-3.5 text-sm font-black text-stone-950 shadow-xl ring-2 ring-amber-200 transition hover:brightness-110"
+                    className="w-full max-w-md rounded-2xl varak-dugme py-3.5 text-sm font-black text-stone-950 shadow-xl ring-2 ring-amber-200 transition hover:brightness-110"
                   >
                     ✅ Tamam
                   </button>
@@ -672,14 +693,14 @@ export function UretimSahnesi({ id, oyun }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* ÜST PANEL: KALICI İŞÇİ GÖREVLENDİRME VE SAHA DURUM ÖZETİ */}
       <div className="grid gap-3 md:grid-cols-2">
         {/* Sol Kutu: Kalıcı İşçi Görevlendirme */}
         <div className="flex flex-col justify-between rounded-3xl bg-stone-950/90 p-4 ring-1 ring-amber-500/35">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+              <span className="text-[11px] font-bold text-amber-300">
                 👷 Kalıcı İşçi Görevlendirme
               </span>
               <h3 className="text-base font-black text-amber-100">
@@ -693,7 +714,7 @@ export function UretimSahnesi({ id, oyun }) {
             <span className="rounded-xl bg-emerald-500/20 px-2.5 py-1 text-xs font-black text-emerald-300 ring-1 ring-emerald-500/40">
               {k === "kereste"
                 ? `Günlük ${buradakiIsci * 2} Keşif Seferi`
-                : `24 Saatte +${gunlukHiz} ${t.ikon}`}
+                : `Her dolumda +${dBilgi.kapasite ?? gunlukHiz} ${t.ikon}`}
             </span>
           </div>
 
@@ -702,7 +723,7 @@ export function UretimSahnesi({ id, oyun }) {
               ? "⚠️ Burada hiç görevli işçi yok! Üretimi ve saha hazırlığını başlatmak için en az 1 kalıcı işçi görevlendir."
               : k === "kereste"
               ? `🔒 Görevlendirilen işçi buradan geri çıkarılamaz. Ormandaki her işçi sana günlük 2 keşif seferi hakkı (${buradakiIsci} × 2 = ${buradakiIsci * 2} hak) kazandırır!`
-              : "🔒 Görevlendirilen işçi buradan geri çıkarılamaz (başka alana kaydırılamaz). İşçi sayısı arttıkça parseller ve kayalar daha hızlı yenilenir!"}
+              : "🔒 Görevlendirilen işçi buradan geri çıkarılamaz (başka alana kaydırılamaz). Her yeni işçi, bir sonraki ekimden itibaren parsel ve kaya başına %25 daha fazla ürün getirir. (Hazır bekleyen ürün eski verimle toplanır.)"}
           </p>
 
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-stone-900 p-2.5 ring-1 ring-stone-800">
@@ -722,7 +743,7 @@ export function UretimSahnesi({ id, oyun }) {
                 type="button"
                 disabled={oyun.bekliyor || bostakiInsan <= 0}
                 onClick={() => oyun.isciAta(k, 1)}
-                className="rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-black text-stone-950 shadow hover:bg-amber-400 disabled:opacity-40"
+                className="varak-dugme rounded-xl px-3.5 py-2 text-xs"
               >
                 + Kalıcı İşçi Ata
               </button>
@@ -742,7 +763,7 @@ export function UretimSahnesi({ id, oyun }) {
             )}
             <div className="flex-1">
               <div className="flex items-center justify-between text-xs font-bold">
-                <span className="uppercase tracking-wider text-amber-300">
+                <span className="text-amber-300">
                   {id === "tarla"
                     ? "🌱 3 Bağımsız Sebze/Meyve Parseli"
                     : id === "orman"
@@ -797,9 +818,12 @@ export function UretimSahnesi({ id, oyun }) {
       </div>
 
       {/* THREE.JS 3D ÜRETİM MİNİ OYUN SAHNESİ */}
-      {id === "tarla" && <TarlaFPS3DSahnesi oyun={oyun} />}
-      {id === "orman" && <OrmanKesifVeKesimSahnesi oyun={oyun} />}
-      {id === "maden" && <TasOcagi3DSahnesi oyun={oyun} />}
+      {/* Telefonda oyunun kendisi en üstte; işçi ve saha bilgisi altında kalır */}
+      <div className="order-first [@media(min-width:768px)_and_(min-height:521px)]:order-none">
+        {id === "tarla" && <TarlaFPS3DSahnesi oyun={oyun} />}
+        {id === "orman" && <OrmanKesifVeKesimSahnesi oyun={oyun} />}
+        {id === "maden" && <TasOcagi3DSahnesi oyun={oyun} />}
+      </div>
     </div>
   );
 }

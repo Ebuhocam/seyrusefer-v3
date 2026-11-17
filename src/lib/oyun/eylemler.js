@@ -9,6 +9,7 @@ import {
   LEVELLAR,
   KARAKTERLER,
   ORMAN_KESIF_BOLGELERI,
+  SART_KAYNAKLARI,
   oyuncuKarakteriBul,
   toplamKonutKapasitesi,
 } from "./sabitler";
@@ -19,6 +20,9 @@ import {
   levelDurumu,
   sahaNoktalariDurumu,
   ormanSeferBilgisi,
+  meydanOlayDurumu,
+  trGunNo,
+  mektupBugunAlindi,
 } from "./kurallar";
 import {
   NAMAZ_VAKITLERI,
@@ -27,6 +31,8 @@ import {
   levelIcerigi,
   binaGorevleriTamamMi,
   tumLevelGorevleriTamamMi,
+  BEYAN_GOREV_TURLERI,
+  onKosulDurumu,
 } from "./gorevler";
 import { koyDavalariListesi, gocmenDurumu } from "./hikayeler";
 
@@ -54,7 +60,7 @@ export function baslangicDurumu(simdi, cinsiyet = "erkek", karakter = null) {
     sonEtkilesim: { erzak: 0, kereste: 0, tas: 0 },
     sahaDurumu: { tarla: {}, maden: {} },
     ormanSefer: {
-      gun: Math.floor((simdi + 3 * SAAT_MS) / (24 * SAAT_MS)),
+      gun: trGunNo(simdi),
       kullanilan: 0,
       maske: 0,
       sonSonuc: 0,
@@ -213,6 +219,9 @@ export function sahaHasat(d, kaynak, noktaId, simdi) {
   const sahaAnahtari = kaynak === "erzak" ? "tarla" : "maden";
   const mevcutSaha = d.sahaDurumu ?? { tarla: {}, maden: {} };
   const guncelHarita = { ...(mevcutSaha[sahaAnahtari] ?? {}), [secilen.id]: simdi };
+  // Yeniden ekilen noktanın, bugünkü işçi sayısıyla yetişeceğini kaydet
+  const isciAnahtari = `${sahaAnahtari}Isci`;
+  const guncelIsci = { ...(mevcutSaha[isciAnahtari] ?? {}), [secilen.id]: isci };
   const miktar = secilen.miktar;
 
   const mesaj =
@@ -230,6 +239,7 @@ export function sahaHasat(d, kaynak, noktaId, simdi) {
       sahaDurumu: {
         ...mevcutSaha,
         [sahaAnahtari]: guncelHarita,
+        [isciAnahtari]: guncelIsci,
       },
       sonToplama: {
         ...d.sonToplama,
@@ -271,9 +281,12 @@ export function sahaHepsiniTopla(d, kaynak, simdi) {
   const sahaAnahtari = kaynak === "erzak" ? "tarla" : "maden";
   const mevcutSaha = d.sahaDurumu ?? { tarla: {}, maden: {} };
   const guncelHarita = { ...(mevcutSaha[sahaAnahtari] ?? {}) };
+  const isciAnahtari = `${sahaAnahtari}Isci`;
+  const guncelIsci = { ...(mevcutSaha[isciAnahtari] ?? {}) };
   let toplamMiktar = 0;
   for (const h of hazirlar) {
     guncelHarita[h.id] = simdi;
+    guncelIsci[h.id] = isci;
     toplamMiktar += h.miktar;
   }
 
@@ -292,6 +305,7 @@ export function sahaHepsiniTopla(d, kaynak, simdi) {
       sahaDurumu: {
         ...mevcutSaha,
         [sahaAnahtari]: guncelHarita,
+        [isciAnahtari]: guncelIsci,
       },
       sonToplama: {
         ...d.sonToplama,
@@ -453,14 +467,20 @@ export function karakterSec(d, karakterId, cinsiyet) {
  * Haberci'den mevcut levelın Aile Mektubunu teslim alır.
  * Mektup teslim alındıktan sonra Kendi Evim (Ev İçi) sahnesinde aile bireyleri çağrılarak okunabilir.
  */
-export function mektupTeslimAl(d) {
+export function mektupTeslimAl(d, simdi = Date.now()) {
+  if (mektupBugunAlindi(d, simdi)) {
+    return { hata: "Bugünün mektubunu zaten aldın. Haberci yarın yeni bir mektupla gelecek!" };
+  }
   return {
     durum: {
       ...d,
       mektupAlindi: d.level,
+      mektupGunu: simdi,
+      // Bu levelda daha önce okunan mektup sayısı: hangi mektubun geleceğini belirler
+      mektupNo: Number(d.gorevIlerlemesi?.aile?.ilerleme ?? 0),
     },
     sonuc: {
-      mesaj: "📬 Aile Mektubunu Haberci'den teslim aldın! Şimdi Kendi Evim'in içine girip aile bireylerini odaya çağırabilirsin.",
+      mesaj: "📬 Aile Mektubunu Haberci'den teslim aldın! Şimdi Kendi Evim'e gir ve ailenle bir araya gelip mektubu birlikte oku.",
     },
   };
 }
@@ -471,9 +491,19 @@ export function yukselt(d, binaId, ayarlar = null) {
   if (b.maks) return { hata: "Bina zaten en üst seviyede" };
   if (!b.levelYeterli) return { hata: `Level ${b.gerekenLevel} gerekli` };
   if (!b.gorevTamam) return { hata: "Bu binanın görev şartları henüz tamamlanmadı" };
-  if (!b.kaynakYeterli) return { hata: "Kaynak yetersiz" };
+  if (!b.kaynakYeterli) {
+    return {
+      hata: b.eksik?.insan
+        ? `Bu bina için köyde en az ${b.nufusSarti} kişi yaşamalı. Kıraathane'ye uğrayan yolcuları köye davet et!`
+        : "Kaynak yetersiz",
+    };
+  }
   const envanter = { ...d.envanter };
-  for (const [k, m] of Object.entries(b.bedel)) envanter[k] -= Number(m) || 0;
+  // 👥 İnsan harcanmaz (nüfus şartıdır); yalnızca mahsul / tahta / taş düşülür
+  for (const [k, m] of Object.entries(b.bedel)) {
+    if (SART_KAYNAKLARI.includes(k)) continue;
+    envanter[k] = Math.max(0, (envanter[k] ?? 0) - (Number(m) || 0));
+  }
   return { durum: { ...d, envanter, binalar: { ...d.binalar, [binaId]: b.hedef } } };
 }
 
@@ -485,18 +515,32 @@ export function levelAtlanabilirMi(d, ayarlar = null) {
 
 export function levelAtla(d, simdi, ayarlar = null) {
   if (!levelAtlanabilirMi(d, ayarlar)) return { hata: "Level hedefleri tamamlanmadı" };
+  const yeniLevel = d.level + 1;
+  // Bu levelda yeni açılan üretim alanı (ör. Taş Ocağı) için köye kendi ustası gelir.
+  // Böylece önceki levelda bütün insanlarını kalıcı işçi yapmış öğrenci yeni alanda tıkanmaz.
+  const isciler = { ...(d.isciler ?? {}) };
+  const envanter = { ...d.envanter };
+  const gelenUstalar = [];
+  for (const [k, t] of Object.entries(KAYNAKLAR)) {
+    if (!t.uretim || t.acilisLevel !== yeniLevel) continue;
+    if ((isciler[k] ?? 0) > 0) continue;
+    isciler[k] = 1;
+    envanter.insan = (envanter.insan ?? 0) + 1;
+    gelenUstalar.push(k);
+  }
   return {
     durum: uretimiBaslat(
-      { ...d, level: d.level + 1, gorevlerTamam: false, gorevIlerlemesi: {} },
+      { ...d, level: yeniLevel, gorevlerTamam: false, gorevIlerlemesi: {}, isciler, envanter },
       simdi
     ),
+    gelenUstalar,
   };
 }
 
 /**
  * Bir görevi 1 adım ilerletir (kod veya tür ile eşleşir).
  */
-export function gorevIlerlet(d, gorevKodu, simdi, ayarlar = null) {
+export function gorevIlerlet(d, gorevKodu, simdi, ayarlar = null, beyan = false) {
   if ((d.binalar?.mektep ?? 0) < 1) {
     return { hata: "Görevlere başlamadan önce köyüne Mektep (Seviye 1) inşa etmelisin!" };
   }
@@ -509,6 +553,15 @@ export function gorevIlerlet(d, gorevKodu, simdi, ayarlar = null) {
       tanimlar.find((g) => g.tur === gorevKodu);
   }
   if (!tanim) return { hata: "Bu levelda böyle bir görev yok" };
+  const kosul = onKosulDurumu(tanim, d.gorevIlerlemesi, d.gorevlerTamam);
+  if (kosul.kilitli) return { hata: kosul.kilitNotu };
+  // Sınav, dava, namaz ve meydan görevleri yalnızca kendi eylemleriyle ilerler; doğrudan "yaptım" denemez
+  if (beyan && !BEYAN_GOREV_TURLERI.includes(tanim.tur)) {
+    return { hata: "Bu görev, ilgili mekânda yapılınca kendiliğinden işaretlenir." };
+  }
+  if (beyan && tanim.tur === "aile" && !mektupBugunAlindi(d, simdi)) {
+    return { hata: "Önce Haberci'den aile mektubunu teslim almalısın!" };
+  }
   if (tanim.tur === "turku" && (d.binalar?.kiraathane ?? 0) < 1) {
     return { hata: "Ozan Dede'yi dinlemek için önce Kıraathane binasını inşa etmelisin!" };
   }
@@ -592,6 +645,10 @@ export function davaCoz(d, davaId, secenekIndeks, simdi, ayarlar = null) {
   if (cozulenler.includes(davaId)) {
     return { hata: "Bu meseleyi daha önce karara bağladın" };
   }
+  const olay = meydanOlayDurumu(d, simdi);
+  if (!olay.hazir) {
+    return { hata: `Bugünkü meydan olayını zaten yaşadın. Yeni olay yaklaşık ${olay.kalanSaat} saat sonra (gece yarısı) gelir.` };
+  }
   const secenek = dava.secenekler?.[Number(secenekIndeks)];
   if (!secenek) return { hata: "Lütfen bir çözüm yolu seç" };
 
@@ -636,6 +693,15 @@ export function gocmenTeklifEt(d, simdi, meydandanMi = false) {
     };
   }
 
+  if (meydandanMi) {
+    const olay = meydanOlayDurumu(d, simdi);
+    if (!olay.hazir) {
+      return { hata: `Bugünkü meydan olayını zaten yaşadın. Yeni misafirler yaklaşık ${olay.kalanSaat} saat sonra gelir.` };
+    }
+  } else if ((d.binalar?.kiraathane ?? 0) < 1) {
+    return { hata: "Yolcuları ağırlamak için önce Kıraathane'yi kurmalısın!" };
+  }
+
   const { hazir, kalanDakika, aday } = gocmenDurumu(simdi, meydandanMi ? 0 : d.sonGocmenKontrol);
   if (!hazir && !meydandanMi) {
     return {
@@ -652,7 +718,7 @@ export function gocmenTeklifEt(d, simdi, meydandanMi = false) {
   const yeniInsan = mevcutInsan + kazanilanInsan;
   const yeniDurum = {
     ...d,
-    sonGocmenKontrol: simdi,
+    ...(meydandanMi ? {} : { sonGocmenKontrol: simdi }),
     ...(meydandanMi ? { sonMeydanOlayZamani: simdi } : {}),
     envanter: {
       ...d.envanter,

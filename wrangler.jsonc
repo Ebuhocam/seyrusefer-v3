@@ -4,6 +4,11 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-09-27",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Site seyrusefer.org ve www.seyrusefer.org adreslerinde yayınlanır (alan adı Cloudflare'de)
+  "routes": [
+    { "pattern": "seyrusefer.org", "custom_domain": true },
+    { "pattern": "www.seyrusefer.org", "custom_domain": true }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

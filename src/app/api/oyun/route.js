@@ -63,7 +63,7 @@ export async function POST(request) {
       sonuc = uretimEtkilesim(durum, g.kaynak, simdi, g.noktaId);
       break;
     case "mektupAl":
-      sonuc = mektupTeslimAl(durum);
+      sonuc = mektupTeslimAl(durum, simdi);
       break;
     case "karakterSec":
       sonuc = karakterSec(durum, g.karakter, g.cinsiyet);
@@ -75,7 +75,7 @@ export async function POST(request) {
       sonuc = levelAtla(durum, simdi, ayarlar);
       break;
     case "gorevTamamla":
-      sonuc = gorevIlerlet(durum, String(g.gorevKodu ?? ""), simdi, ayarlar);
+      sonuc = gorevIlerlet(durum, String(g.gorevKodu ?? ""), simdi, ayarlar, true);
       break;
     case "namazIsaretle":
       sonuc = namazGuncelle(durum, g.vakit, g.deger, simdi, ayarlar);

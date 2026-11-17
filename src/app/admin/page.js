@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { aktifKullanici, gelistiriciIzni } from "@/lib/sunucu/oturum";
+import { aktifKullanici } from "@/lib/sunucu/oturum";
 import AdminPaneli from "./AdminPaneli";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 export default async function AdminSayfasi() {
   const kullanici = await aktifKullanici();
   if (!kullanici) redirect("/giris");
-  if (!gelistiriciIzni(kullanici)) redirect("/");
+  // Yönetim Merkezi yalnızca öğretmen (admin rolü) içindir; geliştirme ortamında bile öğrenciler giremez
+  if (kullanici.rol !== "admin") redirect("/");
 
   return <AdminPaneli />;
 }

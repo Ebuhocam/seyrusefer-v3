@@ -147,9 +147,25 @@ export const ORMAN_KESIF_BOLGELERI = [
 ];
 
 // ---------- 4 TEMEL KAYNAK ----------
-// Mahsul, Tahta, Taş üretim alanlarından 24 saatte 24 birim dolacak şekilde dengelenmiştir.
+// Mahsul, Tahta, Taş üretim alanları günde yaklaşık 24 birim verir (1 işçiyle).
+// Bina bedelleri bu hıza göre, 10 level ≈ 11 haftada bitecek şekilde dengelenmiştir (bkz. scripts/denge-testi.mjs).
+// 👥 İnsan bir "nüfus şartı"dır: bina kurarken HARCANMAZ, köyde en az o kadar kişi yaşaması yeterlidir.
 // İnsan (Ahali) ise Köy Meydanı ve Kıraathane'ye gelen yolculara ev kurma teklif edilerek kazanılır.
 export const SAHA_MAKS_BIRIM = 24;
+/** Bina kurarken harcanmayan, yalnızca "en az şu kadar olmalı" diye aranan kaynaklar */
+export const SART_KAYNAKLARI = ["insan"];
+
+/** Sayıya yönelme eki ekler: 2 → "2'ye", 3 → "3'e", 6 → "6'ya", 10 → "10'a" */
+export function sayiyaEk(n) {
+  const son = { 0: "a", 1: "e", 2: "ye", 3: "e", 4: "e", 5: "e", 6: "ya", 7: "ye", 8: "e", 9: "a" };
+  const x = Math.abs(Math.trunc(Number(n) || 0));
+  const ek = x % 10 === 0 && x > 0 ? ({ 10: "a", 20: "ye", 30: "a", 40: "a", 50: "ye", 60: "a", 70: "e", 80: "e", 90: "a" }[x % 100] ?? "e") : son[x % 10];
+  return `${n}'${ek}`;
+}
+/** Parsel / kaya yeniden dolma süresi (1 işçiyle). 24 değil 20 saat: öğrenci her gün biraz farklı saatte girse de hasadı kaçırmaz. */
+export const NOKTA_DOLUM_SAAT = 20;
+/** Ormanda devrilen bir kurumuş ağacın verdiği tahta (1 işçiyle). Günde 2 seferde ortalama ≈ 24 tahta eder. */
+export const AGAC_TEMEL_ODUL = 18;
 export const KAYNAKLAR = {
   erzak: { ad: "Mahsul", ikon: "🌾", alan: "tarla", gunluk: 24, acilisLevel: 1, uretim: true },
   kereste: { ad: "Tahta", ikon: "🌲", alan: "orman", gunluk: 24, acilisLevel: 1, uretim: true },
@@ -174,9 +190,9 @@ function evTanimi(ad, acilis1, baslangicSeviye = 0) {
     ...(baslangicSeviye ? { baslangicSeviye } : {}),
     acilis: { 1: acilis1, 2: Math.min(10, acilis1 + 2), 3: Math.min(10, acilis1 + 4) },
     bedel: {
-      1: { erzak: 120, kereste: 140 },
-      2: { erzak: 220, kereste: 240, tas: 120 },
-      3: { erzak: 380, kereste: 400, tas: 250 },
+      1: { erzak: 50, kereste: 60 },
+      2: { erzak: 90, kereste: 100, tas: 50 },
+      3: { erzak: 150, kereste: 160, tas: 100 },
     },
   };
 }
@@ -204,9 +220,9 @@ export const BINALAR = {
     baslangicSeviye: 1,
     acilis: { 2: 3, 3: 6, 4: 10 },
     bedel: {
-      2: { erzak: 250, kereste: 200, tas: 150, insan: 6 },
-      3: { erzak: 350, kereste: 300, tas: 200, insan: 10 },
-      4: { erzak: 1000, kereste: 800, tas: 600, insan: 18 },
+      2: { erzak: 90, kereste: 80, tas: 70, insan: 6 },
+      3: { erzak: 120, kereste: 100, tas: 90, insan: 10 },
+      4: { erzak: 500, kereste: 430, tas: 370, insan: 18 },
     },
   },
   mektep: {
@@ -218,9 +234,9 @@ export const BINALAR = {
     acilis: { 1: 1, 2: 4, 3: 6, 4: 8 },
     bedel: {
       1: { erzak: 100, kereste: 100 },
-      2: { erzak: 450, kereste: 350, tas: 250, insan: 7 },
-      3: { erzak: 650, kereste: 500, tas: 350, insan: 11 },
-      4: { erzak: 900, kereste: 700, tas: 500, insan: 15 },
+      2: { erzak: 150, kereste: 130, tas: 110, insan: 7 },
+      3: { erzak: 130, kereste: 110, tas: 90, insan: 11 },
+      4: { erzak: 360, kereste: 310, tas: 260, insan: 15 },
     },
   },
   kiraathane: {
@@ -231,9 +247,9 @@ export const BINALAR = {
     acilis: { 1: 1, 2: 5, 3: 7, 4: 9 },
     bedel: {
       1: { erzak: 80, kereste: 75, insan: 3 },
-      2: { erzak: 260, kereste: 220, tas: 120, insan: 6 },
-      3: { erzak: 420, kereste: 340, tas: 220, insan: 9 },
-      4: { erzak: 580, kereste: 450, tas: 320, insan: 14 },
+      2: { erzak: 90, kereste: 80, tas: 50, insan: 6 },
+      3: { erzak: 200, kereste: 170, tas: 130, insan: 9 },
+      4: { erzak: 220, kereste: 190, tas: 150, insan: 14 },
     },
   },
   sosyalmeydan: {
@@ -243,10 +259,10 @@ export const BINALAR = {
     maksSeviye: 4,
     acilis: { 1: 2, 2: 5, 3: 7, 4: 9 },
     bedel: {
-      1: { erzak: 140, kereste: 120, tas: 48, insan: 5 },
-      2: { erzak: 280, kereste: 240, tas: 140, insan: 8 },
-      3: { erzak: 440, kereste: 350, tas: 240, insan: 12 },
-      4: { erzak: 580, kereste: 450, tas: 340, insan: 16 },
+      1: { erzak: 90, kereste: 80, tas: 40, insan: 5 },
+      2: { erzak: 100, kereste: 90, tas: 60, insan: 8 },
+      3: { erzak: 210, kereste: 180, tas: 140, insan: 12 },
+      4: { erzak: 240, kereste: 200, tas: 170, insan: 16 },
     },
   },
   kendi_evim: evTanimi("Kendi Evim", 1, 1),
@@ -298,9 +314,9 @@ export const BIRLIK_BINALARI = {
     genislik: 15,
     maksSeviye: 4,
     bedel: {
-      2: { erzak: 500, kereste: 400, tas: 300 },
-      3: { erzak: 900, kereste: 700, tas: 500 },
-      4: { erzak: 1500, kereste: 1200, tas: 900 },
+      2: { erzak: 150, kereste: 120, tas: 90 },
+      3: { erzak: 280, kereste: 220, tas: 160 },
+      4: { erzak: 450, kereste: 360, tas: 270 },
     },
   },
   cami: {
@@ -312,9 +328,9 @@ export const BIRLIK_BINALARI = {
     genislik: 14,
     maksSeviye: 4,
     bedel: {
-      2: { erzak: 600, kereste: 500, tas: 350 },
-      3: { erzak: 1000, kereste: 800, tas: 600 },
-      4: { erzak: 1600, kereste: 1300, tas: 1000 },
+      2: { erzak: 180, kereste: 150, tas: 100 },
+      3: { erzak: 300, kereste: 240, tas: 180 },
+      4: { erzak: 480, kereste: 390, tas: 300 },
     },
   },
   medrese: {
@@ -326,9 +342,9 @@ export const BIRLIK_BINALARI = {
     genislik: 14,
     maksSeviye: 4,
     bedel: {
-      2: { erzak: 500, kereste: 450, tas: 300 },
-      3: { erzak: 850, kereste: 700, tas: 500 },
-      4: { erzak: 1400, kereste: 1100, tas: 850 },
+      2: { erzak: 150, kereste: 130, tas: 90 },
+      3: { erzak: 260, kereste: 210, tas: 150 },
+      4: { erzak: 420, kereste: 330, tas: 250 },
     },
   },
   takasmerkezi: {
@@ -340,7 +356,7 @@ export const BIRLIK_BINALARI = {
     genislik: 12,
     maksSeviye: 2,
     bedel: {
-      2: { erzak: 400, kereste: 350, tas: 250 },
+      2: { erzak: 120, kereste: 100, tas: 75 },
     },
   },
   oyuncadiri: {
@@ -352,7 +368,7 @@ export const BIRLIK_BINALARI = {
     genislik: 12,
     maksSeviye: 2,
     bedel: {
-      2: { erzak: 400, kereste: 350, tas: 250 },
+      2: { erzak: 120, kereste: 100, tas: 75 },
     },
   },
 };
@@ -376,10 +392,10 @@ export const LEVELLAR = [
 
 // ---------- 3. KATMAN: GENEL HARİTA BÖLGELERİ (Level 6+) ----------
 export const BOLGELER = [
-  { id: "ihlas_vadisi", ad: "İhlas Vadisi", ikon: "🏞️", x: 45, y: 78, bedel: { erzak: 200, kereste: 150, tas: 100 }, temelGuc: 100 },
-  { id: "hikmet_tepesi", ad: "Hikmet Tepesi", ikon: "⛰️", x: 40, y: 26, bedel: { erzak: 250, kereste: 200, tas: 150 }, temelGuc: 140 },
-  { id: "kardeslik_ovasi", ad: "Kardeşlik Ovası", ikon: "🌾", x: 16, y: 52, bedel: { erzak: 300, kereste: 250, tas: 200 }, temelGuc: 180 },
-  { id: "emanet_kalesi", ad: "Emanet Kalesi", ikon: "🏰", x: 66, y: 58, bedel: { erzak: 400, kereste: 350, tas: 250 }, temelGuc: 240 },
-  { id: "sabir_limani", ad: "Sabır Limanı", ikon: "⚓", x: 88, y: 66, bedel: { erzak: 450, kereste: 400, tas: 300 }, temelGuc: 300 },
-  { id: "ihsan_sancagi", ad: "İhsan Sancağı", ikon: "🚩", x: 82, y: 24, bedel: { erzak: 600, kereste: 500, tas: 400 }, temelGuc: 400 },
+  { id: "ihlas_vadisi", ad: "İhlas Vadisi", ikon: "🏞️", x: 45, y: 78, bedel: { erzak: 60, kereste: 45, tas: 30 }, temelGuc: 100 },
+  { id: "hikmet_tepesi", ad: "Hikmet Tepesi", ikon: "⛰️", x: 40, y: 26, bedel: { erzak: 75, kereste: 60, tas: 45 }, temelGuc: 140 },
+  { id: "kardeslik_ovasi", ad: "Kardeşlik Ovası", ikon: "🌾", x: 16, y: 52, bedel: { erzak: 90, kereste: 75, tas: 60 }, temelGuc: 180 },
+  { id: "emanet_kalesi", ad: "Emanet Kalesi", ikon: "🏰", x: 66, y: 58, bedel: { erzak: 120, kereste: 100, tas: 75 }, temelGuc: 240 },
+  { id: "sabir_limani", ad: "Sabır Limanı", ikon: "⚓", x: 88, y: 66, bedel: { erzak: 135, kereste: 120, tas: 90 }, temelGuc: 300 },
+  { id: "ihsan_sancagi", ad: "İhsan Sancağı", ikon: "🚩", x: 82, y: 24, bedel: { erzak: 180, kereste: 150, tas: 120 }, temelGuc: 400 },
 ];

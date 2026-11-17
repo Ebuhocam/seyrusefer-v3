@@ -1,5 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import { BINALAR } from "@/lib/oyun/sabitler";
+import { trGunNo } from "@/lib/oyun/kurallar";
+
+const KIRAATHANE_BEDEL = BINALAR.kiraathane?.bedel?.[1] ?? {};
 
 export const REHBER_ADIMLARI = [
   // ================= BÖLÜM 1: KÖY TANITIM TURU (7 ADIM — SADECE KAMERA YAKLAŞIR) =================
@@ -94,34 +98,45 @@ export const REHBER_ADIMLARI = [
     tamamMi: (_durum, gorevler) => gorevler.some((g) => g.tur === "hadis" && g.yapilan > 0),
   },
   {
-    kod: "gorev_tarla_orman",
+    kod: "gorev_tarla",
     bolum: "gorev",
-    baslik: "3. Yapılacak İş: Tarlada Sula & Ormanda Ağaç Kes!",
+    baslik: "3. Yapılacak İş: Tarladaki Parselleri Sula ve Topla!",
     metin:
-      "Şimdi haritada parlayan Tarla ve Orman'a tıkla! İçeride işçilerini görevlendir, Tarlada kuruyan parselleri sula ve Ormanda yaş ağaçlara dokunmadan kurumuş ağaçları kes!",
-    hedefler: [
-      { tur: "nokta", id: "tarla", etiket: "🌾 Tarlaya Git (Sula)" },
-      { tur: "nokta", id: "orman", etiket: "🌲 Ormana Git (Ağaç Kes)" },
-    ],
-    tamamMi: (durum) =>
-      (durum.sonEtkilesim?.erzak ?? 0) > 0 || (durum.sonEtkilesim?.kereste ?? 0) > 0,
+      "Şimdi haritada parlayan Tarla'ya tıkla! Kuruyan parselleri bakır ibrikle sula, olgunlaşan mahsulü elinle topla. Boşta insanın varsa tarlaya kalıcı işçi de görevlendirebilirsin: yeni işçi, bir sonraki ekimden itibaren daha bol ürün getirir.",
+    hedefler: [{ tur: "nokta", id: "tarla", etiket: "🌾 Tarlaya Git ve Sula" }],
+    tamamMi: (durum) => (durum.sonEtkilesim?.erzak ?? 0) > 0,
   },
   {
-    kod: "gorev_haberci_ev",
+    kod: "gorev_orman",
     bolum: "gorev",
-    baslik: "4. Yapılacak İş: Haberci'den Mektubu Al ve Evinde Oku!",
+    baslik: "4. Yapılacak İş: Ormana Keşfe Çık ve Ağaç Kes!",
     metin:
-      "Güney yolundaki Haberci'ye tıklayıp mühürlü Aile Mektubunu teslim al! Ardından Kendi Evim binasına tıklayarak Ev İçi odasına gir, aileni/büyüklerini yanına çağır ve mektubu açıp birlikte okuyun!",
-    hedefler: [
-      { tur: "nokta", id: "haberci", etiket: "📜 1. Haberci'den Mektubu Al" },
-      { tur: "bina", id: "kendi_evim", etiket: "🏡 2. Kendi Evime Gir" },
-    ],
-    tamamMi: (_durum, gorevler) => gorevler.some((g) => g.tur === "aile" && g.tamam),
+      "Tarla tamam! Şimdi de Orman'a tıkla. Haritada keşfedilmemiş bir bölge seç; şansına kurumuş bir ağaç çıkarsa baltanla devir ve tahtayı topla. Yaş ağaçlara dokunmuyoruz!",
+    hedefler: [{ tur: "nokta", id: "orman", etiket: "🌲 Ormana Git" }],
+    tamamMi: (durum) => (durum.sonEtkilesim?.kereste ?? 0) > 0,
+  },
+  {
+    kod: "gorev_haberci",
+    bolum: "gorev",
+    baslik: "5. Yapılacak İş: Haberci'den Aile Mektubunu Al!",
+    metin:
+      "Güney yolunda atının yanında bekleyen Haberci'ye tıkla ve sana getirdiği mühürlü aile mektubunu teslim al!",
+    hedefler: [{ tur: "nokta", id: "haberci", etiket: "📜 Haberci'ye Git" }],
+    tamamMi: (durum) => (durum.mektupAlindi ?? 0) >= (durum.level ?? 1),
+  },
+  {
+    kod: "gorev_ev_mektup",
+    bolum: "gorev",
+    baslik: "6. Yapılacak İş: Mektubu Evinde Ailenle Oku!",
+    metin:
+      "Mektup elinde! Şimdi Kendi Evim'e tıklayıp ev içine gir. Ailenin ya da büyüklerinin yanına git; hep beraber oturup mektubu birlikte açın ve okuyun.",
+    hedefler: [{ tur: "bina", id: "kendi_evim", etiket: "🏡 Kendi Evime Gir" }],
+    tamamMi: (_durum, gorevler) => gorevler.some((g) => g.tur === "aile" && (g.tamam || g.bugunYapildi)),
   },
   {
     kod: "gorev_meydan_dava",
     bolum: "gorev",
-    baslik: "5. Yapılacak İş: Köy Meydanı'nda İlk Davayı Çöz!",
+    baslik: "7. Yapılacak İş: Köy Meydanı'nda İlk Davayı Çöz!",
     metin:
       "Şimdi tam ortadaki Köy Meydanı'na tıkla! 3D meydanda bekleyen köylülerin yanına yürüyüp davalarını dinle ve hikmetle çözerek köyün Huzurunu artır!",
     hedefler: [{ tur: "bina", id: "sosyalmeydan", etiket: "⚖️ Köy Meydanı'na Gir" }],
@@ -139,21 +154,21 @@ export const REHBER_ADIMLARI = [
     ],
     tamamMi: (durum) =>
       (durum.binalar?.kiraathane ?? 0) >= 1 ||
-      ((durum.envanter?.erzak ?? 0) >= 80 && (durum.envanter?.kereste ?? 0) >= 75),
+      Object.entries(KIRAATHANE_BEDEL).every(([k, m]) => (durum.envanter?.[k] ?? 0) >= (Number(m) || 0)),
   },
   {
     kod: "gorev_kiraathane_insa",
     bolum: "gorev",
-    baslik: "6. Yapılacak İş (2. Gün Hedefi): Kıraathane'yi İnşa Et!",
+    baslik: "8. Yapılacak İş (2. Gün Hedefi): Kıraathane'yi İnşa Et!",
     metin:
-      "Kaynaklarımız (80 Mahsul ve 75 Tahta) tamamlandı! Şimdi meydanın sağındaki Kıraathane arsasına tıkla ve köyümüzün Kıraathane binasını inşa et!",
+      `Kaynaklarımız (${KIRAATHANE_BEDEL.erzak ?? 0} Mahsul ve ${KIRAATHANE_BEDEL.kereste ?? 0} Tahta) tamamlandı! Şimdi meydanın sağındaki Kıraathane arsasına tıkla ve köyümüzün Kıraathane binasını inşa et!`,
     hedefler: [{ tur: "bina", id: "kiraathane", etiket: "🍵 Kıraathane Arsasına Git ve Kur" }],
     tamamMi: (durum) => (durum.binalar?.kiraathane ?? 0) >= 1,
   },
   {
     kod: "gorev_ozan_dinle",
     bolum: "gorev",
-    baslik: "7. Yapılacak İş: Kıraathane'de Ozan Dede'yi Dinle!",
+    baslik: "9. Yapılacak İş: Kıraathane'de Ozan Dede'yi Dinle!",
     metin:
       "Harika, Kıraathane'mizi inşa ettik! Şimdi Kıraathane'nin içine girerek Ozan Dede'den türkümüzün hikâyesini dinle; dilersen içeride bekleyen yolcuları da köyümüze davet et!",
     hedefler: [{ tur: "bina", id: "kiraathane", etiket: "🎵 Kıraathane İçine Gir (Ozan Dede)" }],
@@ -171,6 +186,51 @@ export function ilkEksikRehberAdimi(durum, gorevler = [], tanitimdanBasla = fals
   return idx === -1 ? ILK_GOREV_ADIM_INDEKSI : idx;
 }
 
+const SON_GUN_ANAHTARI = "seyrusefer_rehber_son_gun";
+const BUGUNLUK_ANAHTARI = "seyrusefer_rehber_bugunluk_gun";
+
+function cihazdanOku(anahtar) {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = window.localStorage.getItem(anahtar);
+    return v == null ? null : Number(v);
+  } catch {
+    return null;
+  }
+}
+
+function cihazaYaz(anahtar, deger) {
+  try {
+    window.localStorage.setItem(anahtar, String(deger));
+  } catch {
+    // saklanamazsa yalnızca bu oturumda geçerli olur
+  }
+}
+
+/** İkinci (ve sonraki) gün: "Bugünlük tamam" adımı yerine öğrenciyi yeniden üretime yönlendiren karşılama */
+function yeniGunAdimi(adim, durum) {
+  const env = durum?.envanter ?? {};
+  const eksik = Object.entries(KIRAATHANE_BEDEL)
+    .filter(([k]) => k === "erzak" || k === "kereste")
+    .map(([k, m]) => ({ k, kalan: Math.max(0, (Number(m) || 0) - (env[k] ?? 0)) }));
+  const ad = { erzak: "Mahsul", kereste: "Tahta" };
+  const kalanMetin = eksik
+    .filter((e) => e.kalan > 0)
+    .map((e) => `${e.kalan} ${ad[e.k]}`)
+    .join(" ve ");
+  return {
+    ...adim,
+    baslik: "🌅 Tekrar Hoş Geldin! Yeni Bir Gün Başladı",
+    metin: `Hayırlı sabahlar genç yönetici! Gece boyunca tarlan yeniden doldu, orman keşif seferlerin de yenilendi. Önce tarladaki hasadını topla, sonra ormana keşfe çık.${
+      kalanMetin ? ` Kıraathane'yi kurmak için ${kalanMetin} daha biriktirmen gerekiyor.` : " Kıraathane için gereken her şey hazır!"
+    }`,
+    hedefler: [
+      { tur: "nokta", id: "tarla", etiket: "🌾 Tarlaya Git" },
+      { tur: "nokta", id: "orman", etiket: "🌲 Ormana Git" },
+    ],
+  };
+}
+
 export default function RehberKarakter({
   acik,
   adimIndeks,
@@ -179,9 +239,49 @@ export default function RehberKarakter({
   onHedefSec,
   durum,
   gorevler,
+  simdi,
+  onGorunenHedefler,
+  onKucukDegisti,
 }) {
-  const adim = REHBER_ADIMLARI[adimIndeks] ?? REHBER_ADIMLARI[0];
+  const [kucuk, setKucuk] = useState(false);
+  const bugun = trGunNo(simdi ?? 0);
+  // Öğrencinin bu cihazda rehberi en son hangi oyun gününde gördüğü (yeni günü fark etmek için)
+  // Cihaz hafızası yalnızca tarayıcıda, sayfa açıldıktan sonra okunur (sunucu çizimiyle uyuşmazlık olmasın)
+  const [sonGorulenGun, setSonGorulenGun] = useState(null);
+  const [bugunlukGun, setBugunlukGun] = useState(null);
+  const [hafizaOkundu, setHafizaOkundu] = useState(false);
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setSonGorulenGun(cihazdanOku(SON_GUN_ANAHTARI));
+    setBugunlukGun(cihazdanOku(BUGUNLUK_ANAHTARI));
+    setHafizaOkundu(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
+  const yeniGun = !!simdi && sonGorulenGun != null && bugun > sonGorulenGun;
+  useEffect(() => {
+    if (hafizaOkundu && acik && simdi) cihazaYaz(SON_GUN_ANAHTARI, bugun);
+  }, [hafizaOkundu, acik, bugun, simdi]);
+
+  const hamAdim = REHBER_ADIMLARI[adimIndeks] ?? REHBER_ADIMLARI[0];
+  // "Bugünlük tamam" adımına ilk ulaşılan gün; ertesi günden itibaren adım "Tekrar hoş geldin"e dönüşür
+  useEffect(() => {
+    if (!hafizaOkundu || !simdi || hamAdim.kod !== "gorev_bugunluk_tamam" || bugunlukGun != null) return;
+    cihazaYaz(BUGUNLUK_ANAHTARI, bugun);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setBugunlukGun(bugun);
+  }, [hafizaOkundu, hamAdim.kod, bugunlukGun, bugun, simdi]);
+  const adim =
+    hamAdim.kod === "gorev_bugunluk_tamam" && !!simdi && bugunlukGun != null && bugun > bugunlukGun
+      ? yeniGunAdimi(hamAdim, durum)
+      : hamAdim;
   const tamMetin = adim.metin;
+  const [oncekiKod, setOncekiKod] = useState(adim.kod);
+  const degisikHedef = adim !== hamAdim;
+  useEffect(() => {
+    onGorunenHedefler?.(degisikHedef ? { kod: adim.kod, hedefler: adim.hedefler } : null);
+    // adim nesnesi her çizimde yeniden üretilir; yalnızca kod ve değişiklik durumu izlenir
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [degisikHedef, adim.kod]);
 
   const [harfSayisi, setHarfSayisi] = useState(0);
   const [agizAcik, setAgizAcik] = useState(false);
@@ -218,6 +318,7 @@ export default function RehberKarakter({
 
   const buAdimTamam = adim.tamamMi ? adim.tamamMi(durum, gorevler) : false;
   const gosterilenMetin = tamMetin.slice(0, harfSayisi);
+  const ileriKilitli = adim.bolum === "gorev" && !!adim.tamamMi && !buAdimTamam;
   const butonluHedefler =
     adim.bolum === "gorev" ? (adim.hedefler ?? []).filter((h) => h.etiket) : [];
 
@@ -227,6 +328,8 @@ export default function RehberKarakter({
       setAgizAcik(false);
       return;
     }
+    // "Yapılacak İşler" bölümünde iş yapılmadan bir sonraki adıma geçilemez
+    if (ileriKilitli) return;
     if (adimIndeks < REHBER_ADIMLARI.length - 1) {
       setAdimIndeks(adimIndeks + 1);
     } else {
@@ -234,145 +337,177 @@ export default function RehberKarakter({
     }
   };
 
+  // Küçültülmüş rehber: yalnızca alt şerit görünür, köy tamamen açıkta kalır.
+  // Yeni bir adıma geçilince rehber kendiliğinden açılır (talimat kaçırılmasın).
+  if (oncekiKod !== adim.kod) {
+    setOncekiKod(adim.kod);
+    if (kucuk) setKucuk(false);
+  }
+  const kucukAyarla = (deger) => {
+    setKucuk(deger);
+    onKucukDegisti?.(deger);
+  };
+
+  if (kucuk) {
+    return (
+      <div className="pointer-events-none fixed inset-x-0 bottom-2 z-[320] flex justify-center px-2 sm:bottom-4">
+        <button
+          type="button"
+          onClick={() => kucukAyarla(false)}
+          className="tezhip levha-ac pointer-events-auto flex max-w-xl min-w-0 items-center gap-2.5 rounded-full py-1.5 pr-4 pl-1.5 text-left text-amber-50"
+          aria-label="Rehberi aç"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/assets/binalar/rehber_kapali.webp"
+            alt=""
+            className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-amber-400/70"
+            draggable={false}
+          />
+          <span className="min-w-0 flex-1 truncate text-xs font-bold sm:text-sm">{adim.baslik}</span>
+          <span className="shrink-0 rounded-full bg-amber-400 px-2.5 py-0.5 text-[11px] font-black text-stone-950">Aç ▴</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-2 z-[320] flex justify-center px-2 sm:bottom-4 sm:px-4">
-      <div className="pointer-events-auto flex w-full max-w-2xl flex-col gap-2.5 rounded-3xl bg-gradient-to-b from-stone-900/95 to-stone-950/95 p-3.5 text-amber-50 shadow-2xl ring-2 ring-amber-400/80 backdrop-blur sm:p-4">
-        {/* Üst Mod Seçici: 1. Köy Tanıtım Turu <-> 2. Şimdi Yapacaklarımız */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-800 pb-2">
-          <div className="flex gap-1.5 rounded-xl bg-stone-950 p-1 text-xs font-black ring-1 ring-stone-800">
+    <div className="pointer-events-none fixed inset-x-0 bottom-2 z-[320] flex justify-center px-2 sm:bottom-4 sm:px-4 kisa:bottom-1! kisa:justify-start kisa:pr-14! kisa:pl-1!">
+      <div className="tezhip levha-ac pointer-events-auto flex w-full max-w-2xl flex-col gap-2 rounded-3xl p-2.5 text-amber-50 sm:gap-2.5 sm:p-4 kisa:max-h-[54dvh] kisa:max-w-[44rem] kisa:gap-1.5 kisa:overflow-y-auto">
+        {/* Üst satır: bölüm seçici + küçült + atla (ince) */}
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="flex gap-1 rounded-xl bg-stone-950 p-0.5 text-[11px] font-black ring-1 ring-stone-800 sm:text-xs">
             <button
               type="button"
               onClick={() => setAdimIndeks(0)}
-              className={`rounded-lg px-2.5 py-1 transition ${
-                adim.bolum === "tanitim"
-                  ? "bg-amber-400 text-stone-950 shadow"
-                  : "text-amber-200/70 hover:text-amber-100"
+              className={`rounded-lg px-2 py-1 transition ${
+                adim.bolum === "tanitim" ? "varak-dugme" : "text-amber-200/70 hover:text-amber-100"
               }`}
             >
-              🗺️ 1. Köy Tanıtım Turu
+              🗺️ Tanıtım
             </button>
             <button
               type="button"
               onClick={() => setAdimIndeks(ilkEksikRehberAdimi(durum, gorevler, false))}
-              className={`rounded-lg px-2.5 py-1 transition ${
-                adim.bolum === "gorev"
-                  ? "bg-emerald-500 text-stone-950 shadow"
-                  : "text-amber-200/70 hover:text-amber-100"
+              className={`rounded-lg px-2 py-1 transition ${
+                adim.bolum === "gorev" ? "bg-emerald-500 text-stone-950 shadow" : "text-amber-200/70 hover:text-amber-100"
               }`}
             >
-              🎯 2. Yapılacak İşler
+              🎯 Yapılacak İşler
             </button>
           </div>
-
-          <button
-            type="button"
-            onClick={onKapat}
-            className="rounded-xl bg-stone-800 px-2.5 py-1 text-xs font-bold text-stone-300 hover:bg-stone-700 hover:text-white"
-          >
-            Rehberi Atla ⏭
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => kucukAyarla(true)}
+              aria-label="Rehberi küçült"
+              title="Rehberi küçült, köyü gör"
+              className="rounded-xl bg-stone-800 px-2.5 py-1 text-xs font-black text-amber-200 hover:bg-stone-700"
+            >
+              ▾ Küçült
+            </button>
+            <button
+              type="button"
+              onClick={onKapat}
+              className="rounded-xl px-2 py-1 text-[11px] font-bold text-stone-400 hover:text-white"
+            >
+              Atla ⏭
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          {/* Karakter Portresi */}
-          <div className="flex items-center gap-3 sm:flex-col sm:gap-1.5">
-            <div className="relative shrink-0">
-              <img
-                src={
-                  yaziliyor && agizAcik
-                    ? "/assets/binalar/rehber_acik.webp"
-                    : "/assets/binalar/rehber_kapali.webp"
-                }
-                alt="Bilge Rehber"
-                className={`h-16 w-16 rounded-2xl object-cover ring-2 sm:h-24 sm:w-24 ${
-                  yaziliyor ? "ring-amber-400 shadow-lg shadow-amber-500/30" : "ring-amber-500/50"
-                }`}
-                draggable={false}
-              />
-              <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black text-stone-950 shadow">
-                🧭 Bilge Rehber
-              </span>
-            </div>
-
-            <div className="flex flex-col sm:hidden">
-              <h3 className="text-sm font-black text-amber-100">{adim.baslik}</h3>
-            </div>
+        {/* Avatar + başlık */}
+        <div className="flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={yaziliyor && agizAcik ? "/assets/binalar/rehber_acik.webp" : "/assets/binalar/rehber_kapali.webp"}
+            alt="Bilge Rehber"
+            className={`h-11 w-11 shrink-0 rounded-xl object-cover ring-2 sm:h-14 sm:w-14 ${
+              yaziliyor ? "ring-amber-400 shadow-lg shadow-amber-500/30" : "ring-amber-500/50"
+            }`}
+            draggable={false}
+          />
+          <div className="min-w-0 flex-1">
+            {yeniGun && adim.kod !== "gorev_bugunluk_tamam" && (
+              <p className="mb-0.5 truncate text-[11px] font-bold text-emerald-300">
+                🌅 Tekrar hoş geldin! Tarlan doldu, orman seferlerin yenilendi.
+              </p>
+            )}
+            <h3 className="text-sm leading-snug font-black text-amber-100 sm:text-base">{adim.baslik}</h3>
           </div>
+          {buAdimTamam && (
+            <span className="shrink-0 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300 ring-1 ring-emerald-500/40">
+              ✅
+            </span>
+          )}
+        </div>
 
-          {/* Daktilo Konuşma Balonu */}
-          <div className="flex-1 space-y-2.5">
-            <div className="hidden items-center justify-between sm:flex">
-              <h3 className="text-sm font-black text-amber-100 sm:text-base">{adim.baslik}</h3>
-              {buAdimTamam && (
-                <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300 ring-1 ring-emerald-500/40">
-                  ✅ Tamamlandı
-                </span>
-              )}
-            </div>
+        {/* Konuşma: en fazla birkaç satır, fazlası kutunun içinde kayar */}
+        <div
+          onClick={() => {
+            if (yaziliyor) {
+              setHarfSayisi(tamMetin.length);
+              setAgizAcik(false);
+            }
+          }}
+          className="max-h-[5.6rem] cursor-pointer overflow-y-auto rounded-2xl bg-stone-900/90 px-3 py-2 text-[13px] leading-relaxed font-medium text-amber-50 ring-1 ring-amber-500/25 sm:max-h-32 sm:text-sm kisa:p-2!"
+        >
+          {gosterilenMetin}
+          {yaziliyor && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-amber-400 align-middle" />}
+        </div>
 
-            <div
-              onClick={() => {
-                if (yaziliyor) {
-                  setHarfSayisi(tamMetin.length);
-                  setAgizAcik(false);
-                }
-              }}
-              className="min-h-[3.75rem] cursor-pointer rounded-2xl bg-stone-900/90 p-3 text-xs leading-relaxed font-medium text-amber-50 ring-1 ring-amber-500/25 sm:text-sm"
+        {/* Alt kontrol ve hedef düğmeleri */}
+        <div className="flex flex-wrap items-center justify-between gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              disabled={adimIndeks === 0}
+              onClick={() => setAdimIndeks(Math.max(0, adimIndeks - 1))}
+              aria-label="Önceki adım"
+              className="rounded-xl bg-stone-800 px-2.5 py-1.5 text-xs font-bold text-stone-300 hover:bg-stone-700 disabled:opacity-40"
             >
-              {gosterilenMetin}
-              {yaziliyor && (
-                <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-amber-400 align-middle" />
-              )}
-            </div>
-
-            {/* Alt Kontrol ve Hedef Butonları */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  type="button"
-                  disabled={adimIndeks === 0}
-                  onClick={() => setAdimIndeks(Math.max(0, adimIndeks - 1))}
-                  className="rounded-xl bg-stone-800 px-2.5 py-1.5 text-xs font-bold text-stone-300 hover:bg-stone-700 disabled:opacity-40"
-                >
-                  ← Önceki
-                </button>
-
-                {butonluHedefler.map((h) => (
-                  <button
-                    key={`${h.tur}_${h.id}`}
-                    type="button"
-                    onClick={() => onHedefSec?.(h)}
-                    className="rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 px-3 py-1.5 text-xs font-black text-white shadow ring-1 ring-emerald-300/50 hover:brightness-110"
-                  >
-                    {h.etiket}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                {adim.bolum === "tanitim" && (
-                  <button
-                    type="button"
-                    onClick={() => setAdimIndeks(ilkEksikRehberAdimi(durum, gorevler, false))}
-                    className="rounded-xl bg-stone-800 px-2.5 py-1.5 text-xs font-bold text-amber-300 ring-1 ring-amber-500/30 hover:bg-stone-700"
-                  >
-                    Tanıtımı Geç → İşlere Başla
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={ileriTikla}
-                  className="rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 px-3.5 py-1.5 text-xs font-black text-stone-950 shadow hover:brightness-110"
-                >
-                  {yaziliyor
-                    ? "⏩ Yazıyı Tamamla"
-                    : adimIndeks < REHBER_ADIMLARI.length - 1
-                    ? "İlerle →"
-                    : "✅ Rehberi Bitir"}
-                </button>
-              </div>
-            </div>
+              ←
+            </button>
+            {butonluHedefler.map((h) => (
+              <button
+                key={`${h.tur}_${h.id}`}
+                type="button"
+                onClick={() => {
+                  // Hedefe gidilirken rehber küçülür, köy görünür kalır
+                  kucukAyarla(true);
+                  onHedefSec?.(h);
+                }}
+                className="rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-700 px-3 py-1.5 text-xs font-black text-white shadow ring-1 ring-emerald-300/50 hover:brightness-110"
+              >
+                {h.etiket}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5">
+            {adim.bolum === "tanitim" && (
+              <button
+                type="button"
+                onClick={() => setAdimIndeks(ilkEksikRehberAdimi(durum, gorevler, false))}
+                className="rounded-xl bg-stone-800 px-2.5 py-1.5 text-xs font-bold text-amber-300 ring-1 ring-amber-500/30 hover:bg-stone-700"
+              >
+                İşlere başla
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={ileriTikla}
+              disabled={!yaziliyor && ileriKilitli}
+              title={!yaziliyor && ileriKilitli ? "Bu iş tamamlanınca rehber kendiliğinden sıradakine geçer" : undefined}
+              className="varak-dugme rounded-xl px-3.5 py-1.5 text-xs"
+            >
+              {yaziliyor
+                ? "⏩ Tamamla"
+                : ileriKilitli
+                ? "🔒 Önce bu işi yap"
+                : adimIndeks < REHBER_ADIMLARI.length - 1
+                ? "İlerle →"
+                : "✅ Bitir"}
+            </button>
           </div>
         </div>
       </div>

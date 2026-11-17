@@ -1,4 +1,5 @@
 import "server-only";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -93,7 +94,15 @@ function baglantiAl() {
   }
 
   const sqlite = process.getBuiltinModule("node:sqlite");
-  const dosyaYolu = process.env.SQLITE_DB_PATH || "/tmp/seyrusefer-v3.sqlite";
+  const varsayilanKlasor = fs.existsSync("/tmp") ? "/tmp" : path.join(process.cwd(), ".wrangler");
+  if (!fs.existsSync(varsayilanKlasor)) {
+    try {
+      fs.mkdirSync(varsayilanKlasor, { recursive: true });
+    } catch {
+      // klasör oluşturulamazsa geç
+    }
+  }
+  const dosyaYolu = process.env.SQLITE_DB_PATH || path.join(varsayilanKlasor, "seyrusefer-v3.sqlite");
 
   let veritabani;
   try {
@@ -141,5 +150,13 @@ function baglantiAl() {
 }
 
 export async function db() {
+  try {
+    const ctx = await getCloudflareContext({ async: true });
+    if (ctx?.env?.DB) {
+      return ctx.env.DB;
+    }
+  } catch {
+    // Cloudflare D1 bağlamı yoksa yerel SQLite adaptörüne düş
+  }
   return baglantiAl();
 }

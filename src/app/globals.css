@@ -1,11 +1,384 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+/* Yatay telefon / kısa ekran: yükseklik dar olduğunda kullanılan varyant (kisa:) */
+@custom-variant kisa (@media (orientation: landscape) and (max-height: 520px));
+
+/* =============================================================
+   SEYRÜSEFER — "TEZHİP" TASARIM DİLİ
+   Lacivert mürekkep zemin · altın varak · çini turkuazı · parşömen
+   Tüm ekranlar aynı paleti kullansın diye Tailwind'in stone / amber /
+   emerald skalaları burada yeniden tanımlanır: bileşenlerdeki
+   `stone-900`, `amber-400` gibi sınıflar otomatik olarak bu renklere döner.
+   ============================================================= */
+
+/* ---------- Yazı tipleri (dosyalar projede; internet gerekmez) ---------- */
+@font-face {
+  font-family: "Alegreya";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("./fonts/alegreya-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Alegreya";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("./fonts/alegreya-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face { font-family: "Alegreya Sans"; font-weight: 400; font-display: swap; src: url("./fonts/alegreya-sans-latin-ext-400-normal.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+20A0-20C0; }
+@font-face { font-family: "Alegreya Sans"; font-weight: 400; font-display: swap; src: url("./fonts/alegreya-sans-latin-400-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+FEFF, U+FFFD; }
+@font-face { font-family: "Alegreya Sans"; font-weight: 500; font-display: swap; src: url("./fonts/alegreya-sans-latin-ext-500-normal.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+20A0-20C0; }
+@font-face { font-family: "Alegreya Sans"; font-weight: 500; font-display: swap; src: url("./fonts/alegreya-sans-latin-500-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+FEFF, U+FFFD; }
+@font-face { font-family: "Alegreya Sans"; font-weight: 700; font-display: swap; src: url("./fonts/alegreya-sans-latin-ext-700-normal.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+20A0-20C0; }
+@font-face { font-family: "Alegreya Sans"; font-weight: 700; font-display: swap; src: url("./fonts/alegreya-sans-latin-700-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+FEFF, U+FFFD; }
+@font-face { font-family: "Alegreya Sans"; font-weight: 800; font-display: swap; src: url("./fonts/alegreya-sans-latin-ext-800-normal.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+20A0-20C0; }
+@font-face { font-family: "Alegreya Sans"; font-weight: 800; font-display: swap; src: url("./fonts/alegreya-sans-latin-800-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+FEFF, U+FFFD; }
+@font-face { font-family: "Alegreya Sans"; font-weight: 900; font-display: swap; src: url("./fonts/alegreya-sans-latin-ext-900-normal.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+20A0-20C0; }
+@font-face { font-family: "Alegreya Sans"; font-weight: 900; font-display: swap; src: url("./fonts/alegreya-sans-latin-900-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+FEFF, U+FFFD; }
+
+@theme {
+  --font-sans: "Alegreya Sans", system-ui, "Segoe UI", sans-serif;
+  --font-serif: "Alegreya", Georgia, serif;
+  --font-display: "Alegreya", Georgia, serif;
+
+  /* stone → parşömenden lacivert mürekkebe */
+  --color-stone-50: #fbf6e9;
+  --color-stone-100: #f6eed8;
+  --color-stone-200: #ecdfbd;
+  --color-stone-300: #d9c9a1;
+  --color-stone-400: #b4a98d;
+  --color-stone-500: #7f8189;
+  --color-stone-600: #4a5876;
+  --color-stone-700: #33415f;
+  --color-stone-800: #212f4c;
+  --color-stone-900: #16223a;
+  --color-stone-950: #0d1628;
+
+  /* amber → altın varak */
+  --color-amber-50: #fdf8e6;
+  --color-amber-100: #faeec2;
+  --color-amber-200: #f5df8f;
+  --color-amber-300: #efcc5c;
+  --color-amber-400: #e7b93b;
+  --color-amber-500: #d8a122;
+  --color-amber-600: #ba8415;
+  --color-amber-700: #946511;
+  --color-amber-800: #6e4a11;
+  --color-amber-900: #513710;
+  --color-amber-950: #2c1d07;
+
+  /* emerald → çini turkuazı */
+  --color-emerald-50: #e8f8f4;
+  --color-emerald-100: #c8efe7;
+  --color-emerald-200: #97dfd2;
+  --color-emerald-300: #61cabb;
+  --color-emerald-400: #34b2a3;
+  --color-emerald-500: #1d968a;
+  --color-emerald-600: #147970;
+  --color-emerald-700: #11615b;
+  --color-emerald-800: #0f4c48;
+  --color-emerald-900: #0d3e3b;
+  --color-emerald-950: #062725;
+
+  /* red → nar kırmızısı */
+  --color-red-400: #e2685c;
+  --color-red-500: #c9463b;
+  --color-red-600: #a8322a;
+  --color-red-700: #872720;
+}
+
+:root {
+  --murekkep: #0d1628;
+  --lacivert: #16223a;
+  --varak: #e7b93b;
+  --varak-koyu: #946511;
+  --cini: #34b2a3;
+  --parsomen: #f6eed8;
+  --nar: #a8322a;
+  /* Selçuklu sekiz köşeli yıldız (iki kare üst üste) */
+  --yildiz: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23e7b93b' d='M12 1l3.2 3.3 4.6-.1-.1 4.6L23 12l-3.3 3.2.1 4.6-4.6-.1L12 23l-3.2-3.3-4.6.1.1-4.6L1 12l3.3-3.2-.1-4.6 4.6.1z'/%3E%3Ccircle cx='12' cy='12' r='3.2' fill='%230d1628'/%3E%3C/svg%3E");
+  /* Zeminlerde çok hafif görünen geometrik örgü */
+  --orgu: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23e7b93b' stroke-opacity='.07' stroke-width='1'%3E%3Cpath d='M28 4l7 7h10v10l7 7-7 7v10H35l-7 7-7-7H11V35l-7-7 7-7V11h10z'/%3E%3Cpath d='M28 16l12 12-12 12-12-12z'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 html,
 body {
-  background: #1f3315;
+  background: var(--murekkep);
   overscroll-behavior: none;
+}
+
+body {
+  font-feature-settings: "lnum" 1, "kern" 1;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Başlıklar el yazması kitap harfiyle */
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.005em;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--varak);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(231, 185, 59, 0.35);
+}
+
+/* İnce altın kaydırma çubuğu */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(231, 185, 59, 0.45) transparent;
+}
+
+/* ---------- Ortak parçalar ---------- */
+
+/* Tezhipli levha: çift altın cetvel + dört köşede Selçuklu yıldızı */
+.tezhip {
+  position: relative;
+  background:
+    var(--orgu),
+    radial-gradient(120% 80% at 50% 0%, rgba(52, 178, 163, 0.1), transparent 60%),
+    linear-gradient(180deg, #1b2946 0%, #111b31 100%);
+  border: 1px solid rgba(231, 185, 59, 0.55);
+  box-shadow:
+    0 0 0 3px #0d1628,
+    0 0 0 4px rgba(231, 185, 59, 0.28),
+    0 24px 60px -12px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.tezhip::before,
+.tezhip::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: var(--yildiz) center / contain no-repeat;
+  pointer-events: none;
+  z-index: 2;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+.tezhip::before {
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.tezhip::after {
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Başlık altı tezhip cetveli: çizgi — yıldız — çizgi */
+.cetvel {
+  height: 14px;
+  background:
+    var(--yildiz) center / 14px 14px no-repeat,
+    linear-gradient(90deg, transparent, rgba(231, 185, 59, 0.6) 20%, rgba(231, 185, 59, 0.6) calc(50% - 14px), transparent calc(50% - 14px), transparent calc(50% + 14px), rgba(231, 185, 59, 0.6) calc(50% + 14px), rgba(231, 185, 59, 0.6) 80%, transparent) center / 100% 1px no-repeat;
+}
+
+/* Parşömen kâğıt (hadis, mektup, ferman metinleri için) */
+.parsomen {
+  color: #2a2113;
+  background:
+    radial-gradient(140% 100% at 50% 0%, rgba(255, 255, 255, 0.5), transparent 55%),
+    linear-gradient(180deg, #f8efd6, #ecdcb4);
+  border: 1px solid #b9965a;
+  box-shadow: inset 0 0 0 3px rgba(248, 239, 214, 0.9), inset 0 0 0 4px rgba(148, 101, 17, 0.35), inset 0 0 40px rgba(148, 101, 17, 0.18);
+  font-family: var(--font-serif);
+}
+
+/* Altın varak düğme */
+.varak-dugme {
+  color: #2c1d07;
+  font-weight: 900;
+  background: linear-gradient(180deg, #f8e39a 0%, #e7b93b 45%, #c08a18 100%);
+  border: 1px solid #f5df8f;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 0 rgba(110, 74, 17, 0.45), 0 6px 16px -4px rgba(231, 185, 59, 0.45);
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.varak-dugme:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.varak-dugme:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+.varak-dugme:disabled {
+  filter: grayscale(0.7) brightness(0.7);
+  cursor: not-allowed;
+}
+
+/* ---------- Hareket ---------- */
+@keyframes levha-ac {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.levha-ac {
+  animation: levha-ac 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+
+@keyframes varak-isilti {
+  0% {
+    background-position: -150% 0;
+  }
+  60%,
+  100% {
+    background-position: 250% 0;
+  }
+}
+.varak-isilti {
+  position: relative;
+  overflow: hidden;
+}
+.varak-isilti::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.55) 50%, transparent 60%) no-repeat;
+  background-size: 60% 100%;
+  animation: varak-isilti 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes sayi-zipla {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.28);
+    color: #fff3c4;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.sayi-zipla {
+  animation: sayi-zipla 0.5s ease-out;
+}
+
+@keyframes yukari-suzul {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -54px) scale(1);
+  }
+}
+.yukari-suzul {
+  animation: yukari-suzul 1.5s ease-out both;
+}
+
+@keyframes kutlama-isin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+@keyframes kutlama-muhur {
+  0% {
+    opacity: 0;
+    transform: scale(2.4) rotate(-18deg);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.94) rotate(3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes konfeti-dus {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--kayma, 0), 112vh, 0) rotate(720deg);
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Üst bar ve harita üstü küçük levhalar: koyu mürekkep cam + ince altın kenar */
+.ust-levha {
+  background: linear-gradient(180deg, rgba(27, 41, 70, 0.94), rgba(13, 22, 40, 0.94));
+  border: 1px solid rgba(231, 185, 59, 0.45);
+  box-shadow: 0 8px 22px -6px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* Üstüne mühür oturan levhalarda üst yıldız gizlenir */
+.tezhip.muhurlu::before {
+  display: none;
+}
+
+/* ---------- Giriş ekranı ---------- */
+@keyframes giris-suzul {
+  0% { transform: scale(1.12) translate(-2%, -1%); }
+  50% { transform: scale(1.18) translate(2%, 1.5%); }
+  100% { transform: scale(1.12) translate(-2%, -1%); }
+}
+.giris-harita {
+  animation: giris-suzul 60s ease-in-out infinite;
+}
+.giris-baslik {
+  font-family: var(--font-display);
+  background: linear-gradient(180deg, #fff6d0 0%, #f5df8f 35%, #e7b93b 60%, #b07d17 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(13, 22, 40, 0.9)) drop-shadow(0 8px 18px rgba(231, 185, 59, 0.25));
+  letter-spacing: 0.01em;
+}
+
+/* Köy haritası: uzaklaştırınca piksel boyutlu işaretler de haritayla küçülür (--isaret-olcek KoyHaritasi'nde ayarlanır) */
+[data-harita-tuval] .harita-isaret,
+[data-harita-tuval] .harita-etiket {
+  zoom: var(--isaret-olcek, 1);
+}
+
+/* Dolu tarlada başaklar hafifçe rüzgârda salınır */
+@keyframes basak-salin {
+  0%, 100% { transform: skewX(0deg); }
+  50% { transform: skewX(-2.5deg); }
+}
+.tarla-basak {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: basak-salin 4.5s ease-in-out infinite;
 }
