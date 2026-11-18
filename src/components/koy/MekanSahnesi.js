@@ -12,6 +12,7 @@ import {
 import KoyMeydani3DSahnesi from "./KoyMeydani3DSahnesi";
 import TasAviOyunu from "./TasAviOyunu";
 import AileOyunlari from "./AileOyunlari";
+import DersCalismaKosesi from "./DersCalismaKosesi";
 
 
 // =============================================================
@@ -277,6 +278,27 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
           </button>
         )}
 
+        {/* Ders Çalışma Köşesi: karakter evin sağındaki çalışma masasına yürür, sayfa en alttaki köşeye kayar */}
+        {kendiEvimMi && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOyuncuKonum({ x: 72, y: 60 });
+              window.setTimeout(() => {
+                document.getElementById("ders-calisma")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 650);
+            }}
+            style={{ left: "76%", top: "41%" }}
+            className="group absolute z-20 -translate-x-1/2 -translate-y-1/2 transition hover:scale-110"
+          >
+            <div className="flex flex-col items-center rounded-2xl bg-stone-900/90 px-3 py-1.5 text-amber-100 shadow-xl ring-2 ring-sky-400/80">
+              <span className="text-2xl sm:text-3xl" aria-hidden="true">📚</span>
+              <span className="text-[10px] font-black whitespace-nowrap sm:text-xs">Ders Köşem</span>
+            </div>
+          </button>
+        )}
+
         {/* Oda İçinde Yürüyen Karakter ve İsim Etiketi */}
         <div
           style={{ left: `${oyuncuKonum.x}%`, top: `${oyuncuKonum.y}%` }}
@@ -330,6 +352,8 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
 
       {/* Ailecek oyunlar yalnızca öğrencinin kendi evinde */}
       {kendiEvimMi && <AileOyunlari />}
+      {/* Ders Çalışma Köşesi sayfanın en altında */}
+      {kendiEvimMi && <DersCalismaKosesi />}
     </div>
   );
 }
