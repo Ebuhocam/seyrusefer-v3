@@ -32,9 +32,9 @@ export const REHBER_ADIMLARI = [
   {
     kod: "tanitim_meydan",
     bolum: "tanitim",
-    baslik: "Tanıtım 3/7: Köy Meydanı & Çınar Altı Sohbeti",
+    baslik: "Tanıtım 3/7: Köy Meydanı",
     metin:
-      "Tam ortadaki taş döşeli alan Köy Meydanı'dır! Meydanda bekleyen köylülerin yanına 3D birinci şahıs gözünden yürüyerek davalarını dinleyip hüküm verirsin; Çınar Altı Sohbeti'nde ise diğer öğrencilerle söz, hikâye ve video paylaşırsın.",
+      "Tam ortadaki taş döşeli alan Köy Meydanı'dır! Meydanda bekleyen köylülerin yanına 3D birinci şahıs gözünden yürüyerek davalarını dinleyip hüküm verirsin. Level 3'te açılan Birlik Meydanı'nın Ulu Çınar'ı altında ise diğer öğrencilerle söz, hikâye ve video paylaşacaksın.",
     hedefler: [{ tur: "bina", id: "sosyalmeydan" }],
   },
   {
@@ -156,9 +156,8 @@ export const REHBER_ADIMLARI = [
     bolum: "gorev",
     baslik: "🌙 Bugünlük Yapılacak Görevlerimiz Tamamlandı!",
     metin:
-      "Maşallah genç yönetici! Bugün Mektep'i kurdun, hadisini okudun, tarla ve ormanda çalıştın, evinde aile mektubunu okudun ve Köy Meydanı'nda ilk davayı çözdün! Bugünlük yapılacak zorunlu görev kalmadı. İşçilerin yarına kadar Kıraathane için gereken Mahsul (80) ve Odun'yı (75) biriktiriyor. Yarın kaynakların dolunca Kıraathane'yi inşa edeceğiz!",
+      "Maşallah genç yönetici! Bugün Mektep'i kurdun, hadisini okudun, tarla ve ormanda çalıştın, evinde aile mektubunu okudun ve Köy Meydanı'nda ilk davayı çözdün! Bugünlük yapılacak zorunlu görev kalmadı. İşçilerin yarına kadar Kıraathane için gereken Mahsul (80) ve Odun'u (75) biriktiriyor. Yarın kaynakların dolunca Kıraathane'yi inşa edeceğiz!",
     hedefler: [
-      { tur: "bina", id: "sosyalmeydan", etiket: "🌳 Çınar Altı Sohbeti'ne Göz At" },
       { tur: "nokta", id: "pano", etiket: "📜 Görev Panosuna Bak" },
     ],
     tamamMi: (durum) =>

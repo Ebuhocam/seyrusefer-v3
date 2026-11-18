@@ -51,7 +51,7 @@ export const LEVEL_GOREVLERI = {
   ],
   3: [
     { kod: "sinav", tur: "sinav", ad: "Mektep Hadis ve İlim Sınavı", hedef: 1, gunluk: false, bina: "otag" },
-    { kod: "meydan_paylasim", tur: "meydan_paylasim", ad: "Köy Meydanı'nda İlk Paylaşımını Yap", hedef: 1, gunluk: false, bina: "otag" },
+    { kod: "meydan_paylasim", tur: "meydan_paylasim", ad: "Birlik Meydanı'nda (Çınar Altı) İlk Paylaşımını Yap", hedef: 1, gunluk: false, bina: "otag" },
     { kod: "dava", tur: "dava", ad: "Köy Meydanı'nda Halkın 1 Davasını Çöz", hedef: 1, gunluk: false, bina: "otag" },
     { kod: "hadis", tur: "hadis", ad: "3 Günlük Hadis Oku", hedef: 3, gunluk: true, bina: "otag" },
   ],
@@ -65,7 +65,7 @@ export const LEVEL_GOREVLERI = {
     { kod: "seyyah", tur: "seyyah", ad: "Haberci'nin 3 İyilik Görevini Yap", hedef: 3, gunluk: true, bina: "kiraathane" },
     { kod: "hadis", tur: "hadis", ad: "5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "kiraathane" },
     { kod: "sinav", tur: "sinav", ad: "Dürüstlük ve Ahlak Sınavı", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
-    { kod: "meydan_yorum", tur: "meydan_yorum", ad: "Köy Meydanı'nda 3 Paylaşıma Yorum Yap", hedef: 3, gunluk: false, bina: "sosyalmeydan" },
+    { kod: "meydan_yorum", tur: "meydan_yorum", ad: "Çınar Altı'nda 3 Paylaşıma Yorum Yap", hedef: 3, gunluk: false, bina: "sosyalmeydan" },
     { kod: "dava", tur: "dava", ad: "Köy Meydanı'nda Dürüstlük Davasını Çöz", hedef: 1, gunluk: false, bina: "kiraathane" },
   ],
   6: [

@@ -4,7 +4,7 @@ import { oyunAyarlariniGetir, tesvikOdulunuKontrolEt, turkiyeGunBasi } from "@/l
 import { govde, hata, oturumZorunlu, oyunYaniti } from "@/lib/sunucu/api";
 import { gorevIlerlet } from "@/lib/oyun/eylemler";
 import { oyunGunu } from "@/lib/oyun/gorevler";
-import { KARAKTER_KODLARI } from "@/lib/oyun/sabitler";
+import { BIRLIK_ACILIS_LEVEL, KARAKTER_KODLARI } from "@/lib/oyun/sabitler";
 
 // Çınar Altı kuralları (kötüye kullanımı ve ödül avcılığını önlemek için)
 const PAYLASIM_ODUL_GUNLUK = 3; // günde ilk 3 paylaşım Huzur ve görev ilerlemesi kazandırır
@@ -213,9 +213,9 @@ export async function POST(request) {
   const an = Date.now();
   const gunBasi = turkiyeGunBasi(an); // günlük sınırlar gerçek Türkiye gününe göre
 
-  // Köy Meydanı'nı kurmamış öğrenci Çınar Altı'nda işlem yapamaz (arayüzü atlayıp API'yi çağırsa da)
-  if ((durum.binalar?.sosyalmeydan ?? 0) < 1) {
-    return hata("Çınar Altı'na katılmak için önce köyüne Köy Meydanı'nı inşa etmelisin.", 403);
+  // Çınar Altı, Birlik Meydanı'ndadır: Level 3'e ulaşmayan öğrenci işlem yapamaz (arayüzü atlayıp API'yi çağırsa da)
+  if ((durum.level ?? 1) < BIRLIK_ACILIS_LEVEL) {
+    return hata(`Çınar Altı, Birlik Meydanı'nda Level ${BIRLIK_ACILIS_LEVEL}'te açılır.`, 403);
   }
 
   const cevap = async (ek = {}) =>

@@ -70,7 +70,7 @@ function levelYenilikleri(level) {
       });
     }
   }
-  if (level === BIRLIK_ACILIS_LEVEL) liste.unshift({ ikon: "🏕️", metin: "Birlik Alanı açıldı: bir birliğe katıl ya da kendi birliğini kur" });
+  if (level === BIRLIK_ACILIS_LEVEL) liste.unshift({ ikon: "🏕️", metin: "Birlik Alanı açıldı: Birlik Meydanı'ndaki Ulu Çınar'da sohbete katıl, bir birliğe gir ya da kendi birliğini kur" });
   if (level === ALAN_MUCADELESI_LEVEL) liste.unshift({ ikon: "🗺️", metin: "Genel Harita açıldı: birliğinle sancak bölgelerine hamle yap" });
   return liste.slice(0, 5);
 }

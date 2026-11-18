@@ -1,5 +1,11 @@
 "use client";
 import KomsuEviTasarim from "./KomsuEviTasarim";
+import BirlikMekanSahnesi from "./BirlikMekanSahnesi";
+import CamiCemaatKutusu from "./CamiCemaatKutusu";
+import OrtakCalismaSalonu from "./OrtakCalismaSalonu";
+import TakasMerkezi from "./TakasMerkezi";
+import SancakTalimi from "./SancakTalimi";
+import DersCalismaKosesi from "./DersCalismaKosesi";
 import { useState } from "react";
 import {
   BINALAR,
@@ -78,6 +84,9 @@ function mekanBasligi(secim, durum) {
   if (secim.tur === "birlikBina") {
     const b = BIRLIK_BINALARI[secim.id];
     return { ikon: "🏕️", baslik: b?.ad ?? "Birlik Binası", alt: "Birlik Külliyesi" };
+  }
+  if (secim.tur === "cinarAlti") {
+    return { ikon: "🌳", baslik: "Birlik Meydanı · Çınar Altı", alt: "Köyler arası paylaşım ve sohbet" };
   }
   if (secim.tur === "bolge") {
     return { ikon: "🗺️", baslik: "Genel Sancak Haritası", alt: "Alan Mücadelesi" };
@@ -170,6 +179,7 @@ export default function Panel({ secim, oyun, kapat, onSecimDegistir }) {
             </div>
           )}
           {secim.tur === "birlikBina" && <BirlikBinaIcerik id={secim.id} oyun={oyun} />}
+          {secim.tur === "cinarAlti" && <SosyalMeydanKutusu oyun={oyun} />}
           {secim.tur === "bolge" && (
             <div className="space-y-4">
               <BirlikPaneli oyun={oyun} varsayilanSekme="fetih" seciliBolgeId={secim.id} />
@@ -192,26 +202,96 @@ function BirlikBinaIcerik({ id, oyun }) {
 
   if (id === "cami") {
     return (
-      <div className="space-y-4">
-        <NamazCetelesiKutusu oyun={oyun} />
+      <BirlikMekanSahnesi
+        oyun={oyun}
+        resim={tanim.icMekan}
+        baslik="🕌 Ulu Cami"
+        altBaslik="Birlik kardeşleriyle ortak namaz çetelesi"
+        noktalar={[
+          { id: "mihrap", x: 50, y: 40, ikon: "🕌", etiket: "Namaz Çetelem", hedef: "cami-cetele", vurgu: true },
+          { id: "cemaat", x: 18, y: 58, ikon: "📿", etiket: "Cemaatimiz", hedef: "cami-cemaat" },
+        ]}
+      >
+        <section id="cami-cetele" className="scroll-mt-24 rounded-3xl bg-stone-950/85 p-4 ring-1 ring-emerald-500/30 sm:p-5">
+          <NamazCetelesiKutusu oyun={oyun} />
+        </section>
+        <CamiCemaatKutusu yenile={oyun.durum.bugunNamaz ? Object.values(oyun.durum.bugunNamaz).filter(Boolean).length : 0} />
         <BirlikPaneli oyun={oyun} varsayilanSekme="birlik" binaId="cami" />
-      </div>
+      </BirlikMekanSahnesi>
     );
   }
 
   if (id === "medrese") {
     return (
-      <div className="space-y-4">
-        <BinaIciGorunumu binaId="medrese" oyun={oyun} />
+      <BirlikMekanSahnesi
+        oyun={oyun}
+        resim={tanim.icMekan}
+        baslik="📚 Medrese · Ortak Çalışma Salonu"
+        altBaslik="Kardeşlerinle aynı salonda ders çalış"
+        noktalar={[
+          { id: "masalar", x: 36, y: 62, ikon: "📚", etiket: "Çalışma Masaları", hedef: "calisma-salonu", vurgu: true },
+          { id: "pano", x: 58, y: 24, ikon: "🏆", etiket: "Sıralama Panosu", hedef: "calisma-siralama" },
+          { id: "masam", x: 82, y: 70, ikon: "⏱️", etiket: "Çalışmaya Başla", hedef: "ders-calisma" },
+        ]}
+      >
+        <OrtakCalismaSalonu oyun={oyun} />
+        <DersCalismaKosesi oyun={oyun} />
         <BirlikPaneli oyun={oyun} varsayilanSekme="birlik" binaId="medrese" />
-      </div>
+      </BirlikMekanSahnesi>
     );
   }
 
-  const varsayilanSekme = id === "otag" ? "sohbet" : id === "oyuncadiri" ? "fetih" : "birlik";
+  if (id === "takasmerkezi") {
+    return (
+      <BirlikMekanSahnesi
+        oyun={oyun}
+        resim={tanim.icMekan}
+        baslik="⚖️ Takas Merkezi"
+        altBaslik="Odun, taş ve mahsul takası"
+        noktalar={[
+          { id: "pano", x: 48, y: 40, ikon: "📜", etiket: "Teklif Panosu", hedef: "takas", vurgu: true },
+          { id: "tezgah", x: 24, y: 64, ikon: "⚖️", etiket: "Takas Tezgâhı", hedef: "takas" },
+        ]}
+      >
+        <TakasMerkezi oyun={oyun} />
+        <BirlikPaneli oyun={oyun} varsayilanSekme="birlik" binaId="takasmerkezi" />
+      </BirlikMekanSahnesi>
+    );
+  }
+
+  if (id === "haberlesme") {
+    return (
+      <BirlikMekanSahnesi
+        oyun={oyun}
+        resim={tanim.icMekan}
+        baslik="🕊️ Haberleşme Kulesi"
+        altBaslik="Birlik grup sohbeti · güzel ve saygılı sözler"
+        noktalar={[{ id: "duvar", x: 67, y: 42, ikon: "🕊️", etiket: "Mesaj Duvarı", hedef: "haberlesme", vurgu: true }]}
+      >
+        <section id="haberlesme" className="scroll-mt-24">
+          <BirlikPaneli oyun={oyun} varsayilanSekme="sohbet" />
+        </section>
+      </BirlikMekanSahnesi>
+    );
+  }
+
+  if (id === "oyuncadiri") {
+    return (
+      <BirlikMekanSahnesi
+        oyun={oyun}
+        resim={tanim.icMekan}
+        baslik="⚔️ Talimhane"
+        altBaslik="Sancak Talimi: bilgiyle bölge kazan"
+        noktalar={[{ id: "masa", x: 50, y: 58, ikon: "🗺️", etiket: "Harita Masası", hedef: "sancak-talimi", vurgu: true }]}
+      >
+        <SancakTalimi oyun={oyun} />
+      </BirlikMekanSahnesi>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <BirlikPaneli oyun={oyun} varsayilanSekme={varsayilanSekme} binaId={id} />
+      <BirlikPaneli oyun={oyun} varsayilanSekme="birlik" binaId={id} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import YoutubeOynatici, { youtubeKimligi } from "./YoutubeOynatici";
 import { useEffect, useRef, useState } from "react";
 import {
   BINALAR,
+  BIRLIK_ACILIS_LEVEL,
   DEPO_SAAT,
   EV_IDLERI,
   KAYNAKLAR,
@@ -544,7 +545,8 @@ function instagramEmbedUrlCikar(url) {
 }
 
 export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
-  const meydanKurulu = (oyun.durum?.binalar?.sosyalmeydan ?? 0) >= 1;
+  // Çınar Altı Birlik Meydanı'ndadır; Level 3'ten itibaren paylaşım yapılabilir
+  const meydanKurulu = (oyun.durum?.level ?? 1) >= BIRLIK_ACILIS_LEVEL;
   const { durum, aktifIcerik } = oyun;
   const gundemSorusu = aktifIcerik?.gundemSorusu;
   const [paylasimlar, setPaylasimlar] = useState([]);
@@ -769,10 +771,10 @@ export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
       {!meydanKurulu ? (
         <div className="rounded-3xl bg-stone-950/85 p-4 text-center ring-1 ring-amber-500/35 sm:p-5">
           <div className="text-3xl" aria-hidden="true">🏗️</div>
-          <p className="mt-1 text-sm font-black text-amber-100">Çınar Altı&apos;nda söz almak için önce Köy Meydanı&apos;nı kur</p>
+          <p className="mt-1 text-sm font-black text-amber-100">Çınar Altı&apos;nda söz almak Level {BIRLIK_ACILIS_LEVEL}&apos;te açılır</p>
           <p className="mx-auto mt-1 max-w-md text-xs text-amber-200/80">
-            Şimdilik diğer köylerin paylaşımlarını okuyabilirsin. Meydanını kurunca sen de paylaşım yapabilir, beğenip yorum
-            yazabilirsin.
+            Şimdilik diğer köylerin paylaşımlarını okuyabilirsin. Level {BIRLIK_ACILIS_LEVEL}&apos;e ulaşınca sen de paylaşım
+            yapabilir, beğenip yorum yazabilirsin.
           </p>
         </div>
       ) : (
@@ -1023,7 +1025,7 @@ export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
                     <button
                       type="button"
                       disabled={!meydanKurulu}
-                      title={!meydanKurulu ? "Önce Köy Meydanı'nı kur" : undefined}
+                      title={!meydanKurulu ? `Level ${BIRLIK_ACILIS_LEVEL}'te açılır` : undefined}
                       onClick={() => begeniDegistir(p.id)}
                       className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-black transition ${
                         p.benBegendim
@@ -1038,7 +1040,7 @@ export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
                     <button
                       type="button"
                       disabled={!meydanKurulu}
-                      title={!meydanKurulu ? "Önce Köy Meydanı'nı kur" : undefined}
+                      title={!meydanKurulu ? `Level ${BIRLIK_ACILIS_LEVEL}'te açılır` : undefined}
                       onClick={() => {
                         setAcikYorumId(acikYorumId === p.id ? null : p.id);
                         setYorumMetni("");
@@ -2025,7 +2027,14 @@ export function BinaIciGorunumu({ binaId, oyun, baslangicSekme = null }) {
           </button>
         </div>
 
-        {aktif === "dava" ? <ObaDavaKutusu oyun={oyun} /> : <SosyalMeydanKutusu oyun={oyun} />}
+        {aktif === "dava" ? (
+          <ObaDavaKutusu oyun={oyun} />
+        ) : (
+          <div className="rounded-3xl bg-stone-950/85 p-5 text-center text-sm text-amber-100 ring-1 ring-amber-500/35">
+            🌳 Çınar Altı sohbeti artık <b>Birlik Meydanı</b>&apos;nda! Level {BIRLIK_ACILIS_LEVEL}&apos;e ulaşınca üstteki{" "}
+            <b>🏕️ Birlik Alanı</b> düğmesinden ortadaki Ulu Çınar&apos;a git.
+          </div>
+        )}
       </div>
     );
   }

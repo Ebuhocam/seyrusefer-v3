@@ -62,3 +62,11 @@ Proje sahibi: Ebubekir Hoca (ortaokul DKAB öğretmeni). Kod yazmıyor, Türkçe
 - **Faz B:** Kendi Evim → 📚 Ders Köşem (`DersCalismaKosesi.js`, `/api/ders`, tablo `ders_calisma`, ilk istekte kendiliğinden kurulur). Sayaç sunucu başlangıç saatine göre arka planda işler, öğrenci onaylar. En çok 60 dk. Günün her 30 dakikası +1 Huzur (günde en çok 4).
 - **Faz C:** Komşu evleri (ev1–ev5) → 🏘️ Komşuyu Ziyaret Et (`KomsuEviTasarim.js`, `komsuEviGuzellestir`, kaynaklar satırları `komsu_ev1..5`). 3 oda × 3 seviye; her seviye +1 Huzur, ev tamamlanınca +2. Köy Meydanı'na 🕌 Köy Camii (namaz çetelesi).
 - Cloudflare Workers Builds bağlı; `package-lock.json` Linux'ta üretilmeli (Windows kilidi `@emnapi` eksik bırakıyordu → `npm ci` hatası).
+
+## 18 Kasım 2026 akşam — Birlik Meydanı (Faz 6 başlangıcı)
+- Telefon performansı: `components/koy/grafikProfili.js` (piksel oranı, AA, gölge, 30 fps) tüm 3D sahnelerde.
+- Birlik Alanı **Level 3**'te açılır (`BIRLIK_ACILIS_LEVEL = 3`). Çınar Altı köyden çıktı; Birlik Meydanı'nın ortasındaki Ulu Çınar'da, Level 3'teki herkese açık (`secim.tur === "cinarAlti"`).
+- Yeni harita `public/assets/harita/birlik_alani.webp`; bina içleri `public/assets/mekanlar/*_ici.webp` + `BirlikMekanSahnesi.js` (tıklanır noktalar, yürüyen karakter).
+- Binalar: Otağ (birlik), Ulu Cami (`CamiCemaatKutusu`), Medrese = Ortak Çalışma Salonu (`OrtakCalismaSalonu`, `/api/birlik/calisma`), Takas Merkezi (`TakasMerkezi`, `/api/birlik/takas`, emanetli teklif), Haberleşme Kulesi (birlik sohbeti + kötü söz filtresi `ekTablolar.kotuSozVarMi` + 🚩 şikâyet, 2 şikâyette gizlenir), Talimhane (`SancakTalimi`, `/api/birlik/talim`, `lib/oyun/talim.js`, soru bankası `lib/oyun/soruBankasi.js` 160 soru %50 DKAB).
+- Yeni tablolar `lib/sunucu/ekTablolar.js` içinde ilk istekte kurulur (göç dosyası `migrations/0007_birlik_meydani.sql`).
+- Eksik görseller: Talimhane ve Haberleşme Kulesi dış görünüşü (şimdilik oyun çadırı resmi / 🕊️ mühür).

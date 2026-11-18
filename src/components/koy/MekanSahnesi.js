@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { BINALAR, KAYNAKLAR, NOKTALAR, toplamKonutKapasitesi } from "@/lib/oyun/sabitler";
+import { BINALAR, BIRLIK_ACILIS_LEVEL, KAYNAKLAR, NOKTALAR, toplamKonutKapasitesi } from "@/lib/oyun/sabitler";
 import { kaynakAcikMi, saatlikUretim, meydanOlayDurumu, mektupBugunAlindi, madenOyunModu } from "@/lib/oyun/kurallar";
 import { koyDavalariListesi, gocmenDurumu } from "@/lib/oyun/hikayeler";
 import { AileOkumasiKutusu, NamazCetelesiKutusu, ObaDavaKutusu, SosyalMeydanKutusu } from "./GorevlerEkrani";
@@ -511,13 +511,7 @@ export function KoyMeydaniSahnesi({ oyun }) {
           >
             🕌 Köy Camii (Namaz Çetelesi)
           </button>
-          <button
-            type="button"
-            onClick={() => setGorunum("cinar_sohbet")}
-            className="rounded-2xl varak-dugme px-4 py-2 text-xs font-black text-stone-950 shadow-lg hover:brightness-110"
-          >
-            🌳 Çınar Altı Sohbeti (Sosyal Medya Sayfası) →
-          </button>
+
         </div>
       </div>
 
@@ -530,7 +524,12 @@ export function KoyMeydaniSahnesi({ oyun }) {
         kalanSaat={kalanSaat}
         diyalogAcik={diyalogAcik || gorunum === "karar_ekrani"}
         onMisafirEtkilesim={() => setDiyalogAcik(true)}
-        onCinarSohbetAc={() => setGorunum("cinar_sohbet")}
+        onCinarSohbetAc={() =>
+          oyun.setMesaj({
+            tur: "bilgi",
+            metin: `🌳 Çınar Altı sohbeti Birlik Meydanı'nda! Level ${BIRLIK_ACILIS_LEVEL}'te üstteki Birlik Alanı düğmesinden git.`,
+          })
+        }
         onBilgiMesaji={(metin) => oyun.setMesaj({ tur: "bilgi", metin })}
       >
         {/* 1. 3D EKRAN İÇİ KONUŞMA POP-UP KUTUSU */}

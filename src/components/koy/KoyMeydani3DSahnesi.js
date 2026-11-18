@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { grafikProfili } from "./grafikProfili";
 
 // =============================================================
 // SEYRÜSEFER v3 — 3D BİRİNCİ ŞAHIS (FIRST-PERSON) KÖY MEYDANI
@@ -48,12 +49,29 @@ function kareZamanlayiciOlustur(gl, yazilimGl) {
   let rafId = 0;
   let timerId = 0;
   let durdu = false;
+  let sonCizim = 0;
   const gl2 = typeof WebGL2RenderingContext !== "undefined" && gl instanceof WebGL2RenderingContext ? gl : null;
 
   const sonraki = (fn) => {
     if (durdu) return;
     if (!yazilimGl) {
-      rafId = requestAnimationFrame(fn);
+      const fps = grafikProfili().fps;
+      if (fps >= 60) {
+        rafId = requestAnimationFrame(fn);
+        return;
+      }
+      // Telefonda 30 kare/sn
+      const aralik = 1000 / fps - 2;
+      const bekle = (t) => {
+        if (durdu) return;
+        if (t - sonCizim >= aralik) {
+          sonCizim = t;
+          fn(t);
+          return;
+        }
+        rafId = requestAnimationFrame(bekle);
+      };
+      rafId = requestAnimationFrame(bekle);
       return;
     }
     if (gl2) {
@@ -858,17 +876,18 @@ export default function KoyMeydani3DSahnesi({
     const yazilimGl = testGl ? yazilimGlTespit(testGl) : true;
     testGl?.getExtension("WEBGL_lose_context")?.loseContext();
 
+    const profil = grafikProfili();
     const renderer = new THREE.WebGLRenderer({
-      antialias: !yazilimGl,
+      antialias: !yazilimGl && profil.aa,
       powerPreference: "high-performance",
     });
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
     const dokunmatik = dokunmatikMi();
-    renderer.setPixelRatio(yazilimGl ? 1 : Math.min(window.devicePixelRatio || 1, dokunmatik ? 1.5 : 2));
-    renderer.shadowMap.enabled = !yazilimGl;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setPixelRatio(yazilimGl ? 1 : Math.min(window.devicePixelRatio || 1, profil.dpr));
+    renderer.shadowMap.enabled = !yazilimGl && profil.golge;
+    renderer.shadowMap.type = profil.yumusakGolge ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
 
     const ilkGenislik = Math.max(320, kapsayici.clientWidth || 960);
     const ilkYukseklik = Math.max(240, kapsayici.clientHeight || 540);
@@ -893,7 +912,7 @@ export default function KoyMeydani3DSahnesi({
     gunes.position.set(12, 18, 10);
     if (renderer.shadowMap.enabled) {
       gunes.castShadow = true;
-      const golgeBoyut = dokunmatik ? 1024 : 2048;
+      const golgeBoyut = Math.min(dokunmatik ? 1024 : 2048, profil.golgeBoyut);
       gunes.shadow.mapSize.set(golgeBoyut, golgeBoyut);
       // Dar kamera: yalnız meydan ve çevre evler (±15) gölge haritasına girer
       gunes.shadow.camera.left = -15;
@@ -1414,7 +1433,7 @@ export default function KoyMeydani3DSahnesi({
             geriCagrilarRef.current.onMisafirEtkilesim?.();
           } else if (varilanTur === "cinar") {
             geriCagrilarRef.current.onBilgiMesaji?.(
-              "🌳 Ulu Çınar'ın gölgesine geldin! Çınar Altı Sohbeti'ne katılabilirsin."
+              "🌳 Ulu Çınar'ın gölgesinde serinledin. Çınar Altı sohbeti artık Birlik Meydanı'nda!"
             );
           } else if (varilanTur === "cesme") {
             geriCagrilarRef.current.onBilgiMesaji?.(
@@ -1764,7 +1783,7 @@ export default function KoyMeydani3DSahnesi({
             onClick={onCinarSohbetAc}
             className="varak-dugme rounded-2xl px-4 py-2.5 text-xs sm:text-sm"
           >
-            🌳 Çınar Altı Sohbeti&apos;ne Katıl →
+            🌳 Çınar Altı Nerede?
           </button>
         )}
 

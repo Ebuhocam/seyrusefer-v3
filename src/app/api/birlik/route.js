@@ -5,6 +5,7 @@ import { govde, hata, oturumZorunlu, oyunYaniti } from "@/lib/sunucu/api";
 import { BIRLIK_ACILIS_LEVEL, ALAN_MUCADELESI_LEVEL, BIRLIK_BINALARI, BOLGELER, KAYNAKLAR } from "@/lib/oyun/sabitler";
 import { bedelKontrol } from "@/lib/oyun/kurallar";
 import { oyunGunu } from "@/lib/oyun/gorevler";
+import { ekTablolariHazirla, kotuSozVarMi } from "@/lib/sunucu/ekTablolar";
 
 // Birlik kasası yalnızca bu üç kaynağı tutar (👥 İnsan bağışlanamaz, harcanamaz)
 const KASA_KAYNAKLARI = ["erzak", "kereste", "tas"];
@@ -12,6 +13,8 @@ const EN_AZ_BAGIS = 10;
 const EN_COK_BAGIS = 100000;
 const DISIPLIN_GUN = 7;
 const MESAJ_ARALIK_MS = 3000;
+// İki farklı kardeşin şikâyet ettiği mesaj sohbetten gizlenir
+const MESAJ_GIZLEME_SIKAYET = 2;
 const SANCAK_RENGI_VARSAYILAN = "#d97706";
 
 /** Görünmez/kontrol karakterlerini atar, boşlukları sadeleştirir */
@@ -91,6 +94,7 @@ const hamleGucu = (bolge, disiplinYuzde) => Math.round(((Number(bolge.temelGuc) 
 
 async function birlikDurumuGetir(kullaniciId, bugun, ayarlar = null) {
   const d = await db();
+  await ekTablolariHazirla(d);
   const uyeSiniri = ayarlar?.birlik?.uyeSiniri ?? BIRLIK_UYE_SINIRI_VARSAYILAN;
   const uyelik = await d
     .prepare(
@@ -204,6 +208,7 @@ async function birlikDurumuGetir(kullaniciId, bugun, ayarlar = null) {
            FROM birlik_mesajlari m
            JOIN kullanicilar k ON k.id = m.kullanici_id
           WHERE m.birlik_id = ?
+            AND (SELECT COUNT(*) FROM birlik_mesaj_sikayet s WHERE s.mesaj_id = m.id) < ${MESAJ_GIZLEME_SIKAYET}
           ORDER BY m.olusturma DESC, m.id DESC
           LIMIT 40`
       )
@@ -438,6 +443,9 @@ export async function POST(request) {
   } else if (g.eylem === "mesajYaz") {
     const mesaj = temizMetin(g.mesaj, true);
     if (mesaj.length < 2 || mesaj.length > 280) return hata("Mesaj 2 ile 280 karakter arasında olmalı.");
+    if (kotuSozVarMi(mesaj)) {
+      return hata("Bu mesajda kırıcı bir söz var. Haberleşme Kulesi'nde güzel ve saygılı konuşalım 🙂", 422);
+    }
 
     const uyelik = await uyelikGetir();
     if (!uyelik) return hata("Önce bir birliğe katılmalısın.");
@@ -458,6 +466,21 @@ export async function POST(request) {
       .prepare("INSERT INTO birlik_mesajlari (birlik_id, kullanici_id, mesaj, olusturma) VALUES (?, ?, ?, ?)")
       .bind(uyelik.birlik_id, kullanici.id, mesaj, Date.now())
       .run();
+  } else if (g.eylem === "mesajSikayet") {
+    const mesajId = Number(g.mesajId);
+    const uyelik = await uyelikGetir();
+    if (!uyelik) return hata("Önce bir birliğe katılmalısın.");
+    const m = await d
+      .prepare("SELECT id, kullanici_id FROM birlik_mesajlari WHERE id = ?1 AND birlik_id = ?2")
+      .bind(mesajId, uyelik.birlik_id)
+      .first();
+    if (!m) return hata("Mesaj bulunamadı.", 404);
+    if (m.kullanici_id === kullanici.id) return hata("Kendi mesajını şikâyet edemezsin; istersen silebilirsin.");
+    await d
+      .prepare("INSERT OR IGNORE INTO birlik_mesaj_sikayet (mesaj_id, kullanici_id, olusturma) VALUES (?1, ?2, ?3)")
+      .bind(mesajId, kullanici.id, Date.now())
+      .run();
+    ek.bildirim = "🚩 Şikâyetin alındı. Teşekkürler, sohbetimizi birlikte güzel tutuyoruz.";
   } else if (g.eylem === "mesajSil") {
     const mesajId = Number(g.mesajId);
     const uyelik = await uyelikGetir();

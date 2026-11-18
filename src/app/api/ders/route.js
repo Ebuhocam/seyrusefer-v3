@@ -2,6 +2,7 @@ import { db } from "@/lib/sunucu/db";
 import { durumGetir, durumYaz, oyunSaati } from "@/lib/sunucu/oyunDeposu";
 import { govde, hata, oturumZorunlu, oyunYaniti } from "@/lib/sunucu/api";
 import { trGunNo } from "@/lib/oyun/kurallar";
+import { ekTablolariHazirla } from "@/lib/sunucu/ekTablolar";
 
 // Ders Çalışma Köşesi: kitap okuma, ödev ve konu tekrarı oturumları
 const TURLER = ["kitap", "odev", "tekrar"];
@@ -12,25 +13,7 @@ const HUZUR_DAKIKA = 30;
 const GUNLUK_HUZUR_TAVANI = 4;
 const GECMIS_GUN = 30;
 
-// Tablo, göç (migration) çalıştırılmamış olsa da ilk istekte kurulur
-const TABLO_SQL = [
-  `CREATE TABLE IF NOT EXISTS ders_calisma (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    kullanici_id INTEGER NOT NULL,
-    gun INTEGER NOT NULL,
-    tur TEXT NOT NULL,
-    hedef_dakika INTEGER NOT NULL,
-    dakika INTEGER NOT NULL DEFAULT 0,
-    baslangic INTEGER NOT NULL,
-    bitis INTEGER
-  )`,
-  `CREATE INDEX IF NOT EXISTS ders_calisma_kullanici_gun ON ders_calisma (kullanici_id, gun)`,
-];
-async function tabloHazirla(d) {
-  if (globalThis.__dersTablosuHazir) return;
-  for (const sql of TABLO_SQL) await d.prepare(sql).run();
-  globalThis.__dersTablosuHazir = true;
-}
+const tabloHazirla = ekTablolariHazirla;
 
 /** Son 30 günün gün gün toplamı, bugünün oturumları ve (varsa) yarım kalmış açık oturum */
 async function ozet(d, kullaniciId, bugun) {

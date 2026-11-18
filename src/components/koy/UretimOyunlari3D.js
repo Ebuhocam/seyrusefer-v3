@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { grafikProfili } from "./grafikProfili";
 import { ORMAN_KESIF_BOLGELERI } from "@/lib/oyun/sabitler";
 
 // =============================================================
@@ -28,6 +29,7 @@ function dokunmatikMi() {
   return Boolean(window.matchMedia?.("(pointer: coarse)")?.matches) || (navigator.maxTouchPoints ?? 0) > 0;
 }
 
+
 function yazilimGlTespit(gl) {
   try {
     const dbg = gl.getExtension("WEBGL_debug_renderer_info");
@@ -43,12 +45,29 @@ function kareZamanlayiciOlustur(gl, yazilimGl) {
   let rafId = 0;
   let timerId = 0;
   let durdu = false;
+  let sonCizim = 0;
   const gl2 = typeof WebGL2RenderingContext !== "undefined" && gl instanceof WebGL2RenderingContext ? gl : null;
 
   const sonraki = (fn) => {
     if (durdu) return;
     if (!yazilimGl) {
-      rafId = requestAnimationFrame(fn);
+      const fps = grafikProfili().fps;
+      if (fps >= 60) {
+        rafId = requestAnimationFrame(fn);
+        return;
+      }
+      // Telefonda 30 kare/sn: ekran tazelemesinin yarısında çizilir, işlemci ve pil rahatlar
+      const aralik = 1000 / fps - 2;
+      const bekle = (t) => {
+        if (durdu) return;
+        if (t - sonCizim >= aralik) {
+          sonCizim = t;
+          fn(t);
+          return;
+        }
+        rafId = requestAnimationFrame(bekle);
+      };
+      rafId = requestAnimationFrame(bekle);
       return;
     }
     if (gl2) {
@@ -100,18 +119,18 @@ function zamanOlcerKur(yazilimGl) {
   };
 }
 
-// Renderer: sRGB, ACES, piksel oranı sınırı (dokunmatik ≤1.5, diğer ≤2), yumuşak gölge
+// Renderer: sRGB, ACES; piksel oranı, kenar yumuşatma ve gölge kalitesi grafik profiline göre
 function rendererKur(el) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+  const profil = grafikProfili();
+  const renderer = new THREE.WebGLRenderer({ antialias: profil.aa, powerPreference: "high-performance" });
   const gl = renderer.getContext();
   const yazilimGl = yazilimGlTespit(gl);
-  const sinir = dokunmatikMi() ? 1.5 : 2;
-  renderer.setPixelRatio(yazilimGl ? 1 : Math.min(window.devicePixelRatio || 1, sinir));
+  renderer.setPixelRatio(yazilimGl ? 1 : Math.min(window.devicePixelRatio || 1, profil.dpr));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = profil.golge && !yazilimGl;
+  renderer.shadowMap.type = profil.yumusakGolge ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   const w = el.clientWidth || 800;
   const h = el.clientHeight || 450;
   renderer.setSize(w, h, false);
@@ -399,8 +418,10 @@ function isikKur(scene, { poz = [6, 10, 5], hedef = [0, 0, 0], yaricap = 7, golg
   const gunes = new THREE.DirectionalLight(0xffe0b0, siddet);
   gunes.position.set(hedef[0] + poz[0], hedef[1] + poz[1], hedef[2] + poz[2]);
   gunes.target.position.set(hedef[0], hedef[1], hedef[2]);
-  gunes.castShadow = true;
-  gunes.shadow.mapSize.set(golgeBoyut, golgeBoyut);
+  const profil = grafikProfili();
+  gunes.castShadow = profil.golge;
+  const boyut = Math.min(golgeBoyut, profil.golgeBoyut);
+  gunes.shadow.mapSize.set(boyut, boyut);
   const k = gunes.shadow.camera;
   k.left = -yaricap;
   k.right = yaricap;

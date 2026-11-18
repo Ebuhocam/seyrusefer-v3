@@ -5,6 +5,7 @@ import {
   NOKTALAR,
   BINALAR,
   BIRLIK_BINALARI,
+  BIRLIK_MEYDANI_CINAR,
   BOLGELER,
   KAYNAKLAR,
   BIRLIK_ACILIS_LEVEL,
@@ -915,19 +916,40 @@ export default function KoyHaritasi({ baslangic }) {
                         zIndex: Math.round(b.y * 2),
                       }}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={b.gorsel(seviye)}
-                        alt={b.ad}
-                        draggable={false}
-                        className="block h-auto w-full drop-shadow-[0_10px_12px_rgba(0,0,0,0.5)] select-none"
-                      />
+                      {b.gorsel ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={b.gorsel(seviye)}
+                          alt={b.ad}
+                          draggable={false}
+                          className="block h-auto w-full drop-shadow-[0_10px_12px_rgba(0,0,0,0.5)] select-none"
+                        />
+                      ) : (
+                        // Dış görseli henüz olmayan bina: arsada tezhipli bir mühür
+                        <span className="harita-isaret mx-auto grid aspect-square w-3/4 place-items-center rounded-full bg-stone-900/90 text-3xl shadow-xl ring-2 ring-amber-400/80">
+                          {b.ikon ?? "🏛️"}
+                        </span>
+                      )}
                       <span className="harita-etiket absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-stone-900/95 px-2.5 py-0.5 text-xs font-black text-amber-100 shadow-lg ring-1 ring-amber-400/70 transition-transform duration-150 group-hover:scale-105">
                         {b.ad} · Lv.{seviye}
                       </span>
                     </button>
                   );
                 })}
+
+                {/* Birlik Meydanı: Ulu Çınar altında herkese açık Çınar Altı sohbeti */}
+                <button
+                  type="button"
+                  aria-label="Birlik Meydanı · Çınar Altı"
+                  onClick={() => setSecim({ tur: "cinarAlti", id: "cinar" })}
+                  className="group absolute -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-105"
+                  style={{ left: `${BIRLIK_MEYDANI_CINAR.x}%`, top: `${BIRLIK_MEYDANI_CINAR.y}%`, zIndex: 205 }}
+                >
+                  <span className="harita-isaret flex flex-col items-center gap-0.5 rounded-2xl bg-emerald-700/90 px-3 py-1.5 text-emerald-50 shadow-xl ring-2 ring-amber-300/80">
+                    <span className="text-xl" aria-hidden="true">🌳</span>
+                    <span className="whitespace-nowrap text-[11px] font-black">Çınar Altı Sohbeti</span>
+                  </span>
+                </button>
 
                 <div className="pointer-events-none absolute bottom-4 left-1/2 z-[210] -translate-x-1/2 rounded-2xl bg-stone-950/90 px-4 py-2 text-center text-xs text-amber-100 shadow-xl ring-1 ring-amber-500/50">
                   {birlikOzeti?.birlik ? (

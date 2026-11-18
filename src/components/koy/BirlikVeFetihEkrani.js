@@ -196,7 +196,7 @@ export function BirlikPaneli({ oyun, varsayilanSekme = "birlik", seciliBolgeId =
       <div className="grid grid-cols-3 rounded-xl bg-stone-950/70 p-1 text-xs font-bold">
         {[
           ["birlik", "🏦 Vergi & Üyeler"],
-          ["sohbet", "💬 Otağ Sohbeti"],
+          ["sohbet", "🕊️ Haberleşme"],
           ["fetih", "🚩 Sancak Haritası"],
         ].map(([kod, etiket]) => (
           <button
@@ -303,13 +303,13 @@ export function BirlikPaneli({ oyun, varsayilanSekme = "birlik", seciliBolgeId =
           <div className="tezhip rounded-2xl bg-stone-950/80 p-3.5">
             <h4 className="text-xs font-bold text-amber-300">💬 {birlik.ad} · Birlik Otağı İstişare Meclisi</h4>
             <p className="mt-0.5 text-[11px] text-amber-200/70">
-              Birlik kardeşlerinle görevleri, namaz çetelesini ve Sancak Haritası stratejinizi burada konuşabilirsin.
+              Birlik kardeşlerinle görevleri, namaz çetelesini ve Sancak Talimi stratejinizi burada konuşabilirsin. Güzel ve saygılı konuşalım; kırıcı sözler gönderilmez, rahatsız eden mesajı 🚩 ile şikâyet edebilirsin.
             </p>
           </div>
 
           <div className="max-h-60 space-y-2 overflow-y-auto rounded-2xl bg-stone-950/90 p-3 ring-1 ring-stone-800">
             {!birlik.mesajlar || birlik.mesajlar.length === 0 ? (
-              <p className="py-6 text-center text-xs text-stone-400">Birlik Otağı&apos;nda henüz mesaj yok. İlk selamı sen ver!</p>
+              <p className="py-6 text-center text-xs text-stone-400">Haberleşme Kulesi&apos;nde henüz mesaj yok. İlk selamı sen ver!</p>
             ) : (
               birlik.mesajlar.map((m) => {
                 const benim = m.kullanici_id === ben;
@@ -333,6 +333,16 @@ export function BirlikPaneli({ oyun, varsayilanSekme = "birlik", seciliBolgeId =
                             mesgul={mesgul}
                             sinif="text-stone-400 hover:text-red-300"
                             onOnay={() => islemYap({ eylem: "mesajSil", mesajId: m.id }, "Mesaj silindi.")}
+                          />
+                        )}
+                        {!benim && (
+                          <OnayliDugme
+                            etiket="🚩"
+                            soru="Şikâyet edilsin mi?"
+                            onayEtiketi="Şikâyet Et"
+                            mesgul={mesgul}
+                            sinif="text-stone-400 hover:text-amber-300"
+                            onOnay={() => islemYap({ eylem: "mesajSikayet", mesajId: m.id }, "Şikâyetin alındı.")}
                           />
                         )}
                       </span>

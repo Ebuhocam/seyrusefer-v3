@@ -335,14 +335,14 @@ export const NOKTALAR = {
   },
 };
 
-// ---------- 2. KATMAN: BİRLİK ALANI BİNALARI (Level 4+) ----------
+// ---------- 2. KATMAN: BİRLİK ALANI BİNALARI (Level 3+) ----------
 export const BIRLIK_BINALARI = {
   otag: {
     ad: "Birlik Otağı",
-    aciklama: "Birliğin mesajlaşma (istişare) odası ve ortak vergi/kasa toplama merkezi.",
+    aciklama: "Birliğin merkezi: birlik kurma, katılma, üyeler, ortak kasa ve teşvikler.",
     gorsel: (s) => `/assets/binalar/otag${Math.min(4, Math.max(1, s || 4))}.webp`,
-    x: 47.5,
-    y: 27,
+    x: 49.5,
+    y: 80,
     genislik: 15,
     maksSeviye: 4,
     bedel: {
@@ -354,9 +354,10 @@ export const BIRLIK_BINALARI = {
   cami: {
     ad: "Ulu Cami",
     aciklama: "Birlik kardeşlerinin ortak namaz çetelesi ve maneviyat merkezi.",
+    icMekan: "/assets/mekanlar/cami_ici.webp",
     gorsel: (s) => `/assets/binalar/cami${Math.min(4, Math.max(1, s || 1))}.webp`,
-    x: 18,
-    y: 50,
+    x: 26,
+    y: 40,
     genislik: 14,
     maksSeviye: 4,
     bedel: {
@@ -366,11 +367,12 @@ export const BIRLIK_BINALARI = {
     },
   },
   medrese: {
-    ad: "Birlik Medresesi",
-    aciklama: "Birliğin ortak ilim, metin okuma, video ve sınav külliyesi.",
+    ad: "Medrese · Ortak Çalışma Salonu",
+    aciklama: "Birlik kardeşleriyle aynı salonda ders çalış: kim çalışıyor, kaç saat çalıştı, birliğin sıralaması.",
+    icMekan: "/assets/mekanlar/medrese_ici.webp",
     gorsel: (s) => `/assets/binalar/medrese${Math.min(4, Math.max(1, s || 2))}.webp`,
-    x: 73,
-    y: 38,
+    x: 77,
+    y: 42,
     genislik: 14,
     maksSeviye: 4,
     bedel: {
@@ -380,11 +382,12 @@ export const BIRLIK_BINALARI = {
     },
   },
   takasmerkezi: {
-    ad: "Vergi & Takas Merkezi",
-    aciklama: "Üyelerin ortak vergi katkıları ve kardeş teşvik noktası.",
+    ad: "Takas Merkezi",
+    aciklama: "Birlik kardeşlerinle odun, taş ve mahsul takası yap.",
+    icMekan: "/assets/mekanlar/takas_ici.webp",
     gorsel: () => `/assets/binalar/takasmerkezi.webp`,
-    x: 56,
-    y: 84,
+    x: 24.5,
+    y: 63,
     genislik: 12,
     maksSeviye: 2,
     bedel: {
@@ -392,21 +395,37 @@ export const BIRLIK_BINALARI = {
     },
   },
   oyuncadiri: {
-    ad: "Cenk & Yarışma Çadırı",
-    aciklama: "Genel Harita mücadelelerine hazırlık ve istişare çadırı.",
-    gorsel: () => `/assets/binalar/oyuncadiri.webp`,
-    x: 84,
-    y: 65,
+    ad: "Talimhane",
+    aciklama: "Sancak Talimi: bilgi düellosuyla bölge kazan, birliğinin sancağını dalgalandır.",
+    icMekan: "/assets/mekanlar/talimhane_ici.webp",
+    gorsel: () => `/assets/binalar/talimhane.webp`,
+    x: 76.5,
+    y: 63,
     genislik: 12,
     maksSeviye: 2,
     bedel: {
       2: { erzak: 120, kereste: 100, tas: 75 },
     },
+  },  haberlesme: {
+    ad: "Haberleşme Kulesi",
+    aciklama: "Birlik kardeşlerinle grup sohbeti. Saygılı ve güzel sözler; kötü söz filtrelenir, şikâyet edilebilir.",
+    gorsel: () => `/assets/binalar/haberlesme_kulesi.webp`,
+    ikon: "🕊️",
+    icMekan: "/assets/mekanlar/haberlesme_ici.webp",
+    x: 67.5,
+    y: 26,
+    genislik: 6.5,
+    maksSeviye: 1,
+    bedel: {},
   },
+
 };
 
 // ---------- LEVELLAR ----------
-export const BIRLIK_ACILIS_LEVEL = 4;
+/** Birlik Alanı ve Birlik Meydanı (Çınar Altı sosyal paylaşım) bu levelda açılır */
+export const BIRLIK_ACILIS_LEVEL = 3;
+/** Birlik Meydanı'nın ortasındaki Ulu Çınar (Çınar Altı sosyal paylaşım), herkese açık */
+export const BIRLIK_MEYDANI_CINAR = { x: 39, y: 47 };
 export const ALAN_MUCADELESI_LEVEL = 6;
 
 export const LEVELLAR = [
