@@ -50,3 +50,8 @@ next-env.d.ts
 # elle yayın paketi ve eski bun kilit dosyası (Cloudflare otomatik derlemesi npm kullanır)
 /open-next-paketi.zip
 /bun.lock.eski
+
+# tanıtım filmi çıktı ve geçici ses dosyaları (Cloudflare asset limitini ve depoyu şişirmesin)
+/tanitim_filmi*.mp4
+/seslendirme.*
+/muzik.*
