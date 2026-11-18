@@ -12,7 +12,7 @@ import {
   sayiyaEk,
 } from "@/lib/oyun/sabitler";
 import { kaynakAcikMi, mektupBugunAlindi } from "@/lib/oyun/kurallar";
-import { GOREV_TURLERI } from "@/lib/oyun/gorevler";
+import { GOREV_TURLERI, binaSartiTamamMi } from "@/lib/oyun/gorevler";
 import {
   HadisKutusu,
   VideoKutusu,
@@ -514,9 +514,9 @@ function BinaIcerik({ id, oyun, onSecimDegistir, kapat }) {
                     gosterilenGorevler.map((g) => (
                       <Sart
                         key={g.kod}
-                        tamam={g.tamam}
+                        tamam={binaSartiTamamMi(g)}
                         eylem={
-                          !g.tamam && (
+                          !binaSartiTamamMi(g) && (
                             <button
                               type="button"
                               onClick={() => setAcikGorev(g.kod)}

@@ -165,18 +165,44 @@ export default function KoyHaritasi({ baslangic }) {
       ? { ...hamRehberAdimi, hedefler: rehberGorunenHedefler.hedefler }
       : hamRehberAdimi;
 
+  // Tanıtım turunu bir kez geçen öğrenci, sayfayı yenileyince turu baştan görmesin (cihazda hatırlanır)
+  useEffect(() => {
+    let gorulmus = false;
+    try {
+      gorulmus = window.localStorage.getItem("seyrusefer_tanitim_goruldu") === "1";
+    } catch {
+      // tarayıcı hafızası kapalıysa tur her seferinde gösterilir
+    }
+    const bolum = REHBER_ADIMLARI[rehberAdimIndeks]?.bolum;
+    // Açılışta görev adımını bugünün durumuna göre yeniden seç (ör. yeni günde önce Haberci'nin mektubu)
+    if ((gorulmus && bolum === "tanitim") || bolum === "gorev") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRehberAdimIndeks(ilkEksikRehberAdimi(oyun.durum, oyun.gorevler, false, oyun.simdi));
+    }
+    // yalnızca açılışta bir kez
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (REHBER_ADIMLARI[rehberAdimIndeks]?.bolum !== "gorev") return;
+    try {
+      window.localStorage.setItem("seyrusefer_tanitim_goruldu", "1");
+    } catch {
+      // saklanamazsa sorun değil
+    }
+  }, [rehberAdimIndeks]);
+
   // Bina inşa edildiğinde (ör. Mektep kurulduğunda) veya görev/level ilerlediğinde rehber açıksa sıradaki adıma otomatik geçsin
   useEffect(() => {
     if (!oyun.hazir || !rehberAcik) return;
     const adim = REHBER_ADIMLARI[rehberAdimIndeks];
-    if (adim?.bolum === "gorev" && adim.tamamMi?.(oyun.durum, oyun.gorevler)) {
-      const yeniIndeks = ilkEksikRehberAdimi(oyun.durum, oyun.gorevler, false);
+    if (adim?.bolum === "gorev" && adim.tamamMi?.(oyun.durum, oyun.gorevler, oyun.simdi)) {
+      const yeniIndeks = ilkEksikRehberAdimi(oyun.durum, oyun.gorevler, false, oyun.simdi);
       if (yeniIndeks !== rehberAdimIndeks) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setRehberAdimIndeks(yeniIndeks);
       }
     }
-  }, [oyun.hazir, oyun.durum, oyun.gorevler, rehberAcik, rehberAdimIndeks]);
+  }, [oyun.hazir, oyun.durum, oyun.gorevler, oyun.simdi, rehberAcik, rehberAdimIndeks]);
 
   const rehberKameraHedefleri = rehberAcik && katman === "koy" ? aktifRehberAdimi?.hedefler ?? [] : [];
   const rehberHedefleri =
@@ -978,7 +1004,7 @@ export default function KoyHaritasi({ baslangic }) {
         rehberAcik={rehberAcik}
         onRehberAcKapat={() => {
           if (!rehberAcik) {
-            setRehberAdimIndeks(ilkEksikRehberAdimi(durum, oyun.gorevler));
+            setRehberAdimIndeks(ilkEksikRehberAdimi(durum, oyun.gorevler, false, oyun.simdi));
             setKatman("koy");
             setRehberAcik(true);
           } else {
@@ -1041,7 +1067,7 @@ export default function KoyHaritasi({ baslangic }) {
         <div
           key={oyun.mesaj.metin}
           role="status"
-          className={`levha-ac fixed top-[4.5rem] left-1/2 z-[450] flex max-w-[92vw] -translate-x-1/2 items-center gap-2 rounded-2xl px-4 py-2 text-sm font-bold shadow-[0_12px_30px_rgba(0,0,0,0.5)] ring-1 ${
+          className={`levha-ac fixed top-[6.75rem] left-1/2 z-[450] sm:top-[4.5rem] flex max-w-[92vw] -translate-x-1/2 items-center gap-2 rounded-2xl px-4 py-2 text-sm font-bold shadow-[0_12px_30px_rgba(0,0,0,0.5)] ring-1 ${
             oyun.mesaj.tur === "hata"
               ? "bg-red-700 text-white ring-red-400/60"
               : oyun.mesaj.tur === "bilgi"
@@ -1064,7 +1090,7 @@ export default function KoyHaritasi({ baslangic }) {
           kapat={() => {
             setSecim(null);
             if (rehberAcik) {
-              setRehberAdimIndeks(ilkEksikRehberAdimi(oyun.durum, oyun.gorevler, false));
+              setRehberAdimIndeks(ilkEksikRehberAdimi(oyun.durum, oyun.gorevler, false, oyun.simdi));
             }
           }}
         />

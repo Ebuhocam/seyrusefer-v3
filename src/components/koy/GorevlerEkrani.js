@@ -542,6 +542,7 @@ function instagramEmbedUrlCikar(url) {
 }
 
 export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
+  const meydanKurulu = (oyun.durum?.binalar?.sosyalmeydan ?? 0) >= 1;
   const { durum, aktifIcerik } = oyun;
   const gundemSorusu = aktifIcerik?.gundemSorusu;
   const [paylasimlar, setPaylasimlar] = useState([]);
@@ -762,7 +763,17 @@ export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
         </div>
       </div>
 
-      {/* Paylaşım Oluşturma Kartı */}
+      {/* Paylaşım Oluşturma Kartı: Köy Meydanı kurulana kadar akış yalnızca okunur */}
+      {!meydanKurulu ? (
+        <div className="rounded-3xl bg-stone-950/85 p-4 text-center ring-1 ring-amber-500/35 sm:p-5">
+          <div className="text-3xl" aria-hidden="true">🏗️</div>
+          <p className="mt-1 text-sm font-black text-amber-100">Çınar Altı&apos;nda söz almak için önce Köy Meydanı&apos;nı kur</p>
+          <p className="mx-auto mt-1 max-w-md text-xs text-amber-200/80">
+            Şimdilik diğer köylerin paylaşımlarını okuyabilirsin. Meydanını kurunca sen de paylaşım yapabilir, beğenip yorum
+            yazabilirsin.
+          </p>
+        </div>
+      ) : (
       <form onSubmit={paylas} className="space-y-3.5 rounded-3xl bg-stone-950/85 p-4 shadow-xl ring-1 ring-amber-500/35 sm:p-5">
         {/* 1. Kategori Seçimi: Gündem İçi vs Gündem Harici Serbest Kürsü */}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -875,6 +886,7 @@ export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
             : "🌿 Serbest Kürsüde Paylaş (+1 😊 Köy Huzuru)"}
         </button>
       </form>
+      )}
 
       {/* Akış Filtre Sekmeleri */}
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1008,6 +1020,8 @@ export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
+                      disabled={!meydanKurulu}
+                      title={!meydanKurulu ? "Önce Köy Meydanı'nı kur" : undefined}
                       onClick={() => begeniDegistir(p.id)}
                       className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-black transition ${
                         p.benBegendim
@@ -1021,11 +1035,13 @@ export function SosyalMeydanKutusu({ oyun, onGeriDon }) {
 
                     <button
                       type="button"
+                      disabled={!meydanKurulu}
+                      title={!meydanKurulu ? "Önce Köy Meydanı'nı kur" : undefined}
                       onClick={() => {
                         setAcikYorumId(acikYorumId === p.id ? null : p.id);
                         setYorumMetni("");
                       }}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-stone-900 px-3 py-1.5 font-bold text-amber-200 ring-1 ring-stone-700 hover:bg-stone-800"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-stone-900 px-3 py-1.5 font-bold text-amber-200 ring-1 ring-stone-700 hover:bg-stone-800 disabled:opacity-50"
                     >
                       <span>💬</span>
                       <span>Yorum Yap ({p.yorumlar?.length ?? 0})</span>
@@ -1166,6 +1182,12 @@ export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup
   const { durum, aktifIcerik } = oyun;
   const aileGorevi = oyun.gorevler.find((g) => g.tur === "aile" || g.kod === "aile");
   const mektupAlindiMi = mektupBugunAlindi(durum, oyun.simdi);
+  // Haberci'nin bugün getirdiği mektup (levelın ilk mektubu ya da günlük havuzdan sıradaki)
+  const gelenMektup = gununMektubu(
+    durum.level,
+    mektupAlindiMi ? durum.mektupNo : (aileGorevi?.yapilan ?? 0),
+    aktifIcerik?.aile
+  );
 
   return (
     <div className="space-y-3">
@@ -1195,10 +1217,10 @@ export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup
             />
             <div className="flex-1 space-y-2 text-center sm:text-left">
               <span className="inline-block rounded-full bg-amber-500/20 px-3 py-0.5 text-xs font-black text-amber-300 ring-1 ring-amber-400/40">
-                📜 Köy Habercisi · Level {durum.level} Mühürlü Aile Mektubu
+                📜 Köy Habercisi · Bugünün Mühürlü Mektubu
               </span>
               <h3 className="text-base font-black text-amber-100">
-                {aktifIcerik?.aile?.baslik ?? "Aile Meclisi Mektubu"}
+                {gelenMektup?.baslik ?? "Aile Meclisi Mektubu"}
               </h3>
               {!mektupAlindiMi ? (
                 <p className="text-xs leading-relaxed text-amber-100/90">
@@ -1238,7 +1260,7 @@ export function HaberciKutusu({ oyun, onSecimDegistir, varsayilanSekme = "mektup
           {/* Mektup içeriği Haberci sayfasında gösterilmez; yalnızca Kendi Evim'de aile çağrıldıktan sonra açılır */}
           <div className="rounded-2xl bg-stone-950/75 p-4 text-center text-xs text-amber-200/85 ring-1 ring-stone-800">
             🔒 <b>Mühürlü Aile Mektubu:</b> Mektup metni Haberci ekranında gizlidir. Mektubu okumak için{" "}
-            <b>Kendi Evim</b> binasına girip ev halkını yanına davet etmelisin.
+            <b>Kendi Evim</b> binasına girip ailenle bir araya gelmelisin.
           </div>
         </div>
       ) : (

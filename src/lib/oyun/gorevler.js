@@ -40,14 +40,14 @@ export const LEVEL_GOREVLERI = {
       // Video, 2. günün hadisiyle birlikte açılır
       onKosul: { kod: "hadis", enAz: 2, metin: "Bu video, Mektep'te 2. günün hadisini okuyunca açılır." },
     },
-    { kod: "aile", tur: "aile", ad: "Haberci'nin Aile Mektuplarını 3 Gün Oku", hedef: 3, gunluk: true, bina: "kiraathane" },
+    { kod: "aile", tur: "aile", ad: "Haberci'nin Aile Mektuplarını 3 Gün Oku", hedef: 3, gunluk: true, binaIcinEnAz: 1, bina: "kiraathane" },
     { kod: "turku", tur: "turku", ad: "Kıraathane'de Ozan Dede'yi Dinle", hedef: 1, gunluk: false, bina: null },
   ],
   2: [
     { kod: "namaz", tur: "namaz", ad: "5 Gün Namaz Çetelesi Doldur", hedef: 5, gunluk: true, bina: "sosyalmeydan" },
     { kod: "hadis", tur: "hadis", ad: "Mektep'te 5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "sosyalmeydan" },
     { kod: "dava", tur: "dava", ad: "Köy Meydanı'nda 1 Halk Sorununu Hikmetle Çöz", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
-    { kod: "aile", tur: "aile", ad: "Haberci'nin Mektuplarını 3 Gün Ailece Oku", hedef: 3, gunluk: true, bina: "sosyalmeydan" },
+    { kod: "aile", tur: "aile", ad: "Haberci'nin Mektuplarını 3 Gün Ailece Oku", hedef: 3, gunluk: true, binaIcinEnAz: 1, bina: "sosyalmeydan" },
   ],
   3: [
     { kod: "sinav", tur: "sinav", ad: "Mektep Hadis ve İlim Sınavı", hedef: 1, gunluk: false, bina: "otag" },
@@ -72,19 +72,19 @@ export const LEVEL_GOREVLERI = {
     { kod: "seyyah", tur: "seyyah", ad: "Haberci'nin 3 Yardım Görevini Yap", hedef: 3, gunluk: true, bina: "mektep" },
     { kod: "namaz", tur: "namaz", ad: "Ulu Cami'de 5 Gün Namaz Çetelesi Doldur", hedef: 5, gunluk: true, bina: "mektep" },
     { kod: "video", tur: "video", ad: "İnfak ve Yardımseverlik Videosu", hedef: 1, gunluk: false, bina: "otag" },
-    { kod: "aile", tur: "aile", ad: "Haberci Mektupları: Paylaşmanın Bereketi (3 Gün)", hedef: 3, gunluk: true, bina: "otag" },
+    { kod: "aile", tur: "aile", ad: "Haberci Mektupları: Paylaşmanın Bereketi (3 Gün)", hedef: 3, gunluk: true, binaIcinEnAz: 1, bina: "otag" },
   ],
   7: [
     { kod: "hadis", tur: "hadis", ad: "5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "kiraathane" },
     { kod: "turku", tur: "turku", ad: "Ozan Dede Sıla-i Rahim Türküsü", hedef: 1, gunluk: false, bina: "kiraathane" },
-    { kod: "aile", tur: "aile", ad: "Aile Büyükleriyle 3 Gün Mektup Okuma", hedef: 3, gunluk: true, bina: "sosyalmeydan" },
+    { kod: "aile", tur: "aile", ad: "Aile Büyükleriyle 3 Gün Mektup Okuma", hedef: 3, gunluk: true, binaIcinEnAz: 1, bina: "sosyalmeydan" },
     { kod: "meydan_paylasim", tur: "meydan_paylasim", ad: "Aile Gündemine Paylaşım Yap", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
   ],
   8: [
     { kod: "namaz", tur: "namaz", ad: "7 Gün Namaz Çetelesi Doldur", hedef: 7, gunluk: true, bina: "mektep" },
     { kod: "hadis", tur: "hadis", ad: "5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "mektep" },
     { kod: "dava", tur: "dava", ad: "Köy Meydanı'nda Sabır ve Kanaat Davasını Çöz", hedef: 1, gunluk: false, bina: "mektep" },
-    { kod: "aile", tur: "aile", ad: "Haberci Mektupları: Sabır ve Şükür (3 Gün)", hedef: 3, gunluk: true, bina: "mektep" },
+    { kod: "aile", tur: "aile", ad: "Haberci Mektupları: Sabır ve Şükür (3 Gün)", hedef: 3, gunluk: true, binaIcinEnAz: 1, bina: "mektep" },
   ],
   9: [
     { kod: "sinav", tur: "sinav", ad: "Adalet ve Emanet İlim Sınavı", hedef: 1, gunluk: false, bina: "kiraathane" },
@@ -96,7 +96,7 @@ export const LEVEL_GOREVLERI = {
     { kod: "namaz", tur: "namaz", ad: "7 Gün Namaz Çetelesi Doldur", hedef: 7, gunluk: true, bina: "otag" },
     { kod: "hadis", tur: "hadis", ad: "5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "otag" },
     { kod: "sinav", tur: "sinav", ad: "Büyük İhsan ve Mezuniyet Sınavı", hedef: 1, gunluk: false, bina: "otag" },
-    { kod: "aile", tur: "aile", ad: "Haberci Mektupları: İhsan ve Ahit (3 Gün)", hedef: 3, gunluk: true, bina: "otag" },
+    { kod: "aile", tur: "aile", ad: "Haberci Mektupları: İhsan ve Ahit (3 Gün)", hedef: 3, gunluk: true, binaIcinEnAz: 1, bina: "otag" },
     { kod: "meydan_paylasim", tur: "meydan_paylasim", ad: "Mezuniyet Tefekkürünü Paylaş", hedef: 1, gunluk: false, bina: "otag" },
   ],
 };
@@ -448,7 +448,14 @@ export function binaGorevleriTamamMi(
   const liste = levelGorevListesi(level, ilerlemeHaritasi, false, Date.now(), ayarlar);
   const binaGorevleri = liste.filter((g) => g.bina === binaId);
   const kontrol = binaGorevleri.length > 0 ? binaGorevleri : liste;
-  return kontrol.every((g) => g.tamam);
+  // Çok günlük bir görev (ör. 3 gün aile mektubu) bina şartı olarak "binaIcinEnAz" kez yapılınca yeterli sayılır
+  return kontrol.every((g) => binaSartiTamamMi(g));
+}
+
+/** Bir görev, bağlı olduğu binanın inşa / yükseltme şartı olarak karşılandı mı? */
+export function binaSartiTamamMi(g) {
+  if (g.tamam) return true;
+  return g.binaIcinEnAz != null && (g.yapilan ?? 0) >= g.binaIcinEnAz;
 }
 
 /** Leveldaki tüm görevler tamamlandı mı? */

@@ -1,9 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import { BINALAR } from "@/lib/oyun/sabitler";
-import { trGunNo } from "@/lib/oyun/kurallar";
+import { trGunNo, mektupBugunAlindi } from "@/lib/oyun/kurallar";
 
 const KIRAATHANE_BEDEL = BINALAR.kiraathane?.bedel?.[1] ?? {};
+
+/** Bu levelda o türde görev yoksa adım geçilmiş sayılır; varsa koşula bakılır (üst levellarda rehber takılmasın) */
+function gorevYoksaVeyaTamam(gorevler, tur, kosul) {
+  const ilgili = gorevler.filter((g) => g.tur === tur);
+  return ilgili.length === 0 || ilgili.some(kosul);
+}
 
 export const REHBER_ADIMLARI = [
   // ================= BÖLÜM 1: KÖY TANITIM TURU (7 ADIM — SADECE KAMERA YAKLAŞIR) =================
@@ -85,7 +91,7 @@ export const REHBER_ADIMLARI = [
     baslik: "1. Yapılacak İş: Mektep 1. Seviyeyi Kur!",
     metin:
       "Köyümüzü tanıdık! Unutma, Mektep kurulmadan görev yapılamaz. Şimdi haritada parlayan Mektep arsasına tıkla ve başlangıç kaynaklarınla 1. Seviyesini hemen inşa et!",
-    hedefler: [{ tur: "bina", id: "mektep", etiket: "🏛️ Mektep Arsını Aç ve Kur" }],
+    hedefler: [{ tur: "bina", id: "mektep", etiket: "🏛️ Mektep Arsasına Git ve Kur" }],
     tamamMi: (durum) => (durum.binalar?.mektep ?? 0) >= 1,
   },
   {
@@ -93,9 +99,9 @@ export const REHBER_ADIMLARI = [
     bolum: "gorev",
     baslik: "2. Yapılacak İş: Mektep'te Günün Hadisini Oku!",
     metin:
-      "Harika, Mektep binamızı kurduk! Şimdi kurduğun Mektep binasına tıklayıp içeri gir. Günün Hadis-i Şerifini oku ve Niyet videosunu izleyerek ilim görevlerini tamamla!",
+      "Mektep binasına tıklayıp içeri gir ve Günün Hadis-i Şerifini oku. Her gün yeni bir hadis seni bekliyor; 2. günün hadisini okuyunca Niyet videosu da açılır!",
     hedefler: [{ tur: "bina", id: "mektep", etiket: "📖 Mektep İçine Gir" }],
-    tamamMi: (_durum, gorevler) => gorevler.some((g) => g.tur === "hadis" && g.yapilan > 0),
+    tamamMi: (_durum, gorevler) => gorevYoksaVeyaTamam(gorevler, "hadis", (g) => g.tamam || g.bugunYapildi),
   },
   {
     kod: "gorev_tarla",
@@ -122,7 +128,10 @@ export const REHBER_ADIMLARI = [
     metin:
       "Güney yolunda atının yanında bekleyen Haberci'ye tıkla ve sana getirdiği mühürlü aile mektubunu teslim al!",
     hedefler: [{ tur: "nokta", id: "haberci", etiket: "📜 Haberci'ye Git" }],
-    tamamMi: (durum) => (durum.mektupAlindi ?? 0) >= (durum.level ?? 1),
+    // Haberci her gün yeni mektup getirir: bugünün mektubu alındı mı (ya da bugün zaten okundu mu)?
+    tamamMi: (durum, gorevler, simdi) =>
+      gorevYoksaVeyaTamam(gorevler, "aile", (g) => g.tamam || g.bugunYapildi) ||
+      (simdi ? mektupBugunAlindi(durum, simdi) : (durum.mektupAlindi ?? 0) >= (durum.level ?? 1)),
   },
   {
     kod: "gorev_ev_mektup",
@@ -131,7 +140,7 @@ export const REHBER_ADIMLARI = [
     metin:
       "Mektup elinde! Şimdi Kendi Evim'e tıklayıp ev içine gir. Ailenin ya da büyüklerinin yanına git; hep beraber oturup mektubu birlikte açın ve okuyun.",
     hedefler: [{ tur: "bina", id: "kendi_evim", etiket: "🏡 Kendi Evime Gir" }],
-    tamamMi: (_durum, gorevler) => gorevler.some((g) => g.tur === "aile" && (g.tamam || g.bugunYapildi)),
+    tamamMi: (_durum, gorevler) => gorevYoksaVeyaTamam(gorevler, "aile", (g) => g.tamam || g.bugunYapildi),
   },
   {
     kod: "gorev_meydan_dava",
@@ -172,18 +181,41 @@ export const REHBER_ADIMLARI = [
     metin:
       "Harika, Kıraathane'mizi inşa ettik! Şimdi Kıraathane'nin içine girerek Ozan Dede'den türkümüzün hikâyesini dinle; dilersen içeride bekleyen yolcuları da köyümüze davet et!",
     hedefler: [{ tur: "bina", id: "kiraathane", etiket: "🎵 Kıraathane İçine Gir (Ozan Dede)" }],
-    tamamMi: (_durum, gorevler) => gorevler.some((g) => g.tur === "turku" && g.tamam),
+    tamamMi: (_durum, gorevler) => gorevYoksaVeyaTamam(gorevler, "turku", (g) => g.tamam),
+  },
+  {
+    // Leveldaki tüm görevler bitince rehber öğrenciyi Ferman'a (level atlamaya) götürür
+    kod: "gorev_level_atla",
+    bolum: "gorev",
+    baslik: "🎉 Level Atlamaya Hazırsın!",
+    metin:
+      "Maşallah! Bu leveldaki bütün görevleri tamamladın. Görev Panosu'na git ve level atla; Padişah'ın Fermanı seni yeni binalar ve yeni görevlerle bekliyor!",
+    hedefler: [{ tur: "nokta", id: "pano", etiket: "⭐ Görev Panosuna Git ve Level Atla" }],
+    tamamMi: (_durum, gorevler) => gorevler.length === 0 || !gorevler.every((g) => g.tamam),
+  },
+  {
+    // Tanıtım bitti: rehber artık başa dönmez, öğrenciyi günlük düzene ve Görev Panosu'na yönlendirir
+    kod: "gorev_serbest",
+    bolum: "gorev",
+    baslik: "🧭 Artık Köyün Sana Emanet!",
+    metin:
+      "Tebrikler genç yönetici, köyün temellerini birlikte attık! Bundan sonra her gün: Haberci'nin mektubunu al ve ailenle oku, hadisini öğren, tarla ve ormanda işçilerini çalıştır, meydandaki davayı çöz. Level atlamak için Görev Panosu'ndaki işleri tamamla; hepsi bitince Ferman gelir ve yeni binalar açılır!",
+    hedefler: [
+      { tur: "nokta", id: "pano", etiket: "📜 Görev Panosuna Bak" },
+      { tur: "nokta", id: "haberci", etiket: "✉️ Haberci'ye Uğra" },
+    ],
+    tamamMi: () => false,
   },
 ];
 
 export const ILK_GOREV_ADIM_INDEKSI = REHBER_ADIMLARI.findIndex((a) => a.bolum === "gorev");
 
-export function ilkEksikRehberAdimi(durum, gorevler = [], tanitimdanBasla = false) {
+export function ilkEksikRehberAdimi(durum, gorevler = [], tanitimdanBasla = false, simdi = 0) {
   if (tanitimdanBasla) return 0;
   const idx = REHBER_ADIMLARI.findIndex(
-    (a, i) => i >= ILK_GOREV_ADIM_INDEKSI && a.tamamMi && !a.tamamMi(durum, gorevler)
+    (a, i) => i >= ILK_GOREV_ADIM_INDEKSI && a.tamamMi && !a.tamamMi(durum, gorevler, simdi)
   );
-  return idx === -1 ? ILK_GOREV_ADIM_INDEKSI : idx;
+  return idx === -1 ? REHBER_ADIMLARI.length - 1 : idx;
 }
 
 const SON_GUN_ANAHTARI = "seyrusefer_rehber_son_gun";
@@ -316,7 +348,7 @@ export default function RehberKarakter({
 
   if (!acik) return null;
 
-  const buAdimTamam = adim.tamamMi ? adim.tamamMi(durum, gorevler) : false;
+  const buAdimTamam = adim.tamamMi ? adim.tamamMi(durum, gorevler, simdi) : false;
   const gosterilenMetin = tamMetin.slice(0, harfSayisi);
   const ileriKilitli = adim.bolum === "gorev" && !!adim.tamamMi && !buAdimTamam;
   const butonluHedefler =
@@ -388,7 +420,7 @@ export default function RehberKarakter({
             </button>
             <button
               type="button"
-              onClick={() => setAdimIndeks(ilkEksikRehberAdimi(durum, gorevler, false))}
+              onClick={() => setAdimIndeks(ilkEksikRehberAdimi(durum, gorevler, false, simdi))}
               className={`rounded-lg px-2 py-1 transition ${
                 adim.bolum === "gorev" ? "bg-emerald-500 text-stone-950 shadow" : "text-amber-200/70 hover:text-amber-100"
               }`}
@@ -487,7 +519,7 @@ export default function RehberKarakter({
             {adim.bolum === "tanitim" && (
               <button
                 type="button"
-                onClick={() => setAdimIndeks(ilkEksikRehberAdimi(durum, gorevler, false))}
+                onClick={() => setAdimIndeks(ilkEksikRehberAdimi(durum, gorevler, false, simdi))}
                 className="rounded-xl bg-stone-800 px-2.5 py-1.5 text-xs font-bold text-amber-300 ring-1 ring-amber-500/30 hover:bg-stone-700"
               >
                 İşlere başla

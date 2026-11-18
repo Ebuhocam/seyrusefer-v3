@@ -38,7 +38,7 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
 
   return (
     <header className="pointer-events-none fixed inset-x-0 top-0 z-[250] flex flex-wrap items-start justify-between gap-1.5 p-2 sm:p-3 kisa:flex-nowrap kisa:gap-1 kisa:p-1!">
-      <div className="pointer-events-auto flex min-w-0 flex-wrap items-center gap-1.5 kisa:flex-nowrap kisa:gap-1">
+      <div className="pointer-events-auto flex min-w-0 max-w-full flex-nowrap items-center gap-1.5 kisa:gap-1">
         {/* Level mührü + gündem */}
         <button
           type="button"
@@ -69,7 +69,7 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
           onClick={() => setKarakterModalAcik(true)}
           title="Oyun karakterini değiştir"
           aria-label="Oyun karakterini değiştir"
-          className="ust-levha grid h-11 w-11 place-items-center rounded-2xl p-0.5 sm:h-[3.25rem] sm:w-[3.25rem] kisa:h-10! kisa:w-10!"
+          className="ust-levha grid h-11 w-11 shrink-0 place-items-center rounded-2xl p-0.5 sm:h-[3.25rem] sm:w-[3.25rem] kisa:h-10! kisa:w-10!"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -131,7 +131,7 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
       </div>
 
       {/* Mutluluk + kaynaklar */}
-      <div className="ust-levha pointer-events-auto flex shrink-0 items-center gap-0.5 rounded-2xl p-0.5 sm:gap-1 kisa:p-0.5!">
+      <div className="ust-levha pointer-events-auto flex max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-2xl p-0.5 [scrollbar-width:none] sm:gap-1 kisa:p-0.5!">
         <div
           className={`flex items-center gap-1 rounded-xl px-1.5 py-1 ring-1 sm:px-2 ${mutlulukRenk}`}
           title="Köy mutluluğu: Meydan'daki davaları hikmetle çözdükçe artar, Kıraathane'ye gelen yolcuların köyde kalma ihtimalini belirler."

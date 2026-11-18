@@ -811,6 +811,16 @@ function kayaKutlesiOlustur(kayaBilgi, doku, kontakDoku) {
   return { kok, govdeGrup, catlaklar1, catlaklar2, kalinti, anaMat, tiklanabilirParcalar };
 }
 
+
+/** Dakikayı okunur süreye çevirir: 45 → "~45 dk", 200 → "~3 sa 20 dk", 1200 → "~20 sa" */
+function sureYaz(dk) {
+  const d = Math.max(1, Math.round(Number(dk) || 0));
+  if (d < 60) return `~${d} dk`;
+  const sa = Math.floor(d / 60);
+  const kalan = d % 60;
+  return sa >= 6 || kalan < 5 ? `~${Math.round(d / 60)} sa` : `~${sa} sa ${kalan} dk`;
+}
+
 export function TasOcagi3DSahnesi({ oyun }) {
   const kapsayiciRef = useRef(null);
   const sahneApiRef = useRef(null);
@@ -843,7 +853,7 @@ export function TasOcagi3DSahnesi({ oyun }) {
     if (!api || !guncelNokta || oyunRef.current.bekliyor) return;
     if (!guncelNokta.hazir) {
       setAktifMesaj(
-        `⏳ ${guncelNokta.ad} yeniden oluşuyor (~${guncelNokta.kalanDakika ?? 60} dk). Sağlam bir kayaya vurabilirsin.`
+        `⏳ ${guncelNokta.ad} yeniden oluşuyor (${sureYaz(guncelNokta.kalanDakika ?? 60)}). Sağlam bir kayaya vurabilirsin.`
       );
       return;
     }
@@ -1240,7 +1250,7 @@ export function TasOcagi3DSahnesi({ oyun }) {
                 {k.hazir ? (
                   <span className="text-emerald-300">⛏️ {vurus > 0 ? `Çatladı (${vurus}/3)` : `Sağlam (+${k.miktar} 🧱)`}</span>
                 ) : (
-                  <span>⏳ ~{k.kalanDakika} dk</span>
+                  <span>⏳ {sureYaz(k.kalanDakika)}</span>
                 )}
               </span>
             </button>
@@ -2609,7 +2619,7 @@ export function TarlaFPS3DSahnesi({ oyun }) {
                   {p.hazir ? (
                     <span className="text-sky-300">💧 Sula & Topla (+{p.miktar} 🌾)</span>
                   ) : (
-                    <span>⏳ Yetişiyor (~{p.kalanDakika} dk)</span>
+                    <span>⏳ Yetişiyor ({sureYaz(p.kalanDakika)})</span>
                   )}
                 </span>
               </div>
