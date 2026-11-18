@@ -44,7 +44,7 @@ export const LEVEL_GOREVLERI = {
     { kod: "turku", tur: "turku", ad: "Kıraathane'de Ozan Dede'yi Dinle", hedef: 1, gunluk: false, bina: null },
   ],
   2: [
-    { kod: "namaz", tur: "namaz", ad: "5 Gün Namaz Çetelesi Doldur", hedef: 5, gunluk: true, bina: "sosyalmeydan" },
+    { kod: "namaz", tur: "namaz", ad: "5 Gün Boyunca En Az Bir Vakit Namaz Kıl", hedef: 5, gunluk: true, bina: "sosyalmeydan" },
     { kod: "hadis", tur: "hadis", ad: "Mektep'te 5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "sosyalmeydan" },
     { kod: "dava", tur: "dava", ad: "Köy Meydanı'nda 1 Halk Sorununu Hikmetle Çöz", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
     { kod: "aile", tur: "aile", ad: "Haberci'nin Mektuplarını 3 Gün Ailece Oku", hedef: 3, gunluk: true, binaIcinEnAz: 1, bina: "sosyalmeydan" },
@@ -56,7 +56,7 @@ export const LEVEL_GOREVLERI = {
     { kod: "hadis", tur: "hadis", ad: "3 Günlük Hadis Oku", hedef: 3, gunluk: true, bina: "otag" },
   ],
   4: [
-    { kod: "namaz", tur: "namaz", ad: "Ulu Cami'de 5 Gün Namaz Çetelesi Doldur", hedef: 5, gunluk: true, bina: "mektep" },
+    { kod: "namaz", tur: "namaz", ad: "5 Gün Boyunca En Az Bir Vakit Namaz Kıl", hedef: 5, gunluk: true, bina: "mektep" },
     { kod: "meydan_paylasim", tur: "meydan_paylasim", ad: "Kardeşlik Gündemine Paylaşım Yap", hedef: 1, gunluk: false, bina: "mektep" },
     { kod: "seyyah", tur: "seyyah", ad: "Haberci'nin 2 İyilik Görevini Yap", hedef: 2, gunluk: true, bina: "mektep" },
     { kod: "turku", tur: "turku", ad: "Ozan Dede'den Kardeşlik Türküsünü Dinle", hedef: 1, gunluk: false, bina: "mektep" },
@@ -70,7 +70,7 @@ export const LEVEL_GOREVLERI = {
   ],
   6: [
     { kod: "seyyah", tur: "seyyah", ad: "Haberci'nin 3 Yardım Görevini Yap", hedef: 3, gunluk: true, bina: "mektep" },
-    { kod: "namaz", tur: "namaz", ad: "Ulu Cami'de 5 Gün Namaz Çetelesi Doldur", hedef: 5, gunluk: true, bina: "mektep" },
+    { kod: "namaz", tur: "namaz", ad: "5 Gün Boyunca En Az Bir Vakit Namaz Kıl", hedef: 5, gunluk: true, bina: "mektep" },
     { kod: "video", tur: "video", ad: "İnfak ve Yardımseverlik Videosu", hedef: 1, gunluk: false, bina: "otag" },
     { kod: "aile", tur: "aile", ad: "Haberci Mektupları: Paylaşmanın Bereketi (3 Gün)", hedef: 3, gunluk: true, binaIcinEnAz: 1, bina: "otag" },
   ],
@@ -81,7 +81,7 @@ export const LEVEL_GOREVLERI = {
     { kod: "meydan_paylasim", tur: "meydan_paylasim", ad: "Aile Gündemine Paylaşım Yap", hedef: 1, gunluk: false, bina: "sosyalmeydan" },
   ],
   8: [
-    { kod: "namaz", tur: "namaz", ad: "7 Gün Namaz Çetelesi Doldur", hedef: 7, gunluk: true, bina: "mektep" },
+    { kod: "namaz", tur: "namaz", ad: "7 Gün Boyunca En Az Bir Vakit Namaz Kıl", hedef: 7, gunluk: true, bina: "mektep" },
     { kod: "hadis", tur: "hadis", ad: "5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "mektep" },
     { kod: "dava", tur: "dava", ad: "Köy Meydanı'nda Sabır ve Kanaat Davasını Çöz", hedef: 1, gunluk: false, bina: "mektep" },
     { kod: "aile", tur: "aile", ad: "Haberci Mektupları: Sabır ve Şükür (3 Gün)", hedef: 3, gunluk: true, binaIcinEnAz: 1, bina: "mektep" },
@@ -93,7 +93,7 @@ export const LEVEL_GOREVLERI = {
     { kod: "meydan_yorum", tur: "meydan_yorum", ad: "3 Kardeşinin Paylaşımına Yorum Yap", hedef: 3, gunluk: false, bina: "sosyalmeydan" },
   ],
   10: [
-    { kod: "namaz", tur: "namaz", ad: "7 Gün Namaz Çetelesi Doldur", hedef: 7, gunluk: true, bina: "otag" },
+    { kod: "namaz", tur: "namaz", ad: "7 Gün Boyunca En Az Bir Vakit Namaz Kıl", hedef: 7, gunluk: true, bina: "otag" },
     { kod: "hadis", tur: "hadis", ad: "5 Günlük Hadis Oku", hedef: 5, gunluk: true, bina: "otag" },
     { kod: "sinav", tur: "sinav", ad: "Büyük İhsan ve Mezuniyet Sınavı", hedef: 1, gunluk: false, bina: "otag" },
     { kod: "aile", tur: "aile", ad: "Haberci Mektupları: İhsan ve Ahit (3 Gün)", hedef: 3, gunluk: true, binaIcinEnAz: 1, bina: "otag" },

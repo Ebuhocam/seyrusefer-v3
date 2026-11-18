@@ -300,3 +300,16 @@ export function mektupBugunAlindi(durum, simdi) {
   const g = Number(durum?.mektupGunu ?? 0);
   return g > 0 && trGunNo(g) === trGunNo(simdi);
 }
+
+
+/**
+ * Taş Ocağı'nın bugünkü oyunu: "kirma" (kazmayla kaya kırma) ya da "yakalama" (kancayla taş avı).
+ * Öğrencinin Taş Ocağı'nda oynadığı her yeni gün sıra değişir; aynı gün içinde sabit kalır.
+ */
+export function madenOyunModu(durum, simdi) {
+  const kayit = durum?.madenMod;
+  const bugun = trGunNo(simdi);
+  if (!kayit?.gun) return "kirma";
+  if (Number(kayit.gun) === bugun) return kayit.mod === "yakalama" ? "yakalama" : "kirma";
+  return kayit.mod === "kirma" ? "yakalama" : "kirma";
+}

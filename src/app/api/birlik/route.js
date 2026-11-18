@@ -404,7 +404,7 @@ export async function POST(request) {
   } else if (g.eylem === "bagis") {
     const kaynak = g.kaynak;
     const miktar = Number(g.miktar);
-    if (!KASA_KAYNAKLARI.includes(kaynak)) return hata("Kasaya yalnızca Mahsul, Tahta veya Taş bağışlanabilir.");
+    if (!KASA_KAYNAKLARI.includes(kaynak)) return hata("Kasaya yalnızca Mahsul, Odun veya Taş bağışlanabilir.");
     if (!Number.isInteger(miktar) || miktar < EN_AZ_BAGIS || miktar > EN_COK_BAGIS) {
       return hata(`Bağış miktarı en az ${EN_AZ_BAGIS} olmalı ve tam sayı girilmeli.`);
     }

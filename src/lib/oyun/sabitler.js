@@ -123,13 +123,15 @@ export const TARLA_PARSELLERI = [
 ];
 
 export const MADEN_KAYALARI_TANIM = [
-  { id: 1, ad: "Kuzey Granit Kayası", tur: "granit", temelMiktar: 4, renk: "#78716c", damarRenk: "#fbbf24" },
-  { id: 2, ad: "Kehribar Damarlı Kaya", tur: "kehribar", temelMiktar: 4, renk: "#57534e", damarRenk: "#f59e0b" },
-  { id: 3, ad: "Boz Mermer Kütle", tur: "mermer", temelMiktar: 4, renk: "#a8a29e", damarRenk: "#e7e5e4" },
-  { id: 4, ad: "Bazalt Taş Yatağı", tur: "bazalt", temelMiktar: 4, renk: "#44403c", damarRenk: "#38bdf8" },
-  { id: 5, ad: "Dere Taşı Kayası", tur: "dere", temelMiktar: 4, renk: "#6b7280", damarRenk: "#cbd5e1" },
-  { id: 6, ad: "Güney Kalker Damarı", tur: "kalker", temelMiktar: 4, renk: "#8c7a6b", damarRenk: "#fde68a" },
+  { id: 1, ad: "Kuzey Granit Kayası", tur: "granit", temelMiktar: 8, renk: "#78716c", damarRenk: "#fbbf24" },
+  { id: 2, ad: "Boz Mermer Kütle", tur: "mermer", temelMiktar: 8, renk: "#a8a29e", damarRenk: "#e7e5e4" },
+  { id: 3, ad: "Bazalt Taş Yatağı", tur: "bazalt", temelMiktar: 8, renk: "#44403c", damarRenk: "#38bdf8" },
 ];
+
+/** Taş Ocağı günlük oyun sırası: bir gün kaya kırma, ertesi gün taş avı (kancayla yakalama) */
+export const MADEN_MODLARI = { kirma: 1, yakalama: 2 };
+/** Taş avında başarı oranının sınırları (hazır kayaların toplam verimiyle çarpılır) */
+export const TAS_AVI_ORAN = { en: 0.5, cok: 1.3 };
 
 export const ORMAN_KESIF_BOLGELERI = [
   { id: 0, ad: "Kuzey Çamlığı", x: 18, y: 24 },
@@ -147,7 +149,7 @@ export const ORMAN_KESIF_BOLGELERI = [
 ];
 
 // ---------- 4 TEMEL KAYNAK ----------
-// Mahsul, Tahta, Taş üretim alanları günde yaklaşık 24 birim verir (1 işçiyle).
+// Mahsul, Odun, Taş üretim alanları günde yaklaşık 24 birim verir (1 işçiyle).
 // Bina bedelleri bu hıza göre, 10 level ≈ 11 haftada bitecek şekilde dengelenmiştir (bkz. scripts/denge-testi.mjs).
 // 👥 İnsan bir "nüfus şartı"dır: bina kurarken HARCANMAZ, köyde en az o kadar kişi yaşaması yeterlidir.
 // İnsan (Ahali) ise Köy Meydanı ve Kıraathane'ye gelen yolculara ev kurma teklif edilerek kazanılır.
@@ -164,11 +166,11 @@ export function sayiyaEk(n) {
 }
 /** Parsel / kaya yeniden dolma süresi (1 işçiyle). 24 değil 20 saat: öğrenci her gün biraz farklı saatte girse de hasadı kaçırmaz. */
 export const NOKTA_DOLUM_SAAT = 20;
-/** Ormanda devrilen bir kurumuş ağacın verdiği tahta (1 işçiyle). Günde 2 seferde ortalama ≈ 24 tahta eder. */
+/** Ormanda devrilen bir kurumuş ağacın verdiği odun (1 işçiyle). Günde 2 seferde ortalama ≈ 24 odun eder. */
 export const AGAC_TEMEL_ODUL = 18;
 export const KAYNAKLAR = {
   erzak: { ad: "Mahsul", ikon: "🌾", alan: "tarla", gunluk: 24, acilisLevel: 1, uretim: true },
-  kereste: { ad: "Tahta", ikon: "🌲", alan: "orman", gunluk: 24, acilisLevel: 1, uretim: true },
+  kereste: { ad: "Odun", ikon: "🌲", alan: "orman", gunluk: 24, acilisLevel: 1, uretim: true },
   tas: { ad: "Taş", ikon: "🧱", alan: "maden", gunluk: 24, acilisLevel: 2, uretim: true },
   insan: { ad: "İnsan", ikon: "👥", alan: "kiraathane", gunluk: 0, acilisLevel: 1, uretim: false },
 };

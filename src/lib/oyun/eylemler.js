@@ -12,6 +12,7 @@ import {
   SART_KAYNAKLARI,
   oyuncuKarakteriBul,
   toplamKonutKapasitesi,
+  TAS_AVI_ORAN,
 } from "./sabitler";
 import {
   biriken,
@@ -22,6 +23,7 @@ import {
   ormanSeferBilgisi,
   meydanOlayDurumu,
   trGunNo,
+  madenOyunModu,
   mektupBugunAlindi,
 } from "./kurallar";
 import {
@@ -117,7 +119,7 @@ export function topla(d, kaynak, simdi) {
     };
   }
   if (kaynak === "kereste") {
-    return { hata: "Orman keşif haritasında bölge arayıp kurumuş ağaçları baltayla devirerek tahta kazan!" };
+    return { hata: "Orman keşif haritasında bölge arayıp kurumuş ağaçları baltayla devirerek odun kazan!" };
   }
   const isciSayisi = d.isciler?.[kaynak] ?? 1;
   const miktar = biriken(kaynak, d.sonToplama[kaynak], simdi, d.binalar.otag ?? 1, isciSayisi);
@@ -207,6 +209,9 @@ export function sahaHasat(d, kaynak, noktaId, simdi) {
     return { hata: "Bu sahada henüz görevli çalışan yok! Önce yukarıdan +1 kalıcı işçi görevlendir." };
   }
 
+  if (kaynak === "tas" && madenOyunModu(d, simdi) !== "kirma") {
+    return { hata: "Bugün Taş Ocağı'nda kırma değil, Taş Avı günü! Kancayla taşları yakala." };
+  }
   const noktalar = sahaNoktalariDurumu(kaynak, d, simdi);
   const secilen = noktalar.find((n) => n.id === Number(noktaId)) ?? noktalar.find((n) => n.hazir);
   if (!secilen) return { hata: "Geçersiz parsel veya kaya seçimi" };
@@ -241,6 +246,7 @@ export function sahaHasat(d, kaynak, noktaId, simdi) {
         [sahaAnahtari]: guncelHarita,
         [isciAnahtari]: guncelIsci,
       },
+      madenMod: kaynak === "tas" ? { gun: trGunNo(simdi), mod: "kirma" } : d.madenMod,
       sonToplama: {
         ...d.sonToplama,
         [kaynak]: simdi,
@@ -272,6 +278,9 @@ export function sahaHepsiniTopla(d, kaynak, simdi) {
     return { hata: "Bu sahada henüz görevli çalışan yok! Önce yukarıdan +1 kalıcı işçi görevlendir." };
   }
 
+  if (kaynak === "tas" && madenOyunModu(d, simdi) !== "kirma") {
+    return { hata: "Bugün Taş Ocağı'nda kırma değil, Taş Avı günü! Kancayla taşları yakala." };
+  }
   const noktalar = sahaNoktalariDurumu(kaynak, d, simdi);
   const hazirlar = noktalar.filter((n) => n.hazir);
   if (hazirlar.length === 0) {
@@ -307,6 +316,7 @@ export function sahaHepsiniTopla(d, kaynak, simdi) {
         [sahaAnahtari]: guncelHarita,
         [isciAnahtari]: guncelIsci,
       },
+      madenMod: kaynak === "tas" ? { gun: trGunNo(simdi), mod: "kirma" } : d.madenMod,
       sonToplama: {
         ...d.sonToplama,
         [kaynak]: simdi,
@@ -381,14 +391,14 @@ export function ormanKesifYap(d, bolgeId, simdi) {
       kalanSefer: Math.max(0, sefer.maksSefer - yeniKullanilan),
       maksSefer: sefer.maksSefer,
       mesaj: kurumusCikti
-        ? `🪓 ${bolge.ad} bölgesinde kurumuş bir ağaç buldun! Baltayla vurup devirerek tahtaları topla!`
+        ? `🪓 ${bolge.ad} bölgesinde kurumuş bir ağaç buldun! Baltayla vurup devirerek odunları topla!`
         : `🌲 ${bolge.ad} bölgesinde yemyeşil yaş ağaçlar çıktı! Yaş ağaca balta vurulmaz; kalan seferinle başka bölge ara.`,
     },
   };
 }
 
 /**
- * Ormanda keşfedilen kurumuş ağacı 3D sahnede baltayla devirdikten sonra tahtayı envantere ekler.
+ * Ormanda keşfedilen kurumuş ağacı 3D sahnede baltayla devirdikten sonra odunu envantere ekler.
  */
 export function ormanAgacKes(d, simdi) {
   if (!kaynakAcikMi("kereste", d.level)) return { hata: "Orman henüz açılmadı" };
@@ -428,7 +438,47 @@ export function ormanAgacKes(d, simdi) {
       kaynak: "kereste",
       miktar,
       bolgeId: sefer.aktifBolge,
-      mesaj: `🌲 ${bolge?.ad ?? "Orman"} bölgesindeki kurumuş ağacı devirdin! +${miktar} Tahta kazandın!`,
+      mesaj: `🌲 ${bolge?.ad ?? "Orman"} bölgesindeki kurumuş ağacı devirdin! +${miktar} Odun kazandın!`,
+    },
+  };
+}
+
+/**
+ * Taş Avı (yakalama günü): öğrenci kancayla küçük/orta/büyük taşları yakalar.
+ * Kazanç sunucuda sınırlanır: hazır kayaların toplam verimi × başarı oranı (%50–%130).
+ * Oyun bitince bütün hazır kayalar kullanılmış sayılır ve 20 saat sonra yeniden dolar.
+ */
+export function tasAvi(d, oran, simdi) {
+  if (!kaynakAcikMi("tas", d.level)) return { hata: "Taş Ocağı henüz açılmadı" };
+  const isci = d.isciler?.tas ?? 0;
+  if (isci <= 0) return { hata: "Taş Ocağı'nda görevli işçi yok! Önce +1 kalıcı işçi görevlendir." };
+  if (madenOyunModu(d, simdi) !== "yakalama") return { hata: "Bugün Taş Avı değil, kaya kırma günü!" };
+  const hazirlar = sahaNoktalariDurumu("tas", d, simdi).filter((n) => n.hazir);
+  if (hazirlar.length === 0) return { hata: "Taş Ocağı dinleniyor; yeni taşlar yarın hazır olacak." };
+  const o = Math.min(TAS_AVI_ORAN.cok, Math.max(TAS_AVI_ORAN.en, Number(oran) || 0));
+  const temel = hazirlar.reduce((t, h) => t + h.miktar, 0);
+  const miktar = Math.max(1, Math.round(temel * o));
+  const mevcutSaha = d.sahaDurumu ?? { tarla: {}, maden: {} };
+  const maden = { ...(mevcutSaha.maden ?? {}) };
+  const madenIsci = { ...(mevcutSaha.madenIsci ?? {}) };
+  for (const h of hazirlar) {
+    maden[h.id] = simdi;
+    madenIsci[h.id] = isci;
+  }
+  return {
+    durum: {
+      ...d,
+      envanter: { ...d.envanter, tas: (d.envanter.tas ?? 0) + miktar },
+      sahaDurumu: { ...mevcutSaha, maden, madenIsci },
+      madenMod: { gun: trGunNo(simdi), mod: "yakalama" },
+      sonToplama: { ...d.sonToplama, tas: simdi },
+      sonEtkilesim: { ...(d.sonEtkilesim ?? {}), tas: simdi },
+    },
+    miktar,
+    sonuc: {
+      kaynak: "tas",
+      miktar,
+      mesaj: `🪝 Taş Avı bitti! Kancanla +${miktar} Taş yakaladın${o >= 1 ? ", maşallah usta avcı!" : "."}`,
     },
   };
 }
@@ -499,7 +549,7 @@ export function yukselt(d, binaId, ayarlar = null) {
     };
   }
   const envanter = { ...d.envanter };
-  // 👥 İnsan harcanmaz (nüfus şartıdır); yalnızca mahsul / tahta / taş düşülür
+  // 👥 İnsan harcanmaz (nüfus şartıdır); yalnızca mahsul / odun / taş düşülür
   for (const [k, m] of Object.entries(b.bedel)) {
     if (SART_KAYNAKLARI.includes(k)) continue;
     envanter[k] = Math.max(0, (envanter[k] ?? 0) - (Number(m) || 0));
@@ -589,7 +639,7 @@ export function gorevIlerlet(d, gorevKodu, simdi, ayarlar = null, beyan = false)
 
 /**
  * Günlük namaz çetelesini günceller.
- * 5 vakit tamamlandığında o leveldaki namaz görevlerini otomatik 1 gün ilerletir.
+ * O gün en az bir vakit işaretlendiğinde o leveldaki namaz görevi o gün için 1 ilerler.
  */
 export function namazGuncelle(d, vakit, deger, simdi, ayarlar = null) {
   if (!NAMAZ_VAKITLERI.some((v) => v.kod === vakit)) return { hata: "Geçersiz namaz vakti" };
@@ -601,7 +651,7 @@ export function namazGuncelle(d, vakit, deger, simdi, ayarlar = null) {
   const namazGorevi = tanimlar.find((g) => g.tur === "namaz" || g.kod === "namaz");
   const bugun = oyunGunu(simdi);
 
-  if (namazGorevi && kilinanSayisi === 5) {
+  if (namazGorevi && kilinanSayisi >= 1) {
     const mevcut = d.gorevIlerlemesi?.[namazGorevi.kod] ?? { ilerleme: 0, sonGun: null };
     if (mevcut.ilerleme < namazGorevi.hedef && mevcut.sonGun !== bugun) {
       yeniDurum = {

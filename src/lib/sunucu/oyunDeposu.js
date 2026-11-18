@@ -100,6 +100,11 @@ export async function durumOku(kullaniciId) {
   const mektupAlindi = tumKaynakSatirlari.mektup_durumu?.envanter ?? 0;
   const mektupGunu = Number(tumKaynakSatirlari.mektup_durumu?.son_toplama ?? 0);
   const mektupNo = Number(tumKaynakSatirlari.mektup_no?.envanter ?? 0);
+  // Taş Ocağı oyun sırası: envanter 1 = kırma, 2 = yakalama; son_toplama = oynandığı TR gün numarası
+  const madenModSatir = tumKaynakSatirlari.maden_mod;
+  const madenMod = madenModSatir?.son_toplama
+    ? { gun: Number(madenModSatir.son_toplama), mod: Number(madenModSatir.envanter) === 2 ? "yakalama" : "kirma" }
+    : null;
   const karakterIndeks = tumKaynakSatirlari.oyuncu_karakter?.envanter ?? 0;
   const karakter = KARAKTER_KODLARI[karakterIndeks] ?? "ahmet";
   const cinsiyet = KARAKTERLER[karakter]?.cinsiyet ?? "erkek";
@@ -142,6 +147,7 @@ export async function durumOku(kullaniciId) {
     mektupAlindi,
     mektupGunu,
     mektupNo,
+    madenMod,
     gorevIlerlemesi: Object.fromEntries(
       gorevler.results.map((g) => [g.gorev_kodu, { ilerleme: g.ilerleme, sonGun: g.son_gun }])
     ),
@@ -250,6 +256,12 @@ export async function durumYaz(kullaniciId, durum, islemSaati = null, ayarlar = 
          ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET envanter = ?2`
       )
       .bind(kullaniciId, Number(durum.mektupNo || 0)),
+    d
+      .prepare(
+        `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, 'maden_mod', ?2, ?3)
+         ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET envanter = ?2, son_toplama = ?3`
+      )
+      .bind(kullaniciId, durum.madenMod?.mod === "yakalama" ? 2 : 1, Number(durum.madenMod?.gun || 0)),
     d
       .prepare(
         `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, 'oyuncu_karakter', ?2, ?3)

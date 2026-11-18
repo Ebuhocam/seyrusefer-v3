@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { BINALAR, KAYNAKLAR, NOKTALAR, toplamKonutKapasitesi } from "@/lib/oyun/sabitler";
-import { kaynakAcikMi, saatlikUretim, meydanOlayDurumu, mektupBugunAlindi } from "@/lib/oyun/kurallar";
+import { kaynakAcikMi, saatlikUretim, meydanOlayDurumu, mektupBugunAlindi, madenOyunModu } from "@/lib/oyun/kurallar";
 import { koyDavalariListesi, gocmenDurumu } from "@/lib/oyun/hikayeler";
 import { AileOkumasiKutusu, ObaDavaKutusu, SosyalMeydanKutusu } from "./GorevlerEkrani";
 import {
@@ -10,6 +10,7 @@ import {
   TarlaFPS3DSahnesi,
 } from "./UretimOyunlari3D";
 import KoyMeydani3DSahnesi from "./KoyMeydani3DSahnesi";
+import TasAviOyunu from "./TasAviOyunu";
 import AileOyunlari from "./AileOyunlari";
 
 
@@ -776,14 +777,16 @@ export function UretimSahnesi({ id, oyun }) {
                     ? "🌱 3 Bağımsız Sebze/Meyve Parseli"
                     : id === "orman"
                     ? "🧭 Günlük Orman Keşif Seferleri"
-                    : "⛰️ 6 Bağımsız 3D Kaya Kütlesi"}
+                    : madenOyunModu(oyun.durum, oyun.simdi) === "yakalama"
+                    ? "🪝 Bugün Taş Avı Günü"
+                    : "⛏️ Bugün Kaya Kırma Günü"}
                 </span>
                 <span className="tabular-nums text-sm font-black text-emerald-300">
                   {id === "tarla"
                     ? `${dBilgi.hazirAdet ?? 0}/${dBilgi.toplamAdet ?? 3} Parsel Hazır`
                     : id === "orman"
                     ? `${dBilgi.hazirAdet ?? 0}/${dBilgi.toplamAdet ?? 0} Sefer Hakkı`
-                    : `${dBilgi.hazirAdet ?? 0}/${dBilgi.toplamAdet ?? 6} Kaya Hazır`}
+                    : `${dBilgi.hazirAdet ?? 0}/${dBilgi.toplamAdet ?? 3} Kaya Hazır`}
                 </span>
               </div>
 
@@ -805,11 +808,15 @@ export function UretimSahnesi({ id, oyun }) {
                   {id === "tarla"
                     ? "Her parsel bağımsız çalışır! Tek tek 3D sahnede sulayıp toplayabilir veya hazır parsellerin hepsini tek tıkla hasat edebilirsin."
                     : id === "orman"
-                    ? "Haritadan keşfedilmemiş bir bölgeye tıkla: şansına kurumuş ağaç çıkarsa 3D baltayla devirip tahta kazanırsın!"
-                    : "Her kaya bağımsız çalışır! Sahadaki 3D kayalara tıklayıp kazmayla parçalayabilir veya hazır kayaları tek tıkla toplayabilirsin."}
+                    ? "Haritadan keşfedilmemiş bir bölgeye tıkla: şansına kurumuş ağaç çıkarsa 3D baltayla devirip odun kazanırsın!"
+                    : madenOyunModu(oyun.durum, oyun.simdi) === "yakalama"
+                    ? "Taş Ocağı'nda oyun her gün değişir: dün kaya kırdın, bugün kancayla taş avlıyorsun! Büyük taş daha çok taş kazandırır ama yavaş çekilir. Yarın yine kazma günü."
+                    : "Taş Ocağı'nda oyun her gün değişir: bugün 3D kayalara tıklayıp kazmayla parçala ya da hazır kayaları tek tıkla topla. Yarın kancayla Taş Avı günü!"}
                 </p>
 
-                {id !== "orman" && (dBilgi.hazirAdet ?? 0) > 0 && (
+                {id !== "orman" &&
+                  (dBilgi.hazirAdet ?? 0) > 0 &&
+                  !(id === "maden" && madenOyunModu(oyun.durum, oyun.simdi) === "yakalama") && (
                   <button
                     type="button"
                     disabled={oyun.bekliyor}
@@ -830,7 +837,12 @@ export function UretimSahnesi({ id, oyun }) {
       <div className="order-first [@media(min-width:768px)_and_(min-height:521px)]:order-none">
         {id === "tarla" && <TarlaFPS3DSahnesi oyun={oyun} />}
         {id === "orman" && <OrmanKesifVeKesimSahnesi oyun={oyun} />}
-        {id === "maden" && <TasOcagi3DSahnesi oyun={oyun} />}
+        {id === "maden" &&
+          (madenOyunModu(oyun.durum, oyun.simdi) === "yakalama" ? (
+            <TasAviOyunu oyun={oyun} />
+          ) : (
+            <TasOcagi3DSahnesi oyun={oyun} />
+          ))}
       </div>
     </div>
   );

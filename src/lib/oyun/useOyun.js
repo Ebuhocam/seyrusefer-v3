@@ -73,7 +73,7 @@ export function useOyun(baslangic) {
         }
         veriUygula(j);
         if (basariMesaji) setMesaj({ tur: "tamam", metin: basariMesaji });
-        if (["topla", "sahaHasat", "sahaHepsiniTopla", "ormanAgacKes"].includes(govde?.eylem)) sesCal("toplama");
+        if (["topla", "sahaHasat", "sahaHepsiniTopla", "ormanAgacKes", "tasAvi"].includes(govde?.eylem)) sesCal("toplama");
         return j;
       } catch {
         setMesaj({ tur: "hata", metin: "Sunucuya ulaşılamadı" });
@@ -117,6 +117,12 @@ export function useOyun(baslangic) {
     if (j?.sonuc?.mesaj) {
       setMesaj({ tur: "tamam", metin: j.sonuc.mesaj });
     }
+    return j?.sonuc ?? null;
+  };
+
+  const tasAvi = async (oran) => {
+    const j = await gonder({ eylem: "tasAvi", oran });
+    if (j?.sonuc?.mesaj) setMesaj({ tur: "tamam", metin: j.sonuc.mesaj });
     return j?.sonuc ?? null;
   };
 
@@ -243,6 +249,7 @@ export function useOyun(baslangic) {
     isciAta,
     sahaHasat,
     sahaHepsiniTopla,
+    tasAvi,
     ormanKesif,
     ormanAgacKes,
     uretimEtkilesim,

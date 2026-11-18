@@ -320,7 +320,7 @@ function kabukDokusuUret() {
   return dokuYap(c);
 }
 
-// Ahşap damarı (tahta, kenar bordür, sepet)
+// Ahşap damarı (odun, kenar bordür, sepet)
 function ahsapDokusuUret(taban = "#8a5a2e") {
   const [c, ctx] = tuvalYap(256, 128);
   ctx.fillStyle = taban;
@@ -661,12 +661,9 @@ function sesCal(tur) {
 // 1. TAŞ OCAĞI 3D KAYA PARÇALAMA SAHNESİ (6 Bağımsız Kaya + Kazma + Parçacıklar)
 // =============================================================
 const KAYA_KONUMLARI_3D = [
-  { id: 1, x: -3.5, z: -0.9, olcek: 1.05 },
-  { id: 2, x: 0.0, z: -1.35, olcek: 1.12 },
-  { id: 3, x: 3.4, z: -0.85, olcek: 1.06 },
-  { id: 4, x: -2.5, z: 1.35, olcek: 0.98 },
-  { id: 5, x: 0.35, z: 1.5, olcek: 1.02 },
-  { id: 6, x: 3.1, z: 1.25, olcek: 1.0 },
+  { id: 1, x: -3.3, z: -0.3, olcek: 1.4 },
+  { id: 2, x: 0.0, z: -0.95, olcek: 1.5 },
+  { id: 3, x: 3.3, z: -0.3, olcek: 1.4 },
 ];
 
 const KAZMA_SURE = 0.62; // sn: kaldırma (0-0.30) · iniş (0.30-0.42) · geri tepme
@@ -827,7 +824,7 @@ export function TasOcagi3DSahnesi({ oyun }) {
   const noktalar = oyun.sahaNoktalari("tas");
   const [vurusSayilari, setVurusSayilari] = useState({});
   const [aktifMesaj, setAktifMesaj] = useState(
-    "⛏️ Sahadaki 6 kayadan birine dokun. Her kaya 3 kazma darbesinde parçalanır."
+    "⛏️ Sahadaki 3 kayadan birine dokun. Her kaya 3 kazma darbesinde parçalanır."
   );
   const [isleniyorId, setIsleniyorId] = useState(null);
 
@@ -917,7 +914,7 @@ export function TasOcagi3DSahnesi({ oyun }) {
     camera.position.copy(kameraTaban);
     camera.lookAt(0, 0.5, 0.1);
     const aspectUyarla = () => {
-      // Dar (telefon) ekranda kamerayı geri çek: 6 kaya da kadrajda kalsın
+      // Dar (telefon) ekranda kamerayı geri çek: 3 kaya da kadrajda kalsın
       const en = camera.aspect;
       const k = en < 1.2 ? clamp(1.25 / en, 1, 1.8) : 1;
       kameraTaban.set(0, 5.4 * k, 8.2 * k);
@@ -990,7 +987,7 @@ export function TasOcagi3DSahnesi({ oyun }) {
     golgeAc(sandik);
     scene.add(sandik);
 
-    // 6 bağımsız kaya
+    // 3 bağımsız kaya
     const kayalar = {};
     const rayHedefleri = [];
     for (const kKonum of KAYA_KONUMLARI_3D) {
@@ -1709,12 +1706,12 @@ function KurumusAgac3DSahnesi({ bolgeAd, odulMiktar, onKesimTamam, bekliyor }) {
           <span className="font-black text-amber-300">🪓 Kurumuş ağaç bulundu: {bolgeAd}</span>
           <p className="mt-0.5 text-amber-100/85">
             {hata
-              ? "Tahtalar toplanamadı. Bir daha dene."
+              ? "Odunlar toplanamadı. Bir daha dene."
               : devrildi
               ? istekSuruyor
-                ? "Ağaç devrildi, tahtalar toplanıyor…"
+                ? "Ağaç devrildi, odunlar toplanıyor…"
                 : "Ağaç devriliyor…"
-              : `Ağacın gövdesine veya düğmeye dokunarak baltayla 3 kez vur (+${odulMiktar} 🌲 tahta).`}
+              : `Ağacın gövdesine veya düğmeye dokunarak baltayla 3 kez vur (+${odulMiktar} 🌲 odun).`}
           </p>
         </div>
         {hata ? (
@@ -1724,7 +1721,7 @@ function KurumusAgac3DSahnesi({ bolgeAd, odulMiktar, onKesimTamam, bekliyor }) {
             onClick={kesimiBitir}
             className="varak-dugme rounded-2xl px-5 py-2.5 text-xs max-sm:w-full"
           >
-            🌲 Tahtaları Tekrar Topla
+            🌲 Odunları Tekrar Topla
           </button>
         ) : (
           <button

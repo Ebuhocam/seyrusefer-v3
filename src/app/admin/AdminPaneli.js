@@ -748,7 +748,7 @@ export default function AdminPaneli() {
                 <div>
                   <h2 className="text-base font-black text-amber-300">🏛️ Köy Binaları: Açılış Levelları ve Bedeller</h2>
                   <p className="text-xs text-amber-200/70">
-                    Her bina seviyesinin açılış levelı ve Mahsul / Tahta / Taş bedeli. &quot;En az nüfus şartı&quot; harcanmaz; köyde en az o kadar kişi yaşaması yeterlidir.
+                    Her bina seviyesinin açılış levelı ve Mahsul / Odun / Taş bedeli. &quot;En az nüfus şartı&quot; harcanmaz; köyde en az o kadar kişi yaşaması yeterlidir.
                   </p>
                 </div>
                 <button

@@ -9,6 +9,7 @@ import {
   isciAta,
   sahaHasat,
   sahaHepsiniTopla,
+  tasAvi,
   ormanKesifYap,
   ormanAgacKes,
   uretimEtkilesim,
@@ -52,6 +53,9 @@ export async function POST(request) {
       break;
     case "sahaHepsiniTopla":
       sonuc = sahaHepsiniTopla(durum, g.kaynak, simdi);
+      break;
+    case "tasAvi":
+      sonuc = tasAvi(durum, g.oran, simdi);
       break;
     case "ormanKesif":
       sonuc = ormanKesifYap(durum, g.bolgeId, simdi);

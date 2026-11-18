@@ -42,7 +42,7 @@ export const REHBER_ADIMLARI = [
     bolum: "tanitim",
     baslik: "Tanıtım 4/7: Kıraathane (Ozan Dede & Yolcular)",
     metin:
-      "Meydanın sağındaki teras Kıraathane alanımızdır. 2. günde yeterli Mahsul ve Tahta biriktiğinde Kıraathane'yi inşa edeceğiz; içeride Ozan Dede'den türkülerimizin hikâyesini dinleyip köye uğrayan yolcuları hanelerimize davet edeceğiz.",
+      "Meydanın sağındaki teras Kıraathane alanımızdır. 2. günde yeterli Mahsul ve Odun biriktiğinde Kıraathane'yi inşa edeceğiz; içeride Ozan Dede'den türkülerimizin hikâyesini dinleyip köye uğrayan yolcuları hanelerimize davet edeceğiz.",
     hedefler: [{ tur: "bina", id: "kiraathane" }],
   },
   {
@@ -117,7 +117,7 @@ export const REHBER_ADIMLARI = [
     bolum: "gorev",
     baslik: "4. Yapılacak İş: Ormana Keşfe Çık ve Ağaç Kes!",
     metin:
-      "Tarla tamam! Şimdi de Orman'a tıkla. Haritada keşfedilmemiş bir bölge seç; şansına kurumuş bir ağaç çıkarsa baltanla devir ve tahtayı topla. Yaş ağaçlara dokunmuyoruz!",
+      "Tarla tamam! Şimdi de Orman'a tıkla. Haritada keşfedilmemiş bir bölge seç; şansına kurumuş bir ağaç çıkarsa baltanla devir ve odunu topla. Yaş ağaçlara dokunmuyoruz!",
     hedefler: [{ tur: "nokta", id: "orman", etiket: "🌲 Ormana Git" }],
     tamamMi: (durum) => (durum.sonEtkilesim?.kereste ?? 0) > 0,
   },
@@ -156,7 +156,7 @@ export const REHBER_ADIMLARI = [
     bolum: "gorev",
     baslik: "🌙 Bugünlük Yapılacak Görevlerimiz Tamamlandı!",
     metin:
-      "Maşallah genç yönetici! Bugün Mektep'i kurdun, hadisini okudun, tarla ve ormanda çalıştın, evinde aile mektubunu okudun ve Köy Meydanı'nda ilk davayı çözdün! Bugünlük yapılacak zorunlu görev kalmadı. İşçilerin yarına kadar Kıraathane için gereken Mahsul (80) ve Tahta'yı (75) biriktiriyor. Yarın kaynakların dolunca Kıraathane'yi inşa edeceğiz!",
+      "Maşallah genç yönetici! Bugün Mektep'i kurdun, hadisini okudun, tarla ve ormanda çalıştın, evinde aile mektubunu okudun ve Köy Meydanı'nda ilk davayı çözdün! Bugünlük yapılacak zorunlu görev kalmadı. İşçilerin yarına kadar Kıraathane için gereken Mahsul (80) ve Odun'yı (75) biriktiriyor. Yarın kaynakların dolunca Kıraathane'yi inşa edeceğiz!",
     hedefler: [
       { tur: "bina", id: "sosyalmeydan", etiket: "🌳 Çınar Altı Sohbeti'ne Göz At" },
       { tur: "nokta", id: "pano", etiket: "📜 Görev Panosuna Bak" },
@@ -170,7 +170,7 @@ export const REHBER_ADIMLARI = [
     bolum: "gorev",
     baslik: "8. Yapılacak İş (2. Gün Hedefi): Kıraathane'yi İnşa Et!",
     metin:
-      `Kaynaklarımız (${KIRAATHANE_BEDEL.erzak ?? 0} Mahsul ve ${KIRAATHANE_BEDEL.kereste ?? 0} Tahta) tamamlandı! Şimdi meydanın sağındaki Kıraathane arsasına tıkla ve köyümüzün Kıraathane binasını inşa et!`,
+      `Kaynaklarımız (${KIRAATHANE_BEDEL.erzak ?? 0} Mahsul ve ${KIRAATHANE_BEDEL.kereste ?? 0} Odun) tamamlandı! Şimdi meydanın sağındaki Kıraathane arsasına tıkla ve köyümüzün Kıraathane binasını inşa et!`,
     hedefler: [{ tur: "bina", id: "kiraathane", etiket: "🍵 Kıraathane Arsasına Git ve Kur" }],
     tamamMi: (durum) => (durum.binalar?.kiraathane ?? 0) >= 1,
   },
@@ -245,7 +245,7 @@ function yeniGunAdimi(adim, durum) {
   const eksik = Object.entries(KIRAATHANE_BEDEL)
     .filter(([k]) => k === "erzak" || k === "kereste")
     .map(([k, m]) => ({ k, kalan: Math.max(0, (Number(m) || 0) - (env[k] ?? 0)) }));
-  const ad = { erzak: "Mahsul", kereste: "Tahta" };
+  const ad = { erzak: "Mahsul", kereste: "Odun" };
   const kalanMetin = eksik
     .filter((e) => e.kalan > 0)
     .map((e) => `${e.kalan} ${ad[e.k]}`)

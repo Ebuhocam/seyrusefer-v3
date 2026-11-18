@@ -400,8 +400,10 @@ export function NamazCetelesiKutusu({ oyun }) {
 
       <p className="rounded-xl bg-stone-950/60 p-3 text-xs text-amber-200/80">
         {kilinan === 5
-          ? "🌟 Maşallah! Bugünün 5 vakit namaz çetelesi tamamlandı."
-          : "💡 Bir günde 5 vakti tamamladığında level namaz çetelesi hedefin otomatik olarak 1 gün ilerler."}
+          ? "🌟 Maşallah! Bugün 5 vaktin hepsini kıldın."
+          : kilinan >= 1
+          ? "✅ Bugünün namaz görevi sayıldı. Kıldığın diğer vakitleri de işaretleyebilirsin; hedefimiz 5 vakit!"
+          : "💡 Bugün en az bir vakit namaz kılıp işaretlediğinde görevin 1 gün ilerler."}
       </p>
     </div>
   );

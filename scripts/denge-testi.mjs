@@ -56,7 +56,9 @@ function oyna({ devamsizlik = 7, isciKullan = true, tohum = 1, sessiz = true } =
 
     // --- 1) Üretim: hazır her şeyi topla
     dene(E.sahaHepsiniTopla(d, "erzak", simdi));
-    dene(E.sahaHepsiniTopla(d, "tas", simdi));
+    // Taş Ocağı: bir gün kırma, ertesi gün Taş Avı (ortalama bir öğrenci hedefin %80'ini tutturur)
+    if (K.madenOyunModu(d, simdi) === "yakalama") dene(E.tasAvi(d, 0.9, simdi));
+    else dene(E.sahaHepsiniTopla(d, "tas", simdi));
     for (let b = 0; b < 12; b++) {
       const sefer = K.ormanSeferBilgisi(d, simdi);
       if (sefer.aktifBolge >= 0) dene(E.ormanAgacKes(d, simdi));
