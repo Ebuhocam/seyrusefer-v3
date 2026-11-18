@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { BINALAR, KAYNAKLAR, NOKTALAR, toplamKonutKapasitesi } from "@/lib/oyun/sabitler";
 import { kaynakAcikMi, saatlikUretim, meydanOlayDurumu, mektupBugunAlindi, madenOyunModu } from "@/lib/oyun/kurallar";
 import { koyDavalariListesi, gocmenDurumu } from "@/lib/oyun/hikayeler";
-import { AileOkumasiKutusu, ObaDavaKutusu, SosyalMeydanKutusu } from "./GorevlerEkrani";
+import { AileOkumasiKutusu, NamazCetelesiKutusu, ObaDavaKutusu, SosyalMeydanKutusu } from "./GorevlerEkrani";
 import {
   TasOcagi3DSahnesi,
   OrmanKesifVeKesimSahnesi,
@@ -353,7 +353,7 @@ export function EvIciSahnesi({ binaId, oyun, onSecimDegistir, onYukseltmeAc }) {
       {/* Ailecek oyunlar yalnızca öğrencinin kendi evinde */}
       {kendiEvimMi && <AileOyunlari />}
       {/* Ders Çalışma Köşesi sayfanın en altında */}
-      {kendiEvimMi && <DersCalismaKosesi />}
+      {kendiEvimMi && <DersCalismaKosesi oyun={oyun} />}
     </div>
   );
 }
@@ -426,6 +426,34 @@ export function KoyMeydaniSahnesi({ oyun }) {
     return () => clearInterval(t);
   }, [diyalogAcik, harfSayisi, diyalogMetni.length]);
 
+  // KÖY CAMİİ: meydanın kenarındaki camide günün namazları işaretlenir
+  if (gorunum === "cami") {
+    return (
+      <div className="space-y-4">
+        <div className="tezhip overflow-hidden rounded-3xl p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setGorunum("meydan")}
+              className="rounded-xl bg-stone-800 px-3 py-1.5 text-xs font-black text-amber-200 ring-1 ring-amber-400/40 hover:bg-stone-700"
+            >
+              ← Meydana Dön
+            </button>
+            <span className="text-xs font-bold text-emerald-300">Köy Meydanı · Köy Camii</span>
+          </div>
+          <CamiCizimi />
+          <p className="mx-auto max-w-xl text-center text-sm leading-relaxed text-amber-100/90">
+            Ezan sesi meydana yayılıyor. Bugün kıldığın vakitleri işaretle; her gün en az bir vakit namaz, görevini bir gün
+            ilerletir. Hedefimiz beş vakti de kılabilmek!
+          </p>
+        </div>
+        <div className="rounded-3xl bg-stone-950/85 p-4 ring-1 ring-emerald-500/30 sm:p-5">
+          <NamazCetelesiKutusu oyun={oyun} />
+        </div>
+      </div>
+    );
+  }
+
   // ÇINAR ALTI SOSYAL MEDYA GÖRÜNÜMÜ
   if (gorunum === "cinar_sohbet") {
     return <SosyalMeydanKutusu oyun={oyun} onGeriDon={() => setGorunum("meydan")} />;
@@ -476,6 +504,13 @@ export function KoyMeydaniSahnesi({ oyun }) {
               🔄 {aktifOlayTuru === "dava" ? "Yeni İnsan Davetine Bak" : "Köylü Davasına Bak"}
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setGorunum("cami")}
+            className="rounded-2xl bg-emerald-600 px-4 py-2 text-xs font-black text-emerald-50 shadow-lg ring-1 ring-emerald-300/60 hover:bg-emerald-500"
+          >
+            🕌 Köy Camii (Namaz Çetelesi)
+          </button>
           <button
             type="button"
             onClick={() => setGorunum("cinar_sohbet")}
@@ -869,5 +904,51 @@ export function UretimSahnesi({ id, oyun }) {
           ))}
       </div>
     </div>
+  );
+}
+
+
+/** Köy Camii: kubbe, iki minare ve akşam göğü (sade SVG çizim) */
+function CamiCizimi() {
+  return (
+    <svg viewBox="0 0 400 190" className="mx-auto my-3 h-40 w-full max-w-lg sm:h-48" role="img" aria-label="Köy Camii">
+      <defs>
+        <linearGradient id="camiGok" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1e1b4b" />
+          <stop offset="100%" stopColor="#7c4a2a" />
+        </linearGradient>
+        <linearGradient id="camiKubbe" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#5eead4" />
+          <stop offset="100%" stopColor="#0f766e" />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="400" height="190" rx="18" fill="url(#camiGok)" />
+      <circle cx="330" cy="38" r="14" fill="#fde68a" opacity="0.9" />
+      <circle cx="336" cy="34" r="12" fill="#1e1b4b" />
+      {[[40, 30], [90, 18], [150, 40], [250, 22], [370, 70]].map(([x, y]) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r="1.6" fill="#fef3c7" />
+      ))}
+      {/* Minareler */}
+      {[92, 308].map((x) => (
+        <g key={x}>
+          <rect x={x - 6} y="52" width="12" height="118" fill="#e7e5e4" />
+          <rect x={x - 9} y="88" width="18" height="5" fill="#d6d3d1" />
+          <polygon points={`${x - 7},52 ${x + 7},52 ${x},22`} fill="url(#camiKubbe)" />
+          <line x1={x} y1="22" x2={x} y2="14" stroke="#fbbf24" strokeWidth="2" />
+        </g>
+      ))}
+      {/* Ana gövde ve kubbe */}
+      <path d="M140 118 Q200 40 260 118 Z" fill="url(#camiKubbe)" />
+      <line x1="200" y1="62" x2="200" y2="50" stroke="#fbbf24" strokeWidth="2.5" />
+      <circle cx="200" cy="47" r="3" fill="#fbbf24" />
+      <path d="M112 118 Q130 96 148 118 Z M252 118 Q270 96 288 118 Z" fill="#14b8a6" />
+      <rect x="110" y="118" width="180" height="52" fill="#f5f5f4" />
+      <rect x="110" y="118" width="180" height="6" fill="#d6d3d1" />
+      {[132, 160, 240, 268].map((x) => (
+        <path key={x} d={`M${x - 7} 160 V140 Q${x} 130 ${x + 7} 140 V160 Z`} fill="#fbbf24" opacity="0.85" />
+      ))}
+      <path d="M186 170 V142 Q200 126 214 142 V170 Z" fill="#78350f" />
+      <rect x="0" y="168" width="400" height="22" fill="#57534e" />
+    </svg>
   );
 }

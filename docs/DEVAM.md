@@ -56,3 +56,9 @@ Proje sahibi: Ebubekir Hoca (ortaokul DKAB öğretmeni). Kod yazmıyor, Türkçe
 - **Üst bar Level 2'de iki satıra taşıyordu:** Sol grup tek satır, başlık kısalır; 320 px'de kaynak çubuğu kaydırılabilir.
 - Küçük düzeltmeler: tanıtım-görüldü bayrağı, bildirim konumu, `sureYaz` süre yazımı, Çınar Altı meydan kurulana kadar salt okunur.
 - **Açık not:** Level 2'de gelen bedava usta nüfusu 6/5 gösteriyor (Köy Evi 2 kurulunca düzelir).
+
+## 18 Kasım 2026 — Faz A/B/C
+- **Faz A:** Taş Ocağı 3 kaya; oynanan günlere göre sırayla kırma günü / Taş Avı (`TasAviOyunu.js`, `tasAvi`, `madenOyunModu`, kaynaklar satırı `maden_mod`). Her yerde "Tahta" → "Odun". Namaz görevi: günde en az bir vakit.
+- **Faz B:** Kendi Evim → 📚 Ders Köşem (`DersCalismaKosesi.js`, `/api/ders`, tablo `ders_calisma`, ilk istekte kendiliğinden kurulur). Sayaç sunucu başlangıç saatine göre arka planda işler, öğrenci onaylar. En çok 60 dk. Günün her 30 dakikası +1 Huzur (günde en çok 4).
+- **Faz C:** Komşu evleri (ev1–ev5) → 🏘️ Komşuyu Ziyaret Et (`KomsuEviTasarim.js`, `komsuEviGuzellestir`, kaynaklar satırları `komsu_ev1..5`). 3 oda × 3 seviye; her seviye +1 Huzur, ev tamamlanınca +2. Köy Meydanı'na 🕌 Köy Camii (namaz çetelesi).
+- Cloudflare Workers Builds bağlı; `package-lock.json` Linux'ta üretilmeli (Windows kilidi `@emnapi` eksik bırakıyordu → `npm ci` hatası).

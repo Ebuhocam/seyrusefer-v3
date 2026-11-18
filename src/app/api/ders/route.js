@@ -1,12 +1,15 @@
 import { db } from "@/lib/sunucu/db";
-import { durumGetir, oyunSaati } from "@/lib/sunucu/oyunDeposu";
-import { govde, hata, oturumZorunlu } from "@/lib/sunucu/api";
+import { durumGetir, durumYaz, oyunSaati } from "@/lib/sunucu/oyunDeposu";
+import { govde, hata, oturumZorunlu, oyunYaniti } from "@/lib/sunucu/api";
 import { trGunNo } from "@/lib/oyun/kurallar";
 
 // Ders Çalışma Köşesi: kitap okuma, ödev ve konu tekrarı oturumları
 const TURLER = ["kitap", "odev", "tekrar"];
 const EN_AZ_DAKIKA = 5;
-const EN_COK_DAKIKA = 120;
+const EN_COK_DAKIKA = 60;
+// Günün toplam çalışmasında her 30 dakika köye +1 Huzur getirir (günde en çok 4 Huzur = 2 saat)
+const HUZUR_DAKIKA = 30;
+const GUNLUK_HUZUR_TAVANI = 4;
 const GECMIS_GUN = 30;
 
 // Tablo, göç (migration) çalıştırılmamış olsa da ilk istekte kurulur
@@ -129,8 +132,30 @@ export async function POST(request) {
     const gecen = Math.floor((an - Number(acik.baslangic)) / 60000);
     const bildirilen = Math.max(0, Math.floor(Number(g.dakika) || 0));
     const dakika = Math.min(bildirilen, gecen + 1, Number(acik.hedef_dakika));
+    const onceki = await d
+      .prepare(`SELECT COALESCE(SUM(dakika), 0) AS t FROM ders_calisma WHERE kullanici_id = ?1 AND gun = ?2 AND bitis IS NOT NULL`)
+      .bind(kullanici.id, bugun)
+      .first();
     await d.prepare(`UPDATE ders_calisma SET bitis = ?2, dakika = ?3 WHERE id = ?1`).bind(acik.id, an, dakika).run();
-    return Response.json({ ...(await ozet(d, kullanici.id, bugun)), kaydedilenDakika: dakika });
+
+    // Huzur: bugünün toplamı yeni bir 30 dakikalık dilimi geçtiyse köy huzuru artar
+    const oncekiToplam = Number(onceki?.t ?? 0);
+    const dilimOnce = Math.min(GUNLUK_HUZUR_TAVANI, Math.floor(oncekiToplam / HUZUR_DAKIKA));
+    const dilimSonra = Math.min(GUNLUK_HUZUR_TAVANI, Math.floor((oncekiToplam + dakika) / HUZUR_DAKIKA));
+    const huzurKazanildi = Math.max(0, dilimSonra - dilimOnce);
+    let oyunVerisi = null;
+    if (huzurKazanildi > 0) {
+      const durum = await durumGetir(kullanici.id);
+      const yeni = { ...durum, mutluluk: Math.min(100, (durum.mutluluk ?? 60) + huzurKazanildi) };
+      await durumYaz(kullanici.id, yeni);
+      oyunVerisi = await (await oyunYaniti(kullanici, yeni)).json();
+    }
+    return Response.json({
+      ...(await ozet(d, kullanici.id, bugun)),
+      kaydedilenDakika: dakika,
+      huzurKazanildi,
+      oyun: oyunVerisi,
+    });
   }
 
   if (g.islem === "vazgec") {

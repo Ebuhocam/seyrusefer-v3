@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const DEPO_ANAHTARI = "seyrusefer_ders_odak";
+const HUZUR_DILIM = 30;
+const EN_COK_DK = 60;
 
 const TURLER = [
   { id: "kitap", ad: "Kitap Okuma", simge: "📖", etiket: "📖 Kitap Okuma", renk: "bg-amber-400" },
@@ -52,39 +53,6 @@ function sayac(ms) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function depoOku(baslangic) {
-  try {
-    const ham = window.localStorage.getItem(DEPO_ANAHTARI);
-    if (!ham) return null;
-    const v = JSON.parse(ham);
-    if (v && v.oturumBaslangic === baslangic) {
-      return {
-        odakMs: Number(v.odakMs) || 0,
-        kalkma: Number(v.kalkma) || 0,
-      };
-    }
-  } catch {
-    /* yok say */
-  }
-  return null;
-}
-
-function depoYaz(veri) {
-  try {
-    window.localStorage.setItem(DEPO_ANAHTARI, JSON.stringify(veri));
-  } catch {
-    /* yok say */
-  }
-}
-
-function depoSil() {
-  try {
-    window.localStorage.removeItem(DEPO_ANAHTARI);
-  } catch {
-    /* yok say */
-  }
-}
-
 async function istek(yontem, govde) {
   const secenek = {
     method: yontem,
@@ -117,7 +85,7 @@ function hucreRengi(dk) {
   return "bg-stone-900/60 text-stone-400";
 }
 
-export default function DersCalismaKosesi() {
+export default function DersCalismaKosesi({ oyun }) {
   const [ozet, setOzet] = useState(null);
   const [yukleniyor, setYukleniyor] = useState(true);
   const [hata, setHata] = useState("");
@@ -127,16 +95,15 @@ export default function DersCalismaKosesi() {
   const [ay, setAy] = useState(false);
   const [bitti, setBitti] = useState(null);
   const [vazgecOnay, setVazgecOnay] = useState(false);
-  const [odakGoster, setOdakGoster] = useState(0);
-  const [kalkma, setKalkma] = useState(0);
-  const [uyari, setUyari] = useState(false);
-
-  const odakRef = useRef(0);
-  const kalkmaRef = useRef(0);
-  const sonTikRef = useRef(0);
-  const gizlendiRef = useRef(false);
+  // Sayaç arka planda da işler: geçen süre sunucunun başlangıç saatine göre hesaplanır
+  const [simdi, setSimdi] = useState(0);
+  const farkRef = useRef(0); // sunucu saati − cihaz saati
   const bitiriyorRef = useRef(false);
-  const bitirRef = useRef(null);
+
+  const ozetUygula = useCallback((veri) => {
+    if (veri?.sunucuZamani) farkRef.current = Number(veri.sunucuZamani) - Date.now();
+    setOzet(veri);
+  }, []);
 
   const acik = ozet ? ozet.acikOturum : null;
   const acikId = acik ? acik.id : null;
@@ -149,7 +116,7 @@ export default function DersCalismaKosesi() {
     (async () => {
       try {
         const veri = await istek("GET");
-        if (!iptal) setOzet(veri);
+        if (!iptal) ozetUygula(veri);
       } catch (e) {
         if (!iptal) setHata(e.message);
       } finally {
@@ -159,86 +126,45 @@ export default function DersCalismaKosesi() {
     return () => {
       iptal = true;
     };
-  }, []);
+  }, [ozetUygula]);
 
-  const bitir = useCallback(async (dakika, otomatik) => {
-    if (bitiriyorRef.current) return;
-    bitiriyorRef.current = true;
-    setMesgul(true);
-    setHata("");
-    try {
-      const veri = await istek("POST", { islem: "bitir", dakika });
-      depoSil();
-      setOzet(veri);
-      setVazgecOnay(false);
-      setUyari(false);
-      setBitti({
-        dakika: typeof veri.kaydedilenDakika === "number" ? veri.kaydedilenDakika : dakika,
-        otomatik,
-      });
-    } catch (e) {
-      setHata(e.message);
-      bitiriyorRef.current = false;
-    } finally {
-      setMesgul(false);
-    }
-  }, []);
+  const bitir = useCallback(
+    async (dakika) => {
+      if (bitiriyorRef.current) return;
+      bitiriyorRef.current = true;
+      setMesgul(true);
+      setHata("");
+      try {
+        const veri = await istek("POST", { islem: "bitir", dakika });
+        ozetUygula(veri);
+        setVazgecOnay(false);
+        // Kazanılan Huzur üst bardaki köy huzuruna hemen yansır
+        if (veri.oyun && oyun?.veriUygula) oyun.veriUygula(veri.oyun);
+        setBitti({
+          dakika: typeof veri.kaydedilenDakika === "number" ? veri.kaydedilenDakika : dakika,
+          huzur: Number(veri.huzurKazanildi) || 0,
+        });
+      } catch (e) {
+        setHata(e.message);
+      } finally {
+        bitiriyorRef.current = false;
+        setMesgul(false);
+      }
+    },
+    [ozetUygula, oyun]
+  );
 
-  useEffect(() => {
-    bitirRef.current = bitir;
-  }, [bitir]);
-
-  // Odak sayacı
+  // Ekran saniyede bir yenilenir; uygulama kapansa da süre sunucudaki başlangıca göre akar
   useEffect(() => {
     if (!acikId) return undefined;
-    const kayit = depoOku(acikBaslangic);
-    odakRef.current = kayit ? kayit.odakMs : 0;
-    kalkmaRef.current = kayit ? kayit.kalkma : 0;
-    sonTikRef.current = Date.now();
-    gizlendiRef.current = document.visibilityState !== "visible";
-    bitiriyorRef.current = false;
-    const hedefMs = acikHedefDk * 60000;
-
-    const tik = () => {
-      const simdi = Date.now();
-      const fark = simdi - sonTikRef.current;
-      sonTikRef.current = simdi;
-      if (document.visibilityState === "visible") {
-        odakRef.current = Math.min(hedefMs, odakRef.current + Math.min(fark, 2500));
-      }
-      depoYaz({
-        oturumBaslangic: acikBaslangic,
-        odakMs: odakRef.current,
-        kalkma: kalkmaRef.current,
-      });
-      setOdakGoster(odakRef.current);
-      setKalkma(kalkmaRef.current);
-      if (odakRef.current >= hedefMs && !bitiriyorRef.current && bitirRef.current) {
-        bitirRef.current(acikHedefDk, true);
-      }
-    };
-
-    const gorunurluk = () => {
-      if (document.visibilityState === "hidden") {
-        gizlendiRef.current = true;
-      } else if (gizlendiRef.current) {
-        gizlendiRef.current = false;
-        sonTikRef.current = Date.now();
-        kalkmaRef.current += 1;
-        setKalkma(kalkmaRef.current);
-        setUyari(true);
-      }
-    };
-
+    const tik = () => setSimdi(Date.now() + farkRef.current);
     const ilk = setTimeout(tik, 0);
     const aralik = setInterval(tik, 1000);
-    document.addEventListener("visibilitychange", gorunurluk);
     return () => {
       clearTimeout(ilk);
       clearInterval(aralik);
-      document.removeEventListener("visibilitychange", gorunurluk);
     };
-  }, [acikId, acikBaslangic, acikHedefDk]);
+  }, [acikId]);
 
   async function basla() {
     setMesgul(true);
@@ -246,12 +172,8 @@ export default function DersCalismaKosesi() {
     setBitti(null);
     try {
       const veri = await istek("POST", { islem: "basla", tur, hedefDakika: hedef });
-      depoSil();
-      setOdakGoster(0);
-      setKalkma(0);
-      setUyari(false);
       setVazgecOnay(false);
-      setOzet(veri);
+      ozetUygula(veri);
     } catch (e) {
       setHata(e.message);
     } finally {
@@ -264,10 +186,8 @@ export default function DersCalismaKosesi() {
     setHata("");
     try {
       const veri = await istek("POST", { islem: "vazgec" });
-      depoSil();
       setVazgecOnay(false);
-      setUyari(false);
-      setOzet(veri);
+      ozetUygula(veri);
     } catch (e) {
       setHata(e.message);
     } finally {
@@ -287,11 +207,13 @@ export default function DersCalismaKosesi() {
   const tamamlananlar = oturumlar.filter((o) => typeof o.dakika === "number");
 
   const hedefMs = acikHedefDk * 60000;
-  const kalanMs = Math.max(0, hedefMs - odakGoster);
-  const oran = hedefMs > 0 ? Math.min(1, odakGoster / hedefMs) : 0;
+  const gecenMs = acik && simdi ? Math.min(hedefMs, Math.max(0, simdi - Number(acikBaslangic))) : 0;
+  const sureDoldu = Boolean(acik) && hedefMs > 0 && gecenMs >= hedefMs;
+  const kalanMs = Math.max(0, hedefMs - gecenMs);
+  const oran = hedefMs > 0 ? Math.min(1, gecenMs / hedefMs) : 0;
   const R = 90;
   const C = 2 * Math.PI * R;
-  const motivasyon = MOTIVASYON[Math.floor(odakGoster / 300000) % MOTIVASYON.length];
+  const motivasyon = MOTIVASYON[Math.floor(gecenMs / 300000) % MOTIVASYON.length];
   const acikTur = acik ? turBul(acik.tur) : null;
 
   return (
@@ -299,7 +221,7 @@ export default function DersCalismaKosesi() {
       <header className="mb-4">
         <h2 className="font-display text-xl text-amber-100 sm:text-2xl">📚 Ders Çalışma Köşem</h2>
         <p className="mt-1 text-sm text-amber-200/80">
-          Masana otur, telefonu bırak, odaklan. Süre bitene kadar masadan kalkmak yok!
+          Masana otur ve odaklan. Sayaç sen uygulamadan çıksan da işlemeye devam eder. Her 30 dakikalık çalışma köye +1 😊 Huzur getirir!
         </p>
       </header>
 
@@ -341,21 +263,35 @@ export default function DersCalismaKosesi() {
                   </div>
                 </div>
                 <p className="text-center text-sm text-amber-200">{motivasyon}</p>
-                <p className="text-xs tabular-nums text-stone-300">Masadan kalkma: {kalkma}</p>
-                {uyari ? (
-                  <div className="w-full rounded-xl bg-amber-500/15 px-3 py-2 text-center text-sm text-amber-200 ring-1 ring-amber-400/50">
-                    ⚠️ Masadan kalktın! Uzakta geçen süre sayılmadı.
+                {sureDoldu ? (
+                  <div className="w-full rounded-xl bg-emerald-500/15 px-3 py-2 text-center text-sm font-bold text-emerald-200 ring-1 ring-emerald-400/60">
+                    ⏰ Süre doldu! Çalışmanı onayla ki kaydedilsin.
                   </div>
-                ) : null}
+                ) : (
+                  <p className="w-full rounded-xl bg-amber-500/10 px-3 py-2 text-center text-xs text-amber-200 ring-1 ring-amber-400/40">
+                    📌 Çalışman bitince buraya gelip <b>onaylamayı unutma</b>; onaylanmayan çalışma kaydedilmez.
+                  </p>
+                )}
                 <div className="flex flex-wrap items-center justify-center gap-3">
-                  <button
-                    type="button"
-                    disabled={mesgul}
-                    onClick={() => bitir(Math.floor(odakRef.current / 60000), false)}
-                    className="rounded-xl bg-emerald-500/20 px-5 py-2.5 text-sm text-emerald-200 ring-1 ring-emerald-400/60 hover:bg-emerald-500/30 disabled:opacity-50"
-                  >
-                    ✅ Erken Bitir ve Kaydet
-                  </button>
+                  {sureDoldu ? (
+                    <button
+                      type="button"
+                      disabled={mesgul}
+                      onClick={() => bitir(acikHedefDk)}
+                      className="varak-dugme varak-isilti rounded-xl px-5 py-2.5 text-sm"
+                    >
+                      ✅ Çalışmamı Tamamladım, Onayla
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={mesgul}
+                      onClick={() => bitir(Math.floor(gecenMs / 60000))}
+                      className="rounded-xl bg-emerald-500/20 px-5 py-2.5 text-sm text-emerald-200 ring-1 ring-emerald-400/60 hover:bg-emerald-500/30 disabled:opacity-50"
+                    >
+                      ✅ Erken Bitir ve Kaydet
+                    </button>
+                  )}
                   {vazgecOnay ? (
                     <span className="flex items-center gap-2 text-xs text-amber-200">
                       Emin misin? Bu çalışma kaydedilmez.
@@ -396,6 +332,15 @@ export default function DersCalismaKosesi() {
                   ? `Maşallah! ${bitti.dakika} dakika odaklandın.`
                   : "Bu sefer süre yetmedi, ama denemen güzeldi!"}
               </p>
+              {bitti.huzur > 0 ? (
+                <p className="mx-auto mt-2 block w-fit rounded-full bg-emerald-400 px-3 py-1 text-xs font-black text-stone-950">
+                  +{bitti.huzur} 😊 Köy Huzuru arttı!
+                </p>
+              ) : bitti.dakika > 0 ? (
+                <p className="mt-2 text-xs text-emerald-200/80">
+                  Bugünkü çalışman {HUZUR_DILIM} dakikayı her doldurduğunda köye +1 Huzur gelir.
+                </p>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setBitti(null)}
@@ -435,8 +380,8 @@ export default function DersCalismaKosesi() {
                 <span className="min-w-24 text-center text-4xl font-bold tabular-nums text-amber-100">{hedef} dk</span>
                 <button
                   type="button"
-                  disabled={hedef >= 120}
-                  onClick={() => setHedef((h) => Math.min(120, h + 5))}
+                  disabled={hedef >= EN_COK_DK}
+                  onClick={() => setHedef((h) => Math.min(EN_COK_DK, h + 5))}
                   className="h-11 w-14 rounded-xl bg-stone-900/70 text-lg text-amber-100 ring-1 ring-stone-700 disabled:opacity-40"
                 >
                   +5

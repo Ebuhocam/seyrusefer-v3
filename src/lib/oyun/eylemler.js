@@ -13,6 +13,11 @@ import {
   oyuncuKarakteriBul,
   toplamKonutKapasitesi,
   TAS_AVI_ORAN,
+  KOMSU_EV_IDLERI,
+  KOMSU_ODALARI,
+  KOMSU_ODA_MAKS,
+  KOMSU_ODA_BEDEL,
+  KOMSU_MAMUR_HUZUR,
 } from "./sabitler";
 import {
   biriken,
@@ -479,6 +484,46 @@ export function tasAvi(d, oran, simdi) {
       kaynak: "tas",
       miktar,
       mesaj: `🪝 Taş Avı bitti! Kancanla +${miktar} Taş yakaladın${o >= 1 ? ", maşallah usta avcı!" : "."}`,
+    },
+  };
+}
+
+/**
+ * Komşu evinin bir odasını bir seviye güzelleştirir (odun, taş, mahsul harcar; köye Huzur getirir).
+ */
+export function komsuEviGuzellestir(d, evId, oda) {
+  if (!KOMSU_EV_IDLERI.includes(evId)) return { hata: "Geçersiz ev" };
+  if (!KOMSU_ODALARI[oda]) return { hata: "Geçersiz oda" };
+  if ((d.binalar?.[evId] ?? 0) < 1) return { hata: "Bu ev henüz kurulmadı; önce evi inşa et." };
+  const evler = d.komsuEvleri ?? {};
+  const ev = { yatak: 0, mutfak: 0, banyo: 0, ...(evler[evId] ?? {}) };
+  const mevcut = ev[oda] ?? 0;
+  if (mevcut >= KOMSU_ODA_MAKS) return { hata: `${KOMSU_ODALARI[oda].ad} zaten en güzel hâlinde!` };
+  const hedef = mevcut + 1;
+  const bedel = KOMSU_ODA_BEDEL[hedef];
+  const ad = { erzak: "Mahsul", kereste: "Odun", tas: "Taş" };
+  const eksik = Object.entries(bedel).filter(([k, m]) => (d.envanter?.[k] ?? 0) < m);
+  if (eksik.length) {
+    return { hata: `Yetersiz kaynak: ${eksik.map(([k, m]) => `${m - (d.envanter?.[k] ?? 0)} ${ad[k]}`).join(", ")} daha gerekiyor.` };
+  }
+  const envanter = { ...d.envanter };
+  for (const [k, m] of Object.entries(bedel)) envanter[k] = (envanter[k] ?? 0) - m;
+  const yeniEv = { ...ev, [oda]: hedef };
+  const mamur = Object.keys(KOMSU_ODALARI).every((o) => (yeniEv[o] ?? 0) >= KOMSU_ODA_MAKS);
+  const huzur = 1 + (mamur ? KOMSU_MAMUR_HUZUR : 0);
+  const yeniMutluluk = Math.min(100, (d.mutluluk ?? 60) + huzur);
+  const seviyeAdi = KOMSU_ODALARI[oda].seviyeler[hedef];
+  return {
+    durum: { ...d, envanter, mutluluk: yeniMutluluk, komsuEvleri: { ...evler, [evId]: yeniEv } },
+    sonuc: {
+      evId,
+      oda,
+      seviye: hedef,
+      huzur,
+      mamur,
+      mesaj: mamur
+        ? `🏡 Maşallah! Komşunun evi baştan sona mamur oldu! +${huzur} 😊 Huzur`
+        : `✨ ${KOMSU_ODALARI[oda].ad}: ${seviyeAdi}. Komşun çok sevindi! +1 😊 Huzur`,
     },
   };
 }

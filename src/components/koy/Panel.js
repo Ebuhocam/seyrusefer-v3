@@ -1,4 +1,5 @@
 "use client";
+import KomsuEviTasarim from "./KomsuEviTasarim";
 import { useState } from "react";
 import {
   BINALAR,
@@ -383,7 +384,7 @@ function BinaIcerik({ id, oyun, onSecimDegistir, kapat }) {
                   : "text-amber-100 hover:bg-stone-800"
               }`}
             >
-              🚪 {tanim.konut ? "2D Ev İçi" : `${tanim.ad} İçi`}
+              {tanim.konut && id !== "kendi_evim" ? "🏘️ Komşuyu Ziyaret Et" : tanim.konut ? "🚪 2D Ev İçi" : `🚪 ${tanim.ad} İçi`}
             </button>
             <button
               type="button"
@@ -410,7 +411,9 @@ function BinaIcerik({ id, oyun, onSecimDegistir, kapat }) {
 
       {/* 1. GÖRÜNÜM: MEKAN İÇİ 2D SAHNESİ VEYA ÇALIŞMA EKRANI */}
       {gorunum === "icerde" && icMekanAcik ? (
-        tanim.konut ? (
+        tanim.konut && id !== "kendi_evim" ? (
+          <KomsuEviTasarim binaId={id} oyun={oyun} />
+        ) : tanim.konut ? (
           <EvIciSahnesi
             binaId={id}
             oyun={oyun}

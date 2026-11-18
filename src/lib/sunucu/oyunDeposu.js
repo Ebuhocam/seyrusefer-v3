@@ -100,6 +100,12 @@ export async function durumOku(kullaniciId) {
   const mektupAlindi = tumKaynakSatirlari.mektup_durumu?.envanter ?? 0;
   const mektupGunu = Number(tumKaynakSatirlari.mektup_durumu?.son_toplama ?? 0);
   const mektupNo = Number(tumKaynakSatirlari.mektup_no?.envanter ?? 0);
+  // Komşu evleri: envanter = yatak + mutfak*4 + banyo*16 (her oda 0–3)
+  const komsuEvleri = {};
+  for (const evId of ["ev1", "ev2", "ev3", "ev4", "ev5"]) {
+    const v = Number(tumKaynakSatirlari[`komsu_${evId}`]?.envanter ?? 0);
+    if (v > 0) komsuEvleri[evId] = { yatak: v % 4, mutfak: Math.floor(v / 4) % 4, banyo: Math.floor(v / 16) % 4 };
+  }
   // Taş Ocağı oyun sırası: envanter 1 = kırma, 2 = yakalama; son_toplama = oynandığı TR gün numarası
   const madenModSatir = tumKaynakSatirlari.maden_mod;
   const madenMod = madenModSatir?.son_toplama
@@ -148,6 +154,7 @@ export async function durumOku(kullaniciId) {
     mektupGunu,
     mektupNo,
     madenMod,
+    komsuEvleri,
     gorevIlerlemesi: Object.fromEntries(
       gorevler.results.map((g) => [g.gorev_kodu, { ilerleme: g.ilerleme, sonGun: g.son_gun }])
     ),
@@ -262,6 +269,16 @@ export async function durumYaz(kullaniciId, durum, islemSaati = null, ayarlar = 
          ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET envanter = ?2, son_toplama = ?3`
       )
       .bind(kullaniciId, durum.madenMod?.mod === "yakalama" ? 2 : 1, Number(durum.madenMod?.gun || 0)),
+    ...["ev1", "ev2", "ev3", "ev4", "ev5"].map((evId) => {
+      const ev = durum.komsuEvleri?.[evId] ?? {};
+      const kod = (ev.yatak ?? 0) + (ev.mutfak ?? 0) * 4 + (ev.banyo ?? 0) * 16;
+      return d
+        .prepare(
+          `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, ?2, ?3, 0)
+           ON CONFLICT(kullanici_id, kaynak) DO UPDATE SET envanter = ?3`
+        )
+        .bind(kullaniciId, `komsu_${evId}`, kod);
+    }),
     d
       .prepare(
         `INSERT INTO kaynaklar (kullanici_id, kaynak, envanter, son_toplama) VALUES (?1, 'oyuncu_karakter', ?2, ?3)

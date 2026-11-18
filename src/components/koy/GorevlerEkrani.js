@@ -370,7 +370,7 @@ export function NamazCetelesiKutusu({ oyun }) {
         </div>
         {gorev && (
           <span className="rounded-full bg-emerald-500/20 px-2.5 py-1 text-xs font-bold text-emerald-200">
-            Hedef: {gorev.yapilan}/{gorev.hedef} tam gün
+            Hedef: {gorev.yapilan}/{gorev.hedef} gün
           </span>
         )}
       </div>

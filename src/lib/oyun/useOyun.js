@@ -120,6 +120,12 @@ export function useOyun(baslangic) {
     return j?.sonuc ?? null;
   };
 
+  const komsuEviGuzellestir = async (evId, oda) => {
+    const j = await gonder({ eylem: "komsuEviGuzellestir", evId, oda });
+    if (j?.sonuc?.mesaj) setMesaj({ tur: "tamam", metin: j.sonuc.mesaj });
+    return j?.sonuc ?? null;
+  };
+
   const tasAvi = async (oran) => {
     const j = await gonder({ eylem: "tasAvi", oran });
     if (j?.sonuc?.mesaj) setMesaj({ tur: "tamam", metin: j.sonuc.mesaj });
@@ -250,6 +256,7 @@ export function useOyun(baslangic) {
     sahaHasat,
     sahaHepsiniTopla,
     tasAvi,
+    komsuEviGuzellestir,
     ormanKesif,
     ormanAgacKes,
     uretimEtkilesim,

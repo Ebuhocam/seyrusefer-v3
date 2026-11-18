@@ -201,6 +201,36 @@ function evTanimi(ad, acilis1, baslangicSeviye = 0) {
 
 export const EV_IDLERI = ["kendi_evim", "ev1", "ev2", "ev3", "ev4", "ev5"];
 
+// ---------- KOMŞU EVLERİNİ GÜZELLEŞTİRME ----------
+// Öğrenci köydeki komşu evlerinin odalarını döşer; her güzelleştirme köye +1 Huzur getirir,
+// bir evin üç odası da en üst seviyeye gelince "Mamur Ev" ödülü olarak +2 Huzur daha gelir.
+export const KOMSU_EV_IDLERI = ["ev1", "ev2", "ev3", "ev4", "ev5"];
+export const KOMSU_ODA_MAKS = 3;
+export const KOMSU_MAMUR_HUZUR = 2;
+export const KOMSU_ODALARI = {
+  yatak: {
+    ad: "Yatak Odası",
+    ikon: "🛏️",
+    seviyeler: ["Hasır döşek", "Yün yatak ve yorgan", "Ahşap karyola ve kilim", "Oymalı karyola ve el işi örtüler"],
+  },
+  mutfak: {
+    ad: "Mutfak",
+    ikon: "🍲",
+    seviyeler: ["Tek ocaklı köşe", "Raflı mutfak ve bakır tencereler", "Taş ocak ve geniş tezgâh", "Çini kaplı, ferah ve aydınlık mutfak"],
+  },
+  banyo: {
+    ad: "Banyo ve Tuvalet",
+    ikon: "🚿",
+    seviyeler: ["Bahçede eski tulumba", "Temiz su ve ahşap gusülhane", "Taş zeminli banyo ve tuvalet", "Mermer kurna ve tertemiz tuvalet"],
+  },
+};
+/** Bir odayı bir üst seviyeye çıkarmanın bedeli (hedef seviyeye göre). Pahalı değildir: günlük üretimin bir kısmı. */
+export const KOMSU_ODA_BEDEL = {
+  1: { kereste: 6, erzak: 4 },
+  2: { kereste: 10, tas: 6, erzak: 6 },
+  3: { kereste: 14, tas: 10, erzak: 8 },
+};
+
 /** Köydeki mevcut evlerin toplam insan (barınma) kapasitesini hesaplar */
 export function toplamKonutKapasitesi(binalar = {}) {
   const kendiKat = binalar.kendi_evim ?? 1;
