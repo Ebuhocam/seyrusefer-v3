@@ -373,6 +373,14 @@ export function KoyMeydaniSahnesi({ oyun }) {
   const [harfSayisi, setHarfSayisi] = useState(0);
   // Göçmen daveti tam ekran sonucu
   const [gocmenSonuc, setGocmenSonuc] = useState(null);
+  // Karar ekranı açıldığı andaki olay türü sabitlenir: dava çözülünce durum değişse bile
+  // ekran misafir davetine atlamaz, öğrenci önce kararının sonucunu görür
+  const [kararTuru, setKararTuru] = useState(null);
+  const kararEkraniniAc = () => {
+    setKararTuru(aktifOlayTuru);
+    setGorunum("karar_ekrani");
+  };
+  const ekranOlayTuru = gorunum === "karar_ekrani" && kararTuru ? kararTuru : aktifOlayTuru;
 
   const diyalogMetni =
     aktifOlayTuru === "dava" && siradakiDava
@@ -516,7 +524,7 @@ export function KoyMeydaniSahnesi({ oyun }) {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setGorunum("karar_ekrani")}
+                      onClick={() => kararEkraniniAc()}
                       className="varak-dugme varak-isilti rounded-xl px-4 py-2 text-xs sm:text-sm"
                     >
                       {aktifOlayTuru === "dava" ? "⚖️ Karar ver →" : "🏡 Davet kararını ver →"}
@@ -538,7 +546,7 @@ export function KoyMeydaniSahnesi({ oyun }) {
             <div className="max-h-full w-full max-w-2xl overflow-y-auto rounded-3xl bg-stone-950/98 p-4 shadow-2xl ring-2 ring-amber-400 sm:p-5">
               <div className="mb-3 flex items-center justify-between border-b border-stone-800 pb-2.5">
                 <span className="text-xs font-black text-amber-300 sm:text-sm">
-                  {aktifOlayTuru === "dava" ? "⚖️ Köy Meydanı · Adalet ve Hüküm" : "🏡 Köy Meydanı · Misafir Daveti"}
+                  {ekranOlayTuru === "dava" ? "⚖️ Köy Meydanı · Adalet ve Hüküm" : "🏡 Köy Meydanı · Misafir Daveti"}
                 </span>
                 <button
                   type="button"
@@ -552,7 +560,7 @@ export function KoyMeydaniSahnesi({ oyun }) {
                 </button>
               </div>
 
-              {aktifOlayTuru === "dava" && siradakiDava ? (
+              {ekranOlayTuru === "dava" ? (
                 <ObaDavaKutusu
                   oyun={oyun}
                   onTamamKapat={() => {

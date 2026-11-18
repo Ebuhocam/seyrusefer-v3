@@ -290,9 +290,18 @@ export default function RehberKarakter({
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
   const yeniGun = !!simdi && sonGorulenGun != null && bugun > sonGorulenGun;
+  // İlk kez oynayan öğrenciye karşılama gösterilmez; o günü "karşılanmış" sayarız.
+  // Sonraki günlerde karşılama kartı, öğrenci "Başlayalım" diyene kadar (sayfa yenilense de) görünür.
   useEffect(() => {
-    if (hafizaOkundu && acik && simdi) cihazaYaz(SON_GUN_ANAHTARI, bugun);
-  }, [hafizaOkundu, acik, bugun, simdi]);
+    if (!hafizaOkundu || !simdi || sonGorulenGun != null) return;
+    cihazaYaz(SON_GUN_ANAHTARI, bugun);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSonGorulenGun(bugun);
+  }, [hafizaOkundu, simdi, sonGorulenGun, bugun]);
+  const karsilamayiKapat = () => {
+    cihazaYaz(SON_GUN_ANAHTARI, bugun);
+    setSonGorulenGun(bugun);
+  };
 
   const hamAdim = REHBER_ADIMLARI[adimIndeks] ?? REHBER_ADIMLARI[0];
   // "Bugünlük tamam" adımına ilk ulaşılan gün; ertesi günden itibaren adım "Tekrar hoş geldin"e dönüşür
@@ -448,6 +457,27 @@ export default function RehberKarakter({
           </div>
         </div>
 
+        {yeniGun && adim.kod !== "gorev_bugunluk_tamam" && (
+          <div className="mb-2 flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-900/80 to-emerald-950/60 px-3 py-2 ring-1 ring-emerald-400/50">
+            <span className="text-2xl" aria-hidden>
+              🌅
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-sm font-black text-emerald-100">Yeniden hoş geldin! Yeni bir gün başladı.</p>
+              <p className="text-[11px] leading-snug text-emerald-200/85">
+                Tarlan doldu, orman seferlerin yenilendi; Haberci de bugünün mektubunu getirdi.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={karsilamayiKapat}
+              className="shrink-0 rounded-xl bg-emerald-400 px-2.5 py-1 text-xs font-black text-emerald-950 hover:bg-emerald-300"
+            >
+              Başlayalım
+            </button>
+          </div>
+        )}
+
         {/* Avatar + başlık */}
         <div className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -460,11 +490,6 @@ export default function RehberKarakter({
             draggable={false}
           />
           <div className="min-w-0 flex-1">
-            {yeniGun && adim.kod !== "gorev_bugunluk_tamam" && (
-              <p className="mb-0.5 truncate text-[11px] font-bold text-emerald-300">
-                🌅 Tekrar hoş geldin! Tarlan doldu, orman seferlerin yenilendi.
-              </p>
-            )}
             <h3 className="text-sm leading-snug font-black text-amber-100 sm:text-base">{adim.baslik}</h3>
           </div>
           {buAdimTamam && (
