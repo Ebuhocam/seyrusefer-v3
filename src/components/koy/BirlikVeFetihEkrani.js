@@ -158,7 +158,7 @@ export function BirlikPaneli({ oyun, varsayilanSekme = "birlik", seciliBolgeId =
   return (
     <div className="space-y-3">
       {/* Birlik Alanı'ndaki belirli bir binadan açıldıysa ortak bina yükseltme kartı */}
-      {birlikBinaTanim && (
+      {birlikBinaTanim && (birlikBinaTanim.maksSeviye ?? 1) > 1 && (
         <div className="tezhip rounded-2xl bg-stone-950/85 p-3.5">
           <div className="flex items-center justify-between gap-2">
             <div>

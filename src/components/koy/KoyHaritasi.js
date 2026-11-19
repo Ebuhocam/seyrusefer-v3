@@ -931,7 +931,7 @@ export default function KoyHaritasi({ baslangic }) {
                         </span>
                       )}
                       <span className="harita-etiket absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-stone-900/95 px-2.5 py-0.5 text-xs font-black text-amber-100 shadow-lg ring-1 ring-amber-400/70 transition-transform duration-150 group-hover:scale-105">
-                        {b.ad} · Lv.{seviye}
+                        {(b.maksSeviye ?? 1) > 1 ? `${b.ad} · Lv.${seviye}` : b.ad}
                       </span>
                     </button>
                   );
