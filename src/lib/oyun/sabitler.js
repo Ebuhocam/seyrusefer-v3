@@ -356,8 +356,8 @@ export const BIRLIK_BINALARI = {
     aciklama: "Birlik kardeşlerinin ortak namaz çetelesi ve maneviyat merkezi.",
     icMekan: "/assets/mekanlar/cami_ici.webp",
     gorsel: (s) => `/assets/binalar/cami${Math.min(4, Math.max(1, s || 1))}.webp`,
-    x: 26.8,
-    y: 39.0,
+    x: 27.0,
+    y: 35.2,
     genislik: 13.0,
     maksSeviye: 4,
     bedel: {
