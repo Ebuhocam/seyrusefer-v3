@@ -893,7 +893,15 @@ export function UretimSahnesi({ id, oyun }) {
       {/* THREE.JS 3D ÜRETİM MİNİ OYUN SAHNESİ */}
       {/* Telefonda oyunun kendisi en üstte; işçi ve saha bilgisi altında kalır */}
       <div className="order-first [@media(min-width:768px)_and_(min-height:521px)]:order-none">
-        {id === "tarla" && <TarlaFPS3DSahnesi oyun={oyun} />}
+        {(id === "tarla" || id === "orman" || id === "maden") && (
+          <div className="tezhip mb-3 rounded-2xl px-4 py-3 text-center">
+            <p className="text-sm font-black text-amber-200">﷽ Besmele berekettir!</p>
+            <p className="mt-0.5 text-xs font-bold text-amber-100">
+              Çalışmaya başlamadan önce besmele çekmeyi unutma: &quot;Bismillahirrahmanirrahim.&quot; Besmeleyle başlanan iş bereketli olur.
+            </p>
+          </div>
+        )}
+        {id === "tarla" &&<TarlaFPS3DSahnesi oyun={oyun} />}
         {id === "orman" && <OrmanKesifVeKesimSahnesi oyun={oyun} />}
         {id === "maden" &&
           (madenOyunModu(oyun.durum, oyun.simdi) === "yakalama" ? (
