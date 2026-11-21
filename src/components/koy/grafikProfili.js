@@ -21,7 +21,7 @@ export function grafikProfili() {
   grafikProfiliOnbellek = !dokun
     ? { ad: "yuksek", dpr: 2, aa: true, golge: true, yumusakGolge: true, golgeBoyut: 2048, fps: 60 }
     : zayif
-    ? { ad: "dusuk", dpr: 1.25, aa: false, golge: false, yumusakGolge: false, golgeBoyut: 256, fps: 30 }
-    : { ad: "orta", dpr: 1.5, aa: false, golge: true, yumusakGolge: false, golgeBoyut: 512, fps: 30 };
+    ? { ad: "dusuk", dpr: 1, aa: false, golge: false, yumusakGolge: false, golgeBoyut: 256, fps: 30 }
+    : { ad: "orta", dpr: 1.25, aa: false, golge: true, yumusakGolge: false, golgeBoyut: 512, fps: 30 };
   return grafikProfiliOnbellek;
 }

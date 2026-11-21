@@ -1,5 +1,12 @@
 "use client";
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import { grafikProfili } from "./grafikProfili";
+
+// Telefonlarda efekt katmanları daha seyrek çizilir (yüksek: x1, orta: x1.6, düşük: x2.5)
+const fxOlcek = () => {
+  const ad = grafikProfili().ad;
+  return ad === "yuksek" ? 1 : ad === "orta" ? 1.6 : 2.5;
+};
 
 // =============================================================
 // SEYRÜSEFER v3 — CANLI KÖY KATMANI
@@ -412,7 +419,7 @@ function AgacSuKatmani({ hareketsiz }) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-      const w = yazilim ? 688 : IMG_W;
+      const w = yazilim || grafikProfili().ad !== "yuksek" ? 688 : IMG_W;
       const h = Math.round((w * 920) / 1710);
       canvas.width = w;
       canvas.height = h;
@@ -463,7 +470,7 @@ function AgacSuKatmani({ hareketsiz }) {
 
     const abonelik = () => {
       if (abone || hareketsiz) return;
-      const aralik = yazilim ? 1 / 10 : 1 / 30;
+      const aralik = (yazilim ? 1 / 10 : 1 / 30) * fxOlcek();
       abone = tickerAbone((t, dt) => {
         birikim += dt;
         if (birikim < aralik) return;
@@ -790,7 +797,7 @@ function VadiDeresiKatmani({ isikRef, hareketsiz }) {
     }
     return tickerAbone((t, dt) => {
       birikim += dt;
-      if (birikim < 1 / 20) return;
+      if (birikim < (1 / 20) * fxOlcek()) return;
       birikim = 0;
       ciz(t);
     });
@@ -841,7 +848,7 @@ function BulutGolgeKatmani({ isikRef, hareketsiz }) {
     }
     return tickerAbone((t, dt) => {
       birikim += dt;
-      if (birikim < 1 / 15) return;
+      if (birikim < (1 / 15) * fxOlcek()) return;
       birikim = 0;
       ciz(t);
     });
@@ -1004,7 +1011,7 @@ function CanlilarKatmani({ isikRef, hareketsiz }) {
 
     const ciz = (t, dt) => {
       birikim += dt;
-      if (birikim < 1 / 30) return;
+      if (birikim < (1 / 30) * fxOlcek()) return;
       const adim = birikim;
       birikim = 0;
       const p = isikRef.current;
@@ -1224,7 +1231,7 @@ function GeceIsiklariKatmani({ isikRef, hareketsiz }) {
     }
     return tickerAbone((t, dt) => {
       birikim += dt;
-      if (birikim < 1 / 24) return;
+      if (birikim < (1 / 24) * fxOlcek()) return;
       birikim = 0;
       ciz(t, false);
     });
