@@ -17,6 +17,7 @@
   "dependencies": {
     "@opennextjs/cloudflare": "1.19.11",
     "@types/three": "^0.187.0",
+    "firebase": "^13.4.0",
     "lucide-react": "^1.73.0",
     "next": "16.2.12",
     "pixi.js": "^8.23.0",

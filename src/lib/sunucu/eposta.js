@@ -27,7 +27,7 @@ function kodUret() {
   return String(n).padStart(6, "0");
 }
 
-async function ortamOku(ad) {
+export async function ortamOku(ad) {
   let v = process.env[ad];
   if (!v) {
     try {

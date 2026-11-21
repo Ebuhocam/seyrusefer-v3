@@ -4,6 +4,7 @@ import { aktifKullanici, gelistiriciIzni } from "@/lib/sunucu/oturum";
 import { durumGetir, oyunSaati } from "@/lib/sunucu/oyunDeposu";
 import { oyunAyarlariniGetir } from "@/lib/sunucu/ayarlarDeposu";
 import KoyHaritasi from "@/components/koy/KoyHaritasi";
+import BildirimDavet from "./BildirimDavet";
 
 export const dynamic = "force-dynamic";
 
@@ -27,5 +28,10 @@ export default async function Home() {
     gelistirici: gelistiriciIzni(kullanici),
   };
 
-  return <KoyHaritasi baslangic={baslangic} />;
+  return (
+    <>
+      <KoyHaritasi baslangic={baslangic} />
+      <BildirimDavet />
+    </>
+  );
 }
