@@ -11,6 +11,8 @@ export default function GirisFormu() {
   const [sifre, setSifre] = useState("");
   const [cinsiyet, setCinsiyet] = useState("erkek"); // 'erkek' | 'kiz'
   const [karakter, setKarakter] = useState("ahmet");
+  const [eposta, setEposta] = useState("");
+  const [kosulKabul, setKosulKabul] = useState(false);
   const [hata, setHata] = useState(null);
   const [yukleniyor, setYukleniyor] = useState(false);
 
@@ -23,7 +25,7 @@ export default function GirisFormu() {
       const r = await fetch(adres, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kullaniciAdi, sifre, ad, cinsiyet, karakter }),
+        body: JSON.stringify({ kullaniciAdi, sifre, ad, cinsiyet, karakter, eposta, kosulKabul }),
       });
       const j = await r.json();
       if (!r.ok) {
@@ -216,15 +218,51 @@ export default function GirisFormu() {
             />
           </label>
 
+          {kip === "kayit" && (
+            <>
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-amber-200/80">E-posta (veli e-postası olabilir)</span>
+                <input
+                  required
+                  type="email"
+                  value={eposta}
+                  onChange={(e) => setEposta(e.target.value)}
+                  placeholder="ornek@eposta.com"
+                  autoComplete="email"
+                  className="w-full rounded-xl bg-stone-950/80 px-3.5 py-2.5 text-sm text-amber-50 ring-1 ring-amber-500/25 placeholder:text-stone-400 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                />
+                <span className="mt-1 block text-[11px] text-amber-300/75">Sana 6 haneli bir doğrulama kodu göndereceğiz. Şifreni unutursan da bu adresle sıfırlarsın.</span>
+              </label>
+              <label className="flex items-start gap-2 text-xs text-amber-100/90">
+                <input
+                  type="checkbox"
+                  checked={kosulKabul}
+                  onChange={(e) => setKosulKabul(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-amber-400"
+                />
+                <span>
+                  <a href="/kullanim-kosullari" target="_blank" className="font-bold underline">Kullanım Koşulları</a> ve{" "}
+                  <a href="/gizlilik" target="_blank" className="font-bold underline">Gizlilik Bildirimi</a>&apos;ni okudum, kabul ediyorum.
+                  18 yaşından küçüksem velimin bilgisi dahilindedir.
+                </span>
+              </label>
+            </>
+          )}
+
           {hata && <p className="rounded-xl bg-red-950/70 px-3 py-2 text-xs font-semibold text-red-200 ring-1 ring-red-500/40">{hata}</p>}
 
           <button
             type="submit"
-            disabled={yukleniyor}
+            disabled={yukleniyor || (kip === "kayit" && !kosulKabul)}
             className="varak-dugme varak-isilti w-full rounded-2xl py-3.5 text-base"
           >
             {yukleniyor ? "Bekleyin…" : kip === "kayit" ? "🏕️ Köyümü Kur" : "🚪 Köyüme Gir"}
           </button>
+          {kip === "giris" && (
+            <a href="/sifremi-unuttum" className="block pt-1 text-center text-xs font-semibold text-amber-200/80 underline hover:text-amber-100">
+              Şifremi unuttum
+            </a>
+          )}
         </form>
       </div>
     </main>

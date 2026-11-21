@@ -60,7 +60,7 @@ export async function aktifKullanici() {
   const d = await db();
   const satir = await d
     .prepare(
-      `SELECT k.id, k.kullanici_adi, k.ad, k.rol
+      `SELECT k.id, k.kullanici_adi, k.ad, k.rol, k.eposta, k.eposta_dogrulandi, k.kosul_onay
          FROM oturumlar o JOIN kullanicilar k ON k.id = o.kullanici_id
         WHERE o.token_hash = ? AND o.bitis > ?`
     )
