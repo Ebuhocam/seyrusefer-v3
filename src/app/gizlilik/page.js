@@ -1,6 +1,9 @@
 import KartKabugu from "../KartKabugu";
 import { ILETISIM_EPOSTA, SITE_ADI, YASAL_GUNCELLEME } from "@/lib/yasal";
 
+// Kök düzen çerez okuduğu için sayfa her istekte üretilir (statik üretim canlıda 500 veriyordu)
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Gizlilik Bildirimi — Seyrüsefer" };
 
 const B = "mt-4 mb-1 text-base font-black text-amber-200";
