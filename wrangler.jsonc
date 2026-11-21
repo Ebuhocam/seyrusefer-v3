@@ -4,8 +4,8 @@
   // OpenNext Worker'ını saran dosya: günlük bildirim zamanlayıcısını (scheduled) ekler
   "main": "custom-worker.js",
   "triggers": {
-    // Her gün 13:30 UTC = 16:30 Türkiye saati (günlük hatırlatma bildirimi)
-    "crons": ["30 13 * * *"]
+    // Her gün 14:30 UTC = 17:30 Türkiye saati (günlük hatırlatma bildirimi)
+    "crons": ["30 14 * * *"]
   },
   "compatibility_date": "2025-09-27",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],

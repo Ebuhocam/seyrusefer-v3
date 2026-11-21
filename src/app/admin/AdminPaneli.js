@@ -2,6 +2,7 @@
 import { youtubeKimligi } from "@/components/koy/YoutubeOynatici";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import BildirimGonder from "./BildirimGonder";
 import { BINALAR, KAYNAKLAR } from "@/lib/oyun/sabitler";
 import { GOREV_TURLERI } from "@/lib/oyun/gorevler";
 
@@ -198,6 +199,7 @@ export default function AdminPaneli() {
             { kod: "levellar", ad: "📜 Level & Görev Tasarım Merkezi (1-10)" },
             { kod: "binalar", ad: "🏛️ Binalar, Ozan Dede & Haberci" },
             { kod: "moderasyon", ad: `🚩 Çınar Altı Moderasyon${veri.moderasyon.filter((m) => m.bekleyen > 0).length ? ` (${veri.moderasyon.filter((m) => m.bekleyen > 0).length})` : ""}` },
+            { kod: "bildirim", ad: "🔔 Bildirim Gönder" },
             { kod: "kullanicilar", ad: `👥 Öğrenciler & Roller (${veri.kullanicilar.length})` },
           ].map((s) => (
             <button
@@ -1053,6 +1055,9 @@ export default function AdminPaneli() {
             karar={(paylasimId, karar, mesaj) => gonder({ islem: "moderasyon", paylasimId, karar }, mesaj)}
           />
         )}
+
+        {/* SEKME: BİLDİRİM GÖNDER */}
+        {anaSekme === "bildirim" && <BildirimGonder />}
 
         {/* SEKME 3: KULLANICILAR */}
         {anaSekme === "kullanicilar" && (
