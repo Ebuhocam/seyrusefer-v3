@@ -731,8 +731,8 @@ export default function KoyHaritasi({ baslangic }) {
                         style={{
                           left: `${n.x}%`,
                           top: `${n.y}%`,
-                          width: "5.2%",
-                          minWidth: "62px",
+                          width: "3.12%",
+                          minWidth: "37px",
                           transform: "translate(-50%, -84%)",
                           zIndex: rehberVurgulu || kameraOdakli ? 245 : Math.round(n.y * 2),
                         }}
