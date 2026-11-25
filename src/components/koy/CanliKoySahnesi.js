@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { grafikProfili } from "./grafikProfili";
+import { hafifAbone, hafifMi } from "@/lib/hafifMod";
 
 // Telefonlarda efekt katmanları daha seyrek çizilir (yüksek: x1, orta: x1.6, düşük: x2.5)
 const fxOlcek = () => {
@@ -91,12 +92,17 @@ function tickerAktifAyarla(v) {
 }
 
 // ---------- prefers-reduced-motion ----------
+// Hafif mod da (akıllı tahta / zayıf cihaz) "az hareket" sayılır: efekt döngüleri hiç çalışmaz
 function azHareketAbone(cb) {
   const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
   mq.addEventListener("change", cb);
-  return () => mq.removeEventListener("change", cb);
+  const hafifBirak = hafifAbone(cb);
+  return () => {
+    mq.removeEventListener("change", cb);
+    hafifBirak();
+  };
 }
-const azHareketAl = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const azHareketAl = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches || hafifMi();
 const azHareketSunucu = () => false;
 const bosAbone = () => () => {};
 
@@ -1000,7 +1006,12 @@ function CanlilarKatmani({ isikRef, hareketsiz }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx || hareketsiz) return undefined; // azaltılmış hareket: hiç çizilmez
+    if (!canvas || !ctx) return undefined;
+    if (hareketsiz) {
+      // azaltılmış hareket / hafif mod: hiç çizilmez (havada donmuş kuş kalmasın)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return undefined;
+    }
     canvas.width = FX_W;
     canvas.height = FX_H;
     const W = FX_W;

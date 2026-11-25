@@ -1,6 +1,8 @@
 import "./globals.css";
 import Hazirlaniyor from "./Hazirlaniyor";
 import KurulumDavet from "./KurulumDavet";
+import HafifOlcer from "./HafifOlcer";
+import { HAFIF_BASLANGIC_BETIGI } from "@/lib/hafifMod";
 import { onizlemeIzniVar } from "@/lib/sunucu/onizleme";
 
 export const metadata = {
@@ -25,10 +27,15 @@ export default async function RootLayout({ children }) {
   // Gizli ön izleme kapısı: şifre girilmemişse herkes "hazırlanıyor" sayfasını görür
   const izinli = await onizlemeIzniVar();
   return (
-    <html lang="tr" className="h-full antialiased">
+    <html lang="tr" className="h-full antialiased" suppressHydrationWarning>
+      <head>
+        {/* Hafif mod sınıfı sayfa boyanmadan eklenir (akıllı tahta / zayıf cihaz) */}
+        <script dangerouslySetInnerHTML={{ __html: HAFIF_BASLANGIC_BETIGI }} />
+      </head>
       <body className="min-h-full font-sans">
         {izinli ? children : <Hazirlaniyor />}
         {izinli && <KurulumDavet />}
+        {izinli && <HafifOlcer />}
       </body>
     </html>
   );

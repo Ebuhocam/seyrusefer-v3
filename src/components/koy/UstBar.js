@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { hafifAbone, hafifAyarla, hafifMi } from "@/lib/hafifMod";
 import Link from "next/link";
 import {
   KAYNAKLAR,
@@ -161,6 +162,7 @@ export default function UstBar({ oyun, katman = "koy", onKatmanSec, onLevelTikla
           );
         })}
 
+        <HafifDugmesi />
         <SesDugmesi />
 
         {oyun.cikis && (
@@ -324,6 +326,23 @@ function Sayi({ deger }) {
     >
       {deger}
     </span>
+  );
+}
+
+// ⚡ Hafif mod: akıllı tahta / zayıf cihazlarda süslemeleri kapatıp akıcılığı artırır
+function HafifDugmesi() {
+  const acik = useSyncExternalStore(hafifAbone, hafifMi, () => false);
+  return (
+    <button
+      type="button"
+      onClick={() => hafifAyarla(!acik)}
+      title={acik ? "Hafif mod açık: süslemeler kapalı (kapatmak için dokun)" : "Hafif mod: oyun kasıyorsa aç"}
+      aria-label={acik ? "Hafif modu kapat" : "Hafif modu aç"}
+      aria-pressed={acik}
+      className={`rounded-xl px-1.5 py-1 text-sm ${acik ? "bg-amber-500/25 ring-1 ring-amber-400/60" : "opacity-60 hover:bg-white/5 hover:opacity-100"}`}
+    >
+      ⚡
+    </button>
   );
 }
 
